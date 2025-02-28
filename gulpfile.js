@@ -1,16 +1,10 @@
 import { rollup } from 'rollup'
-import resolve from '@rollup/plugin-node-resolve'
-import gulp from 'gulp'
-import rename from 'gulp-rename'
 import { minify } from 'rollup-plugin-esbuild-minify';
-import { exec } from 'child_process';
-import fs from 'fs';
+import resolve from '@rollup/plugin-node-resolve'
+import rename from 'gulp-rename'
+import gulp from 'gulp'
 
-
-/*
- * javascript
- */
-
+// javascript
 function minify_file(file, name, args) {
     let {
         do_minify = true,
@@ -48,10 +42,6 @@ gulp.task('minify-mathjax', () => gulp.src(['node_modules/mathjax/es5/tex-svg.js
 
 // minify all
 gulp.task('minify', gulp.parallel('minify-marked', 'minify-codemirror', 'minify-mathjax'));
-
-/*
- * build
- */
 
 // build all
 gulp.task('build', gulp.parallel('minify'));

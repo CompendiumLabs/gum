@@ -170,6 +170,14 @@ function divide(arr, scalar) {
     return arr.map(x => x/scalar);
 }
 
+function addition(arr, scalar) {
+    return arr.map(x => x + scalar);
+}
+
+function subtract(arr, scalar) {
+    return arr.map(x => x - scalar);
+}
+
 function cumsum(arr, first) {
     let sum = 0;
     let ret = arr.map(x => sum += x);
@@ -208,6 +216,12 @@ function enumerate(x) {
 
 function repeat(x, n) {
     return Array(n).fill(x);
+}
+
+function padvec(vec, len, val) {
+    if (vec.length >= len) return vec;
+    let m = len - vec.length;
+    return [...vec, ...repeat(val, m)];
 }
 
 function meshgrid(x, y) {
@@ -1191,29 +1205,48 @@ class HStack extends Stack {
     }
 }
 
+/* grid layout and aspect computation (grok)
+\log(\mu) = \frac{1}{M N} \sum_{i=1}^M \sum_{j=1}^N \log a_{ij}
+\log(u)_j = \frac{1}{M} \sum_{i=1}^M \log a_{ij} - \log(\mu)
+\log(v)_i = \log(\mu) - \frac{1}{N} \sum_{j=1}^N \log a_{ij}
+w_j = \frac{u_j}{\sum_{k=1}^N u_k}
+h_i = \frac{v_i}{\sum_{k=1}^M v_k}
+\log(a) = \log(\mu) - \frac{1}{N} \sum_{j=1}^N \log(w_j) + \frac{1}{M} \sum_{i=1}^M \log(h_i)
+*/
+
 class Grid extends Container {
     constructor(children, args) {
-        let {rows, cols, widths, heights, spacing, ...attr} = args ?? {};
+        let {rows, cols, widths, heights, spacing, aspect, ...attr} = args ?? {};
         spacing = ensure_vector(spacing ?? 0, 2);
         rows = rows ?? children.length;
         cols = cols ?? max(...children.map(row => row.length));
 
         // fill in missing rows and columns
         let spacer = new Spacer();
-        let filler = range(cols).map(i => spacer);
-        children = children.map(row => range(cols).map(i => i < row.length ? row[i] : spacer));
-        children = range(rows).map(i => i < children.length ? children[i] : filler);
+        let filler = repeat(spacer, cols);
+        children = children.map(row => padvec(row, cols, spacer));
+        children = padvec(children, rows, filler);
 
         // aggregate aspect ratios along rows and columns (assuming null goes to 1)
         let aspect_grid = children.map(row => row.map(e => e.aspect ?? 1));
-        widths = normalize(widths ?? zip(...aspect_grid).map(mean));
-        heights = normalize(heights ?? aspect_grid.map(row => mean(row.map(a => 1/a))));
+        let log_aspect = aspect_grid.map(row => row.map(log));
+
+        // these are exact for equipartitioned grids (row or column)
+        let log_mu = mean(log_aspect.map(row => mean(row)));
+        let log_uj = zip(...log_aspect).map(mean).map(x => x - log_mu);
+        let log_vi = log_aspect.map(mean).map(x => log_mu - x);
+
+        // implement findings
+        widths = widths ?? normalize(log_uj.map(exp));
+        heights = heights ?? normalize(log_vi.map(exp));
+        let aspect0 = exp(log_mu - mean(widths.map(log)) + mean(heights.map(log)));
 
         // adjust widths and heights to account for spacing
         let [spacex, spacey] = spacing;
         let [scalex, scaley] = [1 - spacex * (cols-1), 1 - spacey * (rows-1)];
         widths = widths.map(w => scalex * w);
         heights = heights.map(h => scaley * h);
+        aspect = (1-spacey*(rows-1))/(1-spacex*(cols-1)) * aspect0;
 
         // get top left positions
         let lpos = cumsum(widths.map(w => w + spacex));
@@ -1223,7 +1256,8 @@ class Grid extends Container {
 
         // make grid
         let grid = meshgrid(rbox, cbox).map(([[y0, y1], [x0, x1]]) => [x0, y0, x1, y1]);
-        super(zip(children.flat(), grid), attr);
+        let attr1 = {aspect: aspect ?? aspect0, ...attr};
+        super(zip(children.flat(), grid), attr1);
     }
 }
 
