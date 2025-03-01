@@ -18,5 +18,6 @@ Keyword arguments:
 
 - `font_family` = `'IBMPlexSans'`: the font family (for display and size calculations)
 - `font_weight` = `100`: the font weight (for display and size calculations)
+- `color` = `black` = sets the text color using both stroke and fill (this is the usual way)
 - `offset` = `[0.0, -0.13]`: offset of the text relative to its bounding box
 - `scale` = `1`: size of the box relative to its bounding box

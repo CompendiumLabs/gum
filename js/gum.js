@@ -1019,7 +1019,7 @@ class Frame extends Container {
     constructor(child, args) {
         let {
             padding, margin, border, aspect, adjust, flex, rotate, invar, align,
-            shrink, shape, rounded, ...attr0
+            shrink, shape, rounded, stroke, fill, ...attr0
         } = args ?? {};
         let [border_attr, attr] = prefix_split(['border'], attr0);
         border = border ?? 0;
@@ -1056,7 +1056,7 @@ class Frame extends Container {
         aspect = flex ? null : (aspect ?? tasp);
 
         // make border box
-        let rargs = {stroke_width: border, ...border_attr};
+        let rargs = {stroke_width: border, stroke, fill, ...border_attr};
         let rect = shape(rargs);
 
         // gather children
@@ -1932,10 +1932,11 @@ function escape_xml(text) {
 
 class Text extends Element {
     constructor(text, args) {
-        let {font_family, font_weight, offset, scale, ...attr0} = args ?? {};
+        let {font_family, font_weight, offset, scale, color, ...attr0} = args ?? {};
         let [calc_args, attr] = prefix_split(['calc'], attr0);
         offset = offset ?? [0, -0.13];
         scale = scale ?? 1;
+        color = color ?? 'black';
 
         // compute text box
         let fargs = {family: font_family, weight: font_weight, ...calc_args};
@@ -1947,7 +1948,7 @@ class Text extends Element {
         let aspect = width0/height0;
 
         // pass to element
-        let attr1 = {aspect, font_family, font_weight, fill: 'black', ...attr};
+        let attr1 = {aspect, font_family, font_weight, stroke: color, fill: color, ...attr};
         super('text', false, attr1);
 
         // store metrics
