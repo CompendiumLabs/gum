@@ -1,7 +1,7 @@
 // A plot of an inverted sine wave where the line markers are sized in proportion to the amplitude and the color ranges from blue to red depending on the phase. The x-axis ticks are labeled with multiples of π. The x-axis is labeled "phase" and the y-axis is labeled "amplitude". The title is "Inverted Sine Wave".
 let xlim = [0, 2*pi], ylim = [-1, 1];
 let func = x => -sin(x);
-let pal = x => interpolateHex(blue, red, x);
+let pal = x => interpolate_hex(blue, red, x);
 let xticks = linspace(0, 2, 6).slice(1).map(x => [x*pi, `${rounder(x, 1)} π`]);
 let line = SymPath({fy: func, xlim});
 let points = SymPoints({

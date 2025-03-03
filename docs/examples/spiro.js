@@ -13,7 +13,7 @@ let paths = range(1, 6).map(i => {
         fx, fy,
         tlim: [0, 20*pi],
         N: 1000,
-        stroke: interpolateHex(blue, red, i/5),
+        stroke: interpolate_hex(blue, red, i/5),
         stroke_width: 1.5,
         stroke_opacity: 0.7,
     });

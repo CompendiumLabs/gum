@@ -1,7 +1,7 @@
 // set parameters
 let xlim = [-2, 2]; let ylim = [-1.5, 1.5];
 let wave = (x, th) => exp(-2*x*x) * sin(2*pi*(x-th));
-let pal = x => interpolateHex(red, blue, 4*x*(1-x));
+let pal = x => interpolate_hex(red, blue, 4*x*(1-x));
 
 // make waves
 let paths = linspace(0, 1, 7).map(th =>

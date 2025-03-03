@@ -8,7 +8,7 @@ let smov = (x, k) => {
     let t = pow(x, k)/(pow(x, k) + pow(1-x, k));
     return 3*pow(t, 2) - 2*pow(t, 3);
 }
-let pall = i => interpolateHex(red, blue, i/(n-1));
+let pall = i => interpolate_hex(red, blue, i/(n-1));
 let paths = range(1, n+1).map((k, i) =>
     SymPath({fy: x => smov(x, k), xlim, stroke: pall(i), stroke_width: 1.2})
 );

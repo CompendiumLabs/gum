@@ -99,7 +99,7 @@ function enumerate(x: any[]): any[];
 function repeat(x: any, n: number): any[];
 function meshgrid(x: number[], y: number[]): number[][];
 function lingrid(xlim: range, ylim: range, N: number): number[][];
-function interpolateHex(c1: string, c2: string, alpha: number): string;
+function interpolate_hex(c1: string, c2: string, alpha: number): string;
 ```
 
 Next are the constructors used to create the various types of `Element` objects that can be used in the library. For convenience, one does not have to use the `new` keyword, you can simply call them as functions, but they are functions that return the specified object of the same name. The two most important types of elements are `Element`, which represents a single element and `Group`, which represents a container that can hold multiple elements. All other elements are derived from one or both of these.

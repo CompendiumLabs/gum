@@ -18,7 +18,7 @@ let quads = linspace(...xlim, N).map(x0 => {
     let y0 = sin(x0);
     return SymPath({
         fy: x => clamp(y0 - a*(x - x0)**2, ylim), opacity: 0.85,
-        xlim, stroke: interpolateHex(blue, red, rescale(x0, xlim))
+        xlim, stroke: interpolate_hex(blue, red, rescale(x0, xlim))
     });
 });
 
@@ -50,7 +50,7 @@ let freqs = linspace(...flim_log, 40).map(exp);
 let xlim = [0, 2*pi]; let ylim = [-1, 1];
 
 // Define colors for each wave
-let palette = f => interpolateHex(red, blue, rescale(f, flim));
+let palette = f => interpolate_hex(red, blue, rescale(f, flim));
 
 // Create sine waves
 let waves = freqs.map(f => {
@@ -177,7 +177,7 @@ Prompt: Create a spiral using dots that transition from red in the center to blu
 // Set up spiral
 let tlim = [-15*pi, 15*pi];
 let frad = t => 0.9 * (2/pi) * atan(exp(0.1*t));
-let fpal = t => interpolateHex(red, blue, frad(t));
+let fpal = t => interpolate_hex(red, blue, frad(t));
 let fx = t => frad(t) * cos(t);
 let fy = t => frad(t) * sin(t);
 let fs = (x, y, t) => Dot({color: fpal(t)});
@@ -205,7 +205,7 @@ let freqs = linspace(...flim_log, 9).map(exp);
 
 // Create plots
 let plots = freqs.map(f => {
-  let color = interpolateHex(red, blue, rescale(f, flim));
+  let color = interpolate_hex(red, blue, rescale(f, flim));
   let path = SymPath({fy: x => sin(f*x), xlim: [0, 2*pi], stroke: color});
   let plot = Graph(path, {padding: 0.15, flex: true});
   let frame = Frame(plot, {border: 1});
@@ -281,7 +281,7 @@ let x = t => (R - r) * cos(t) + a * cos((R - r) * t / r);
 let y = t => (R - r) * sin(t) - a * sin((R - r) * t / r);
 
 // Color oscillation function
-let color = t => interpolateHex(red, blue, rescale(sin(t/numRotations), [-1, 1]));
+let color = t => interpolate_hex(red, blue, rescale(sin(t/numRotations), [-1, 1]));
 let shape = (x, y, t) => Circle({fill: color(t)});
 
 // Create the spirograph with oscillating color markers

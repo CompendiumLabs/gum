@@ -39,7 +39,7 @@ return frame;
 // define parameters
 let xlim = [0, 2*pi]; let ylim = [-1, 1];
 let decay = x => exp(-0.1*x) * sin(x);
-let pal = th => interpolateHex(red, blue, abs(th-180)/180);
+let pal = th => interpolate_hex(red, blue, abs(th-180)/180);
 // make individual blades
 let wave = th => SymFill({fy1: decay, fy2: 0, xlim, fill: pal(th), opacity: 0.5});
 let graph = th => Graph(wave(th), {aspect: phi, xlim, ylim});

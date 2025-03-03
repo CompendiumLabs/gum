@@ -82,7 +82,7 @@ let quads = linspace(...xlim, N).map(x0 => {
     let y0 = sin(x0);
     return SymPath({
         fy: x => clamp(y0 - a*(x - x0)**2, ylim), opacity: 0.85,
-        xlim, stroke: interpolateHex(blue, red, rescale(x0, xlim))
+        xlim, stroke: interpolate_hex(blue, red, rescale(x0, xlim))
     });
 });
 

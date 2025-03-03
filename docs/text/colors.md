@@ -13,4 +13,4 @@ There are a few functions designed to manipulate colors in HEX, RGB, and HSL for
 - `hex2rgb(hex)` — convert a HEX color string to an RGB array
 - `rgb2hex(rgb)` — convert an RGB array to a HEX color string
 - `rgb2hsl(rgb)` — convert an RGB array to an HSL array
-- `interpolateHex(hex1, hex2, alpha)` — interpolate between two HEX colors with weight `alpha` and return the result in RGB format. This is useful for creating continuous color palettes.
+- `interpolate_hex(hex1, hex2, alpha)` — interpolate between two HEX colors with weight `alpha` and return the result in RGB format. This is useful for creating continuous color palettes.

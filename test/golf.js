@@ -349,7 +349,7 @@ return f;
 // fancy plot
 let xlim = [0, 2*pi], ylim = [-1, 1];
 let func = x => -sin(x);
-let pal = x => interpolateHex('#1e88e5', '#ff0d57', x);
+let pal = x => interpolate_hex('#1e88e5', '#ff0d57', x);
 let xticks = linspace(0, 2, 6).slice(1).map(x => [x*pi, `${rounder(x, 1)} π`]);
 let line = SymPath({fy: func, xlim});
 let points = SymPoints({

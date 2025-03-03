@@ -227,7 +227,7 @@ spng.addEventListener('click', evt => {
         downloadFile('output.png', data);
     }).catch(err => {
         console.log(err);
-    }); 
+    });
 });
 
 /*
@@ -238,7 +238,7 @@ spng.addEventListener('click', evt => {
 let example0 = `
 // fancy plot
 let xlim = [0, 2*pi], ylim = [-1, 1];
-let pal = x => interpolateHex('#1e88e5', '#ff0d57', x);
+let pal = x => interpolate_hex('#1e88e5', '#ff0d57', x);
 let xt = linspace(0, 2, 6).slice(1).map(x => [x*pi, \`\${rounder(x, 1)} π\`]);
 let f = SymPath({fy: x => -sin(x), xlim});
 let s = SymPoints({
@@ -249,7 +249,7 @@ let s = SymPoints({
 let p = Plot([f, s], {
   xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_pos: 'both',
   xticks: xt, yticks: 5, ygrid: true, xlabel_offset: 0.1,
-  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave' 
+  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave'
 });
 return Frame(p, {margin: 0.25});
 `.trim();

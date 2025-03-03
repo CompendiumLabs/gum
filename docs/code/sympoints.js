@@ -1,7 +1,7 @@
 // Various simple shapes spiraling inwards. The shapes have black borders and semi-transparent fills. They are tinted blue at the outside and red towards the inside. They are framed by a circle with a black border and a gray background.
 let freq = 38*pi;
 let shapes = [Circle, Square, Triangle];
-let pal = t => interpolateHex(red, blue, t/freq);
+let pal = t => interpolate_hex(red, blue, t/freq);
 let fshape = i => shapes[i % shapes.length];
 let rshape = (t, i) => Rotate(fshape(i)({fill: pal(t), opacity: 0.7}), t);
 let spiral = SymPoints({
