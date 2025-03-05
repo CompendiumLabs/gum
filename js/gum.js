@@ -41,7 +41,7 @@ let svg_props_base = {
 };
 
 // canvas text sizer
-function canvasTextSizer(ctx, text, args) {
+function canvas_text_sizer(ctx, text, args) {
     let {family, weight, size, actual} = args ?? {};
     family = family ?? font_family_base;
     weight = weight ?? font_weight_base;
@@ -68,12 +68,12 @@ function canvasTextSizer(ctx, text, args) {
 }
 
 // try for browser environment
-let textSizer = null;
+let text_sizer = null;
 try {
     let canvas = document.createElement('canvas');
     let ctx = canvas.getContext('2d');
-    textSizer = function(text, args) {
-        return canvasTextSizer(ctx, text, args);
+    text_sizer = function(text, args) {
+        return canvas_text_sizer(ctx, text, args);
     }
 } catch (error) {
     // console.log(error);
@@ -339,6 +339,8 @@ let floor = Math.floor;
 let ceil = Math.ceil;
 let round = Math.round;
 let atan = Math.atan;
+let isNan = Number.isNaN;
+let isInf = x => !Number.isFinite(x);
 
 // null on empty
 function min(...vals) {
@@ -678,12 +680,23 @@ function align_frac(align) {
     }
 }
 
+function rect_remap(rect, frac) {
+    let [x1, y1, x2, y2] = rect;
+    let [w, h] = [x2 - x1, y2 - y1];
+    let [fx1, fy1, fx2, fy2] = frac;
+    return [
+        x1 + fx1*w, y1 + fy1*h,
+        x1 + fx2*w, y1 + fy2*h
+    ];
+}
+
 class Context {
     constructor(prect, args) {
-        let {coord, rrect, trans, prec, debug} = args ?? {};
+        let {coord, submap, rrect, trans, prec, debug} = args ?? {};
         this.prect = prect;
         this.rrect = rrect;
         this.coord = coord;
+        this.submap = submap;
         this.trans = trans;
         this.prec = prec;
         this.debug = debug ?? false;
@@ -723,10 +736,10 @@ class Context {
     }
 
     // NOTE: this is the main mapping function! be very careful when changing it!
-    // implement placement logic: map from placement specification to pixel rectangle (prect)
+    // implement placement logic: map from coordinate rect (rect) to pixel rect (prect)
     // also outputs coordinate system (coord), rotation rect (rrect), and transform string (trans)
     map(args) {
-        let {rect, aspect, rotate, expand, invar, align, pivot, coord} = args ?? {};
+        let {rect, aspect, rotate, expand, invar, align, pivot, coord, submap} = args ?? {};
         rect = rect ?? coord_base;
         rotate = rotate ?? 0;
         expand = expand ?? false;
@@ -754,27 +767,24 @@ class Context {
         let [pw0, ph0] = [px2 - px1, py2 - py1];
 
         // embedded rectangle aspect
-        let asp0 = pw0/ph0; // pixel rect
-        let rasp = aspect ?? asp0; // mimic outer if null
+        let asp0 = pw0/ph0 ?? 1; // pixel rect (zero size is 1)
+        let asgn = asp0 == 0 ? (ph0 >= 0 ? 1 : -1) : sign(asp0)
+        let rasp = (aspect != null) ? asgn * aspect : asp0; // mimic outer if inner is null, but always match outer sign
         let asp1 = rotate_aspect_radians(rasp, theta);
 
         // shrink down if aspect mismatch
-        let wide = asp1 > asp0;
+        let wide = abs(asp1) > abs(asp0);
         let [hexpand, vexpand] = ensure_vector(expand, 2);
         let [tw, th] = [cos(theta)+sin(theta)/rasp, rasp*sin(theta)+cos(theta)];
         let [rw0, rh0] = [pw0/tw, ph0/th];
         let [pw1, ph1] = ((wide & hexpand) | (!wide & !vexpand)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
         let [rw1, rh1] = [pw1*tw, ph1*th];
 
-        // get absolute sizes
-        let [apw1, aph1] = [abs(pw1), abs(ph1)];
-        let [arw1, arh1] = [abs(rw1), abs(rh1)];
-
         // get rotated/unrotated pixel rect
         let cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
         let cy = (1-valign)*py1 + valign*py2 + (0.5-valign)*rh1;
-        let prect = [cx-0.5*apw1, cy-0.5*aph1, cx+0.5*apw1, cy+0.5*aph1];
-        let rrect = invar ? prect : [cx-0.5*arw1, cy-0.5*arh1, cx+0.5*arw1, cy+0.5*arh1];
+        let prect = [cx-0.5*pw1, cy-0.5*ph1, cx+0.5*pw1, cy+0.5*ph1];
+        let rrect = invar ? prect : [cx-0.5*rw1, cy-0.5*rh1, cx+0.5*rw1, cy+0.5*rh1];
 
         // get transform string
         let vx = (1-hpivot)*px1 + hpivot*px2;
@@ -782,7 +792,11 @@ class Context {
         let [sx, sy] = [vx, vy].map(z => rounder(z, this.prec));
         let trans = (rotate != 0) ? `rotate(${rounder(rotate, this.prec)} ${rounder(sx, this.prec)} ${rounder(sy, this.prec)})` : null;
 
-        return new Context(prect, {coord, rrect, trans, prec: this.prec, debug: this.debug});
+        // remap subcoords
+        if (this.submap != null) coord = rect_remap(coord ?? coord_base, this.submap);
+
+        // return new context
+        return new Context(prect, {coord, submap, rrect, trans, prec: this.prec, debug: this.debug});
     }
 }
 
@@ -869,9 +883,8 @@ function match_rect_sign(coord1, coord2) {
 
 class Container extends Element {
     constructor(children, args) {
-        let {tag, aspect, coord, inherit, clip, debug, ...attr} = args ?? {};
+        let {tag, aspect, coord, clip, debug, ...attr} = args ?? {};
         tag = tag ?? 'g';
-        inherit = inherit ?? false;
         clip = clip ?? true;
         debug = debug ?? false;
 
@@ -889,7 +902,7 @@ class Container extends Element {
         let bounds = (children.length > 0) ?
             merge_rects(...children.map(([c, a]) => a.rect)) : null;
 
-        // inherit aspect of clipped contents
+        // infer aspect of clipped contents
         if (aspect == null && clip) {
             let ctx = new Context(coord_base);
             let rects = children
@@ -907,7 +920,6 @@ class Container extends Element {
         this.children = children;
         this.coord = coord;
         this.bounds = bounds;
-        this.inherit = inherit;
         this.debug = debug;
     }
 
@@ -917,23 +929,17 @@ class Container extends Element {
             return '\n';
         }
 
-        // inherit coordinate from parent
-        // this is necessary because context mapping nullifies inverted coordinates
-        // and always produces an upright pixel rectangle on output
-        let coord1 = (this.inherit && ctx.coord != null) ?
-            match_rect_sign(this.coord ?? coord_base, ctx.coord ?? coord_base) :
-            this.coord;
-
         // map to new contexts and render
+        let cargs = {coord: this.coord};
         let inside = this.children.map(([c, a]) => c.svg(
-            ctx.map({aspect: c.aspect, coord: coord1, ...a})
+            ctx.map({aspect: c.aspect, ...cargs, ...a})
         )).filter(s => s.length > 0).join('\n');
 
         // debug rects
         if (this.debug || ctx.debug) {
             let dstr = this.children.map(([c, a]) => {
-                let ctx1 = ctx.map({aspect: c.aspect, coord: this.coord, ...a});
-                let ctx2 = ctx.map({coord: this.coord, ...a});
+                let ctx1 = ctx.map({aspect: c.aspect, ...cargs, ...a});
+                let ctx2 = ctx.map({...cargs, ...a});
                 let rect1 = new Rect({stroke: 'red'});
                 let rect2 = new Rect({stroke_dasharray: 4, stroke: 'blue'});
                 return `${rect1.svg(ctx1)}\n${rect2.svg(ctx2)}`;
@@ -1284,6 +1290,28 @@ class Rotate extends Container {
         let spec = [child, {rotate, expand, invar, align, pivot}];
         let attr1 = {clip: true, ...attr};
         super([spec], attr1);
+    }
+}
+
+class Flip extends Container {
+    constructor(direc, child, args) {
+        direc = get_orient(direc);
+        let rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1];
+        let spec = [child, rect];
+        let attr1 = {clip: true, ...args};
+        super([spec], attr1);
+    }
+}
+
+class VFlip extends Flip {
+    constructor(child, args) {
+        super('v', child, args);
+    }
+}
+
+class HFlip extends Flip {
+    constructor(child, args) {
+        super('h', child, args);
     }
 }
 
@@ -1924,15 +1952,15 @@ function escape_xml(text) {
 
 class Text extends Element {
     constructor(text, args) {
-        let {font_family, font_weight, offset, scale, color, ...attr0} = args ?? {};
+        let {font_family, font_weight, color, scale, offset, ...attr0} = args ?? {};
         let [calc_args, attr] = prefix_split(['calc'], attr0);
-        offset = offset ?? [0, -0.13];
-        scale = scale ?? 1;
         color = color ?? 'black';
+        scale = scale ?? 1;
+        offset = offset ?? [0, -0.13];
 
         // compute text box
         let fargs = {family: font_family, weight: font_weight, ...calc_args};
-        let [xoff0, yoff0, width0, height0] = textSizer(text, fargs);
+        let [xoff0, yoff0, width0, height0] = text_sizer(text, fargs);
 
         // get position and size
         let offset1 = add([xoff0/height0, yoff0/height0], offset);
@@ -1944,21 +1972,28 @@ class Text extends Element {
         super('text', false, attr1);
 
         // store metrics
+        this.scale = scale;
         this.offset = offset1;
         this.size = size;
-        this.scale = scale;
         this.text = escape_xml(text);
     }
 
+    // because text will always be displayed upright,
+    // we need to find the ordered bounds of the text
+    // and then offset it by the given offset
     props(ctx) {
-        // get pixel position
-        let [x, y0] = ctx.coord_to_pixel(this.offset);
+        // get ordered bounds
+        let [xa, ya] = ctx.coord_to_pixel([0, 0]);
+        let [xb, yb] = ctx.coord_to_pixel([1, 1]);
+        let [x0, y0] = [Math.min(xa, xb), Math.min(ya, yb)];
+
+        // get display position
+        let [xoff, yoff] = ctx.coord_to_pixel_size(this.offset);
         let [w0, h0] = ctx.coord_to_pixel_size(this.size);
+        let [w, h] = [w0 * this.scale, h0 * this.scale];
+        let [x, y] = [x0 + xoff, y0 + yoff + h];
 
         // get adjusted size
-        let h = this.scale*h0;
-        let y = y0 + h;
-
         let base = {x, y, font_size: `${h}px`};
         return {...base, ...this.attr};
     }
@@ -2047,10 +2082,18 @@ class Latex extends Element {
     }
 
     props(ctx) {
-        // get pixel position
-        let [x, y] = ctx.coord_to_pixel(this.offset);
-        let [w, h] = ctx.coord_to_pixel_size([this.scale, this.scale]);
+        // get ordered bounds
+        let [xa, ya] = ctx.coord_to_pixel([0, 0]);
+        let [xb, yb] = ctx.coord_to_pixel([1, 1]);
+        let [x0, y0] = [Math.min(xa, xb), Math.min(ya, yb)];
 
+        // get display position
+        let [xoff, yoff] = ctx.coord_to_pixel_size(this.offset);
+        let [w0, h0] = ctx.coord_to_pixel_size([1, 1]);
+        let [w, h] = [w0 * this.scale, h0 * this.scale];
+        let [x, y] = [x0 + xoff, y0 + yoff];
+
+        // get adjusted size
         let base = {x, y, width: w, height: h, font_size: `${h}px`};
         return {...base, ...this.attr};
     }
@@ -2639,7 +2682,7 @@ class Edge extends ArrowPath {
         let grad2 = multiply(vec_direction(direc2), -1);
 
         // pass to arrowpath
-        let attr1 = {direc_beg: grad1, direc_end: grad2, inherit: true, ...attr};
+        let attr1 = {direc_beg: grad1, direc_end: grad2, ...attr};
         super(anchor1, anchor2, attr1);
     }
 }
@@ -2770,7 +2813,7 @@ function make_ticklabel(s, prec, attr) {
 }
 
 function ensure_tick(t, prec) {
-    prec = prec ?? 3;
+    prec = prec ?? 2;
     if (is_scalar(t)) {
         return [t, make_ticklabel(t, prec)];
     } else if (is_array(t) && t.length == 2) {
@@ -3055,33 +3098,27 @@ function outer_limits(elems, padding) {
 
 class Graph extends Container {
     constructor(elems, args) {
-        let {xlim, ylim, coord, aspect, flex, ...attr} = args ?? {};
+        let {coord, aspect, padding, flex, flip, ...attr} = args ?? {};
+        padding = padding ?? 0;
         flex = flex ?? false;
-        aspect = flex ? null : (aspect ?? 'auto');
+        flip = flip ?? true;
 
         // handle singleton line
-        if (is_element(elems)) {
-            elems = [elems];
-        }
+        if (is_element(elems)) elems = [elems];
 
         // determine coordinate limits
-        if (coord == null) {
-            let [xmin, ymin, xmax, ymax] = outer_limits(elems);
-            [xmin, xmax] = xlim ?? [xmin, xmax];
-            [ymin, ymax] = ylim ?? [ymin, ymax];
-            coord = [xmin, ymin, xmax, ymax];
-        }
-
-        // invert coordinate limits
-        let [xmin, ymin, xmax, ymax] = coord;
-        coord = [xmin, ymax, xmax, ymin];
+        let [xmin, ymin, xmax, ymax] = coord ?? outer_limits(elems, padding);
+        if (flip) [ymin, ymax] = [ymax, ymin];
+        coord = [xmin, ymin, xmax, ymax];
 
         // get automatic aspect
-        aspect = (aspect == 'auto') ? rect_aspect(coord) : aspect;
+        if (!flex && aspect == null) aspect = rect_aspect(coord);
 
         // pass to container
+        let submap = [0, 1, 1, 0];
+        let elem1 = elems.map(e => [e, {submap}]);
         let attr1 = {aspect, coord, ...attr};
-        super(elems, attr1);
+        super(elem1, attr1);
     }
 }
 
@@ -3411,7 +3448,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3556,5 +3593,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
+    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
 };
