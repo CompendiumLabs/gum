@@ -501,7 +501,7 @@ function rect_center(rect) {
 
 function rect_aspect(rect) {
     let [w, h] = rect_dims(rect);
-    return w/h;
+    return abs(w/h);
 }
 
 function aspect_invariant(value, aspect, alpha) {
@@ -3115,8 +3115,8 @@ class Graph extends Container {
         if (!flex && aspect == null) aspect = rect_aspect(coord);
 
         // pass to container
-        let submap = [0, 1, 1, 0];
-        let elem1 = elems.map(e => [e, {submap}]);
+        let eargs = {submap: [0, 1, 1, 0]};
+        let elem1 = elems.map(e => [e, eargs]);
         let attr1 = {aspect, coord, ...attr};
         super(elem1, attr1);
     }
@@ -3160,10 +3160,10 @@ class Plot extends Container {
         xlim = xlim ?? [xmin, xmax]; [xmin, xmax] = xlim;
         ylim = ylim ?? [ymin, ymax]; [ymin, ymax] = ylim;
         let coord = [xmin, ymin, xmax, ymax];
-        let [xrange, yrange] = [xmax - xmin, ymax - ymin];
 
         // ensure consistent apparent tick size
-        aspect = (aspect == 'auto') ? xrange/yrange : aspect;
+        let [xrange, yrange] = [xmax - xmin, ymax - ymin];
+        aspect = (aspect == 'auto') ? abs(xrange/yrange) : aspect;
         let [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
         [xtick_size, ytick_size] = [yrange * xtick_size, xrange * ytick_size];
 
