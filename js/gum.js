@@ -2140,7 +2140,7 @@ class TextFrame extends Frame {
 
 class TitleFrame extends Frame {
     constructor(child, title, attr) {
-        let {title_size, title_fill, title_offset, title_rounded, title_border, adjust, padding, margin, border, ...attr0} = attr ?? {};
+        let {title_size, title_fill, title_offset, title_rounded, title_border, adjust, padding, margin, border, aspect, ...attr0} = attr ?? {};
         let [title_attr0, frame_attr0] = prefix_split(['title'], attr0);
         title_size = title_size ?? 0.075;
         title_fill = title_fill ?? 'white';
@@ -2166,12 +2166,15 @@ class TitleFrame extends Frame {
         let frame_attr = {margin, border, ...frame_attr0};
         let title_attr = {fill: title_fill, border: title_border, rounded: title_rounded, ...title_attr0};
 
-        // place label at top
+        // make title box
         let base = title_offset * title_size;
         let text = new TextFrame(title, title_attr);
         let place = new Place(text, {pos: [0.5, base], rad: [null, title_size], expand: true});
+
+        // make outer frame
         let frame = new Frame(child, {padding});
-        let group = new Group([frame, place], {clip: false, aspect: frame.aspect});
+        let aspect1 = aspect ?? frame.aspect;
+        let group = new Group([frame, place], {clip: false, aspect: aspect1});
 
         // apply margin only frame
         super(group, frame_attr);
@@ -3593,5 +3596,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
+    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 };
