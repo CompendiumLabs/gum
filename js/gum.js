@@ -2694,16 +2694,22 @@ class Edge extends ArrowPath {
  ** bar components
  **/
 
-class Bar extends Container {
-    constructor(args) {
-        let {color, shape, ...attr} = args ?? {};
+class Bar extends Place {
+    constructor(direc, pos, height, args) {
+        let {shape, width, zero, ...attr} = args ?? {};
         shape = shape ?? (a => new Rect(a));
+        width = width ?? 0.5;
+        zero = zero ?? 0;
 
-        // make shape
-        let child = shape({stroke: color, fill: color, ...attr});
+        // get standardized direction
+        direc = get_orient(direc);
+        let rect = (direc == 'v') ?
+            [pos-width/2, zero, pos+width/2, height] :
+            [zero, pos-width/2, height, pos+width/2];
 
         // call constructor
-        super([child]);
+        let child = shape(attr);
+        super(child, {rect});
     }
 }
 
