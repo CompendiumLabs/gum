@@ -1315,20 +1315,21 @@ class HFlip extends Flip {
     }
 }
 
+let anchor_rect = {
+    'left': [0, 0, 0, 1], 'right': [1, 0, 1, 1],
+    'top': [0, 0, 1, 0], 'bottom': [0, 1, 1, 1]
+};
 class Anchor extends Container {
-    constructor(child, args) {
-        let {aspect, align, ...attr} = args ?? {};
-        aspect = aspect ?? 1;
-        align = align ?? 'left';
+    constructor(child, side, args) {
+        let {align, ...attr} = args ?? {};
 
-        let rmap = {
-            'left': [1, 0, 1, 1], 'right': [0, 0, 0, 1],
-            'top': [0, 0, 1, 0], 'bottom': [0, 1, 1, 1]
-        };
+        // get anchor rect
+        let rect = anchor_rect[side];
+        align = align ?? 1 - align_frac(side);
 
-        let falign = 1 - align_frac(align);
-        let spec = {rect: rmap[align], expand: true, align: falign};
-        super([[child, spec]], {aspect, clip: false, ...attr});
+        // pass to container
+        let spec = {rect, align, expand: true};
+        super([[child, spec]], {clip: false, ...attr});
     }
 }
 
@@ -1954,27 +1955,25 @@ function escape_xml(text) {
 
 class Text extends Element {
     constructor(text, args) {
-        let {font_family, font_weight, color, scale, offset, ...attr0} = args ?? {};
+        let {font_family, font_weight, font_size, color, offset, ...attr0} = args ?? {};
         let [calc_args, attr] = prefix_split(['calc'], attr0);
         color = color ?? 'black';
-        scale = scale ?? 1;
         offset = offset ?? [0, -0.13];
 
         // compute text box
-        let fargs = {family: font_family, weight: font_weight, ...calc_args};
+        let fargs = {family: font_family, weight: font_weight, size: font_size, ...calc_args};
         let [xoff0, yoff0, width0, height0] = text_sizer(text, fargs);
 
         // get position and size
         let offset1 = add([xoff0/height0, yoff0/height0], offset);
-        let size = [width0/height0, 1];
+        let size = [width0, height0];
         let aspect = width0/height0;
 
         // pass to element
-        let attr1 = {aspect, font_family, font_weight, stroke: color, fill: color, ...attr};
+        let attr1 = {aspect, font_family, font_weight, font_size, stroke: color, fill: color, ...attr};
         super('text', false, attr1);
 
         // store metrics
-        this.scale = scale;
         this.offset = offset1;
         this.size = size;
         this.text = escape_xml(text);
@@ -1988,12 +1987,21 @@ class Text extends Element {
         let [xa, ya] = ctx.coord_to_pixel([0, 0]);
         let [xb, yb] = ctx.coord_to_pixel([1, 1]);
         let [x0, y0] = [Math.min(xa, xb), Math.min(ya, yb)];
+        let [w0, h0] = [Math.abs(xb - xa), Math.abs(yb - ya)];
 
         // get display position
         let [xoff, yoff] = ctx.coord_to_pixel_size(this.offset);
-        let [w0, h0] = ctx.coord_to_pixel_size(this.size);
-        let [w, h] = [w0 * this.scale, h0 * this.scale];
-        let [x, y] = [x0 + xoff, y0 + yoff + h];
+        let [x, y] = [x0 + xoff, y0 + yoff + h0];
+
+        // get font size
+        let { font_size } = this.attr;
+        let h = font_size ?? h0;
+
+        // handle horizontal centering
+        if (font_size != null) {
+            let frac = font_size / h0;
+            x += w0 * (1 - frac) / 2;
+        }
 
         // get adjusted size
         let base = {x, y, font_size: `${h}px`};
@@ -2729,10 +2737,10 @@ class HMultiBar extends MultiBar {
 function make_bar(i, b, attr) {
     let {color, ...attr0} = attr ?? {};
     color = color ?? 'lightgray';
-    let [x, y, c] = is_scalar(b) ? [i, b] : b;
+    let [h, c] = is_scalar(b) ? [b, null] : b;
     let attr1 = {fill: color, ...attr0};
     c = c ?? new RoundedRect(attr1);
-    return [c, [x, y]];
+    return [c, [i, h]];
 }
 
 class Bars extends Container {
@@ -2759,7 +2767,7 @@ class Bars extends Container {
  **/
 
 function make_ticklabel(s, prec, attr) {
-    let attr1 = {border: 0, padding: 0, text_vshift: -0.13, ...attr};
+    let attr1 = {border: 0, padding: 0, ...attr};
     let text = rounder(s, prec);
     let node = new TextFrame(text, attr1);
     return node;
@@ -2806,6 +2814,14 @@ class HScale extends Scale {
     }
 }
 
+function invert_align(align) {
+    return align == 'left' ? 'right' :
+           align == 'right' ? 'left' :
+           align == 'bottom' ? 'top' :
+           align == 'top' ? 'bottom' :
+           align;
+}
+
 // this is used by axis with the main coordinates defined
 // label elements must have an aspect to properly size them
 class Labels extends Container {
@@ -2813,11 +2829,14 @@ class Labels extends Container {
         let {align, prec, ...attr} = args ?? {};
         direc = get_orient(direc);
         ticks = ticks.map(x => ensure_tick(x, prec));
-        align = align ?? 'left';
+        align = align ?? 'center';
 
         // anchor vertical ticks to unit-aspect boxes
         if (direc == 'v') {
-            ticks = ticks.map(([t, c]) => [t, new Anchor(c, {align})]);
+            let talign = invert_align(align);
+            ticks = ticks.map(([t, c]) =>
+                [t, new Anchor(c, talign, {aspect: 1, align: talign})]
+            );
         }
 
         // place tick boxes using expanded lines
