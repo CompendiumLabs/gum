@@ -3164,16 +3164,16 @@ class Plot extends Container {
 
         // automatic grid path
         if (grid === true || xgrid === true) {
-            xgrid = (xaxis != null) ? xaxis.ticks.map(([x, t]) => x) : null;
+            let xgridvals = (xaxis != null) ? xaxis.ticks.map(([x, t]) => x) : null;
+            xgrid = new HMesh(xgridvals, {lim: ylim, ...xgrid_attr});
+        } else {
+            xgrid = null;
         }
         if (grid === true || ygrid === true) {
-            ygrid = (yaxis != null) ? yaxis.ticks.map(([y, t]) => y) : null;
-        }
-        if (is_array(xgrid)) {
-            xgrid = new HMesh(xgrid, {lim: ylim, ...xgrid_attr});
-        }
-        if (is_array(ygrid)) {
-            ygrid = new VMesh(ygrid, {lim: xlim, ...ygrid_attr});
+            let ygridvals = (yaxis != null) ? yaxis.ticks.map(([y, t]) => y) : null;
+            ygrid = new VMesh(ygridvals, {lim: xlim, ...ygrid_attr});
+        } else {
+            ygrid = null;
         }
 
         // create graph from core elements
