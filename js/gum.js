@@ -1113,7 +1113,9 @@ class Stack extends Container {
 
         // get aspects and adjust for direction
         let aspects = elements.map(c => c.aspect);
-        let hasa = any(aspects.map(a => a != null));
+        let hasa = any(zip(heights, aspects).map(
+            ([h, a]) => a != null && h != null
+        )) || all(aspects.map(a => a != null));
         if (direc == 'h') {
             aspects = aspects.map(a => (a != null) ? 1/a : null);
         }
