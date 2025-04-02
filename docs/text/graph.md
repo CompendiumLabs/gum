@@ -10,4 +10,5 @@ Positional arguments:
 Keyword arguments:
 - `xlim`/`ylim` = `[0, 1]` — the range over which to graph
 - `padding` = `0` — limit padding to add when auto-detected from `elems`
+- `flex` = `false` — if true, aspect is set to `null` rather than inferred from limits
 - `coord` — the coordinate system to use for the graph (overrides `xlim`/`ylim`)

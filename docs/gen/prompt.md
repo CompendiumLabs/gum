@@ -32,7 +32,7 @@ Prompt: Create a red circle in the center of the canvas that spans half its widt
 
 Generated code:
 ```javascript
-return Circle({rad: 0.25, fill: "red", stroke_width: 5});
+return Circle({rad: 0.25, fill: 'red', stroke_width: 5});
 ```
 
 **Example 2**
@@ -52,7 +52,7 @@ return Frame(plot, {margin: 0.2});
 
 # Interface Definitions
 
-This is a description of the types, functions, and constructors used in the `gum.js` library using TypeScript style annotations.
+This is a description of the types, functions, and constructors used in the `gum.js` library using TypeScript style annotations. Any arguments passed in `args` objects are optional unless specified otherwise.
 
 Below are the type aliases used throughout the library.
 ```typescript
@@ -61,8 +61,9 @@ type size = number | number[2];
 type range = number[2];
 type rect = number[4];
 type frame = number | number[2] | rect;
-type spec = {pos?: point, rad?: size, rect?: rect, expand?: boolean, align?: string, rotate?: number, pivot?: string | number | number[2], invar?: boolean};
+type spec = {pos: point, rad: size, rect: rect, expand: boolean, align: string, rotate: number, pivot: string | number | number[2], invar: boolean};
 type child = Element | [Element, rect | spec];
+type stack = Element | [Element, number];
 type valign = 'top' | 'bottom' | 'center' | number;
 type halign = 'left' | 'right' | 'center' | number;
 type aspect = number | 'auto';
@@ -71,11 +72,12 @@ type label = string | Element;
 type ticks = number | number[] | [number, label][];
 type grid = number | number[];
 type bars = [string, number | Bar][];
-type edge_pos = point | [point, string];
+type edge_pos = Node | [Node, string];
 type node = [string, string, point] | [string, string, point, size];
 type edge = [string, string];
 type func1d = (x: number) => number;
-type path_spec = {fx: func1d, fy: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number, size: size};
+type path_spec = {fx: func1d, fy: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number};
+type fill_spec = {fx1: func1d, fx2: func1d, fy1: func1d, fy2: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number};
 type sizefunc = (x: number, y: number, t: number, i: number) => size;
 type shapefunc = (x: number, y: number, t: number, i: number) => Element;
 ```
@@ -106,31 +108,31 @@ Next are the constructors used to create the various types of `Element` objects 
 ```typescript
 function Element(tag: string, unary: boolean, args?: {aspect: number}): Element;
 function Container(children: child[], args?: {tag: string, clip: boolean, inherit: boolean, coord: rect}): Container;
-function Frame(child: Element, args?: {padding: frame, margin: frame, border: number, adjust: boolean, flex: boolean, shape: Element}): Frame;
-function Stack(direc: string, children: child[], args?: {expand: boolean, align: align, spacing: number, aspect: aspect, debug: boolean}): Stack;
-function Grid(children: child[][], args?: {rows: number, cols: number, widths: number[], heights: number[], spacing: size}): Grid;
+function Frame(child: Element, args?: {padding: frame, margin: frame, border: number, rounded: size, adjust: boolean, flex: boolean, shape: Element}): Frame;
+function Stack(direc: string, children: stack[], args?: {expand: boolean, align: align, spacing: number, aspect: aspect, debug: boolean}): Stack;
+function Grid(children: Element[][], args?: {rows: number, cols: number, widths: number[], heights: number[], spacing: size}): Grid;
 function Place(child: Element, args?: spec): Place;
 function Points(children: child[], args?: {size: size, shape: Element}): Points;
-function Rect(args?: {pos: point, rad: size, rounded: number | number[2]}): Rect;
+function Rect(args?: {pos: point, rad: size, rounded: size}): Rect;
 function Circle(args?: {pos: point, rad: size}): Circle;
 function Line(p1: point, p2: point): Line;
 function UnitLine(direc: string, pos: number, args?: {lim: range}): UnitLine;
 function Polyline(points: point[]): Polyline;
 function SymPath(args?: path_spec): SymPath;
-function SymPoints(args?: {...path_spec, shape: Element, fr: sizefunc, fs: shapefunc}): SymPoints;
-function SymFill(args?: {...path_spec, fill: string, stroke: string, stroke_width: number}): SymFill;
-function SymPoly(args?: {...path_spec, fill: string, stroke: string, stroke_width: number}): SymPoly;
+function SymFill(args?: path_spec): SymFill;
+function SymPoly(args?: path_spec): SymPoly;
+function SymPoints(args?: {...path_spec, size: size, shape: Element, fr: sizefunc, fs: shapefunc}): SymPoints;
 function Axis(dirc: string, ticks: ticks, args?: {label_size: number, lim: range, tick_pos: string}): Axis;
-function Graph(elems: Element[], args?: {xlim: range, ylim: range, padding: frame}): Graph;
-function Plot(elems: Element[], args?: {xlim: range, ylim: range, xanchor: number, yanchor: number, xticks: ticks, yticks: ticks, xgrid: grid, ygrid: grid, xlabel: label, ylabel: label, title: label}): Plot;
-function BarPlot(bars: bars, args?: {direc: string, shrink: number, color: string}): BarPlot;
-function Text(text: string, args?: {font_family: string, font_weight: number, offset: size, scale: number}): Text;
+function Graph(elems: Element[], args?: {xlim: range, ylim: range, padding: frame, flex: boolean, coord: rect}): Graph;
+function Plot(elems: Element[], args?: {xlim: range, ylim: range, xanchor: number, yanchor: number, xticks: ticks, yticks: ticks, grid: boolean, xgrid: boolean, ygrid: boolean, xlabel: label, ylabel: label, title: label}): Plot;
+function BarPlot(bars: bars, args?: {direc: string, padding: number}): BarPlot;
+function Text(text: string, args?: {font_family: string, font_weight: number, font_size: number, color: string, offset: size}): Text;
 function MultiText(texts: label | label[], args?: {spacing: number}): MultiText;
 function Emoji(name: string): Emoji;
 function Latex(text: string): Latex;
 function Note(text: string, args?: {pos: point, rad: size, latex: boolean}): Note;
 function TextFrame(text: label | label[] | Element, args?: {latex: boolean, emoji: boolean}): TextFrame;
-function TitleFrame(child: Element, title: label, args?: {title_size: number, title_fill: string, title_offset: number, title_rounded: size, adjust: boolean}): TitleFrame;
+function TitleFrame(child: Element, title: label, args?: {title_size: number, title_fill: string, title_offset: number, title_border: number, title_rounded: size, adjust: boolean}): TitleFrame;
 function Node(text: string, pos: point, args?: {size: size}): Node;
 function Edge(beg: edge_pos, end: edge_pos, args?: {arrow: boolean, arrow_beg: boolean, arrow_end: boolean, arrow_size: number}): Edge;
 ```

@@ -2,7 +2,7 @@
 
 <span class="inherit">[Container](#Container)</span>
 
-The `Grid` element creates a container that arranges its children in a grid. The grid is specified by the number of rows and columns, and the gap between the cells.
+The `Grid` element creates a container that arranges its children in a grid. The grid is specified by the number of rows and columns, and the gap between the cells. In the case where `widths` and `heights` are not specified, a reasonable effort is made to best accomodate the grid elements based on their aspects (if specified).
 
 Positional arguments:
 - `children`: An array of arrays of child elements to arrange in the grid.

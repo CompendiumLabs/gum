@@ -1356,7 +1356,6 @@ class Attach extends Container {
 class Points extends Container {
     constructor(points, args) {
         let {size, shape, stroke, fill, stroke_width, ...attr} = args ?? {};
-        fill = fill ?? 'black';
         shape = shape ?? new Dot({stroke, fill, stroke_width});
         size = size ?? 0.01;
 
@@ -1538,9 +1537,10 @@ class Circle extends Ellipse {
 
 class Dot extends Circle {
     constructor(args) {
-        let {color, rad, ...attr} = args ?? {};
-        color = color ?? 'black';
-        super({stroke: color, fill: color, rad, ...attr});
+        let {stroke, fill, rad, ...attr} = args ?? {};
+        stroke = stroke ?? 'black';
+        fill = fill ?? 'black';
+        super({stroke, fill, rad, ...attr});
     }
 }
 

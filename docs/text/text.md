@@ -8,7 +8,7 @@ There are a number of related elements that can handle different types of text:
 - `MultiText` can handle multiple lines of text that are passed in as an array
 - `TextFrame` can handle text with a border and background a la `Frame`
 - `Emoji` is specialized for the display of emoji characters
-- `Math` is specialized for the display of LaTeX expressions
+- `Latex` is specialized for the display of LaTeX expressions
 
 Positional arguments:
 
@@ -18,6 +18,6 @@ Keyword arguments:
 
 - `font_family` = `'IBMPlexSans'`: the font family (for display and size calculations)
 - `font_weight` = `100`: the font weight (for display and size calculations)
+- `font_size` = `null`: only set this to hard-code a specific font size
 - `color` = `black` = sets the text color using both stroke and fill (this is the usual way)
 - `offset` = `[0.0, -0.13]`: offset of the text relative to its bounding box
-- `scale` = `1`: size of the box relative to its bounding box

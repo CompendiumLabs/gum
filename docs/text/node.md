@@ -9,7 +9,7 @@ Positional arguments:
 - `pos` — the position to place the node
 
 Keyword arguments:
-- `size` — the size of the node box
+- `size` = `0.1` — the size of the node box
 
 Subunit names:
 - `text` — keywords to pass to an auto-generated `Text` object or objects

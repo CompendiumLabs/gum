@@ -5,7 +5,7 @@
 This creates a cubic spline path from one point to another with optional arrowheads at either or both ends. It is named `Edge` because of its usage in network diagrams. The emenation directions are automatically inferred from the relative point positions but can be overriden as well.
 
 Positional arguments:
-- `beg`/`end` — the beginning and ending points for the path and where the optional arrowheads are placed, or a `[point, direc]` pair where `direc` specifies the emanation direction
+- `beg`/`end` — the beginning and ending `Node`s for the path and where the optional arrowheads are placed, or a `[node, direc]` pair where `direc` specifies the emanation direction
 
 Keyword arguments:
 - `arrow`/`arrow_beg`/`arrow_end` = `false` — toggles whether the respective arrowheads are included

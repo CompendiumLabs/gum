@@ -2,10 +2,10 @@
 
 <span class="inherit">[Container](#Container) > [Element](#Element)</span>
 
-Place copies of a common shape at various points. The radius can be specified by the `radius` keyword and overridden for particular children.
+Place copies of a common shape at various points. The radius can be specified by the `size` keyword and overridden for particular children.
 
 Positional arguments:
-- `points` — a list of `[child, position]` pairs, where `position` can be either an `[x,y]` pair or a `[x,y,r]`/`[x,y,rx,ry]` list to override the `radius`
+- `points` — a list of `[child, position]` pairs, where `position` can be either an `[x,y]` pair or a `[x,y,r]`/`[x,y,rx,ry]` list to override the default `size`
 
 Keyword arguments:
 - `size` = `0.01` — the default radius to use for children
