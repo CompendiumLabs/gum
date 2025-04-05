@@ -593,9 +593,9 @@ function props_repr(d, prec) {
 
 // Converts a #ffffff hex string into an [r,g,b] array
 function hex2rgb(hex) {
-    let result1 = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    let result1 = /^#?([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})$/i.exec(hex);
     if (result1) return result1.slice(1).map(c => parseInt(c, 16));
-    let result2 = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(hex);
+    let result2 = /^#?([a-fA-F\d])([a-fA-F\d])([a-fA-F\d])$/i.exec(hex);
     if (result2) return result2.slice(1).map(c => parseInt(`${c}${c}`, 16));
     return null;
 }
