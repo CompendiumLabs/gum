@@ -593,8 +593,11 @@ function props_repr(d, prec) {
 
 // Converts a #ffffff hex string into an [r,g,b] array
 function hex2rgb(hex) {
-    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? result.slice(1).map(c => parseInt(c, 16)) : null;
+    let result1 = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (result1) return result1.slice(1).map(c => parseInt(c, 16));
+    let result2 = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(hex);
+    if (result2) return result2.slice(1).map(c => parseInt(`${c}${c}`, 16));
+    return null;
 }
 
 function rgb2hex(rgb) {
@@ -2126,23 +2129,11 @@ class TextFrame extends Frame {
         emoji = emoji ?? false;
 
         // generate core elements
-        let child;
-        if (is_string(text)) {
-            if (emoji) {
-                child = new Emoji(text, text_attr);
-            } else if (latex) {
-                child = new Latex(text, text_attr);
-            } else if (is_array(text)) {
-                child = new MultiText(text, text_attr);
-            } else {
-                child = new Text(text, text_attr);
-            }
-        } else if (is_array(text)) {
-            let lines = text.map(s => is_string(s) ? new Text(s, text_attr) : s);
-            child = new VStack(lines, {expand: false, align, spacing});
-        } else {
-            child = text;
-        }
+        let TextElement = latex ? Latex : emoji ? Emoji : Text;
+        let maker = s => is_string(s) ? new TextElement(s, text_attr) : s;
+        let child = is_array(text) ?
+            new VStack(text.map(maker), {expand: false, align, spacing}) :
+            maker(text);
 
         // pass to container
         let attr1 = {padding, border, align, ...attr};
