@@ -1,11 +1,12 @@
-// A gray line spiraling clockwise inward in a triangular path. The background is nearly black with rounded corners.
-let spiral = SymPath({
-  fx: t => 0.43 + 0.5*exp(-0.05*t)*cos(t),
-  fy: t => 0.48 + 0.5*exp(-0.05*t)*sin(t),
-  tlim: [0, 1000], N: 500, stroke: '#BBB'
+// plot two lines: (1) a sine wave in red; (2) the same sine wave with a lower amplitude higher frequency sine wave added on top
+let xlim = [0, 2*pi];
+let line1 = SymPath({
+    fy: sin, xlim, stroke: red, stroke_width: 2
 });
-let frame = Frame(spiral, {
-  padding: 0.05, border: 1, margin: 0.05,
-  border_rounded: 0.02, border_fill: '#111'
+let line2 = SymPath({
+    fy: x => sin(x) + 0.2*sin(5*x), xlim, stroke: blue, stroke_width: 2
 });
-return frame;
+let plot = Plot([line1, line2], {
+    aspect: phi, grid: true, ylim: [-1.5, 1.5]
+});
+return Frame(plot, {margin: 0.2});

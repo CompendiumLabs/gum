@@ -76,8 +76,14 @@ type edge_pos = Node | [Node, string];
 type node = [string, string, point] | [string, string, point, size];
 type edge = [string, string];
 type func1d = (x: number) => number;
-type path_spec = {fx: func1d, fy: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number};
-type fill_spec = {fx1: func1d, fx2: func1d, fy1: func1d, fy2: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number};
+type ypath_spec = {fy: func1d, xlim: range, xvals?: number[], N?: number}
+type xpath_spec = {fx: func1d, ylim: range, yvals?: number[], N?: number}
+type tpath_spec = {fx: func1d, fy: func1d, tlim: range, tvals?: number[], N?: number}
+type path_spec = ypath_spec | xpath_spec | tpath_spec;
+type yfill_spec = {fy1: func1d, fy2: func1d, xlim: range, xvals?: number[], N?: number};
+type xfill_spec = {fx1: func1d, fx2: func1d, ylim: range, yvals?: number[], N?: number};
+type tfill_spec = {fx1: func1d, fx2: func1d, fy1: func1d, fy2: func1d, tlim: range, tvals?: number[], N?: number};
+type fill_spec = yfill_spec | xfill_spec | tfill_spec;
 type sizefunc = (x: number, y: number, t: number, i: number) => size;
 type shapefunc = (x: number, y: number, t: number, i: number) => Element;
 ```
@@ -119,8 +125,8 @@ function Line(p1: point, p2: point): Line;
 function UnitLine(direc: string, pos: number, args?: {lim: range}): UnitLine;
 function Polyline(points: point[]): Polyline;
 function SymPath(args?: path_spec): SymPath;
-function SymFill(args?: path_spec): SymFill;
 function SymPoly(args?: path_spec): SymPoly;
+function SymFill(args?: fill_spec): SymFill;
 function SymPoints(args?: {...path_spec, size: size, shape: Element, fr: sizefunc, fs: shapefunc}): SymPoints;
 function Axis(dirc: string, ticks: ticks, args?: {label_size: number, lim: range, tick_pos: string}): Axis;
 function Graph(elems: Element[], args?: {xlim: range, ylim: range, padding: frame, flex: boolean, coord: rect}): Graph;
