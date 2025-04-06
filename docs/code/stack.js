@@ -1,6 +1,8 @@
 // one large donut in a frame stacked on top of two smaller side-by-side framed donuts
-let d = TextFrame('🍩');
-let h = HStack([d, d]);
-let v = VStack([d, h]);
-let f = Frame(v, {margin: 0.1});
-return f;
+
+const d = new TextFrame('🍩');
+const h = new HStack([d, d]);
+const v = new VStack([d, h]);
+return new Frame(v, {
+  margin: 0.1,
+});

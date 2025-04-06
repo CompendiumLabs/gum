@@ -1,5 +1,6 @@
 import { GumEditor, enableResize } from './editor.js'
 import { renderGumSafe } from './gum.js';
+
 // global elements
 let code = document.querySelector('#code');
 let disp = document.querySelector('#disp');
@@ -50,11 +51,21 @@ function parseEntry(name0, type) {
     return item;
 }
 
+// intercept to log errors
+function renderEntry(code) {
+    try {
+        return renderGumSafe(code);
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
 // resize panels
 enableResize(left, right, mid);
 
 // make the actual editor
-let gum_editor = new GumEditor(code, null, disp, renderGumSafe, {stat});
+let gum_editor = new GumEditor(code, null, disp, renderEntry, {stat});
 
 // get docs data
 let meta = await getData('docs/meta.json', true);

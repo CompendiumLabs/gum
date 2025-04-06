@@ -3421,33 +3421,13 @@ function detect(g) {
     }
 }
 
-// make functional interface
-function mapper(g) {
-    let t = detect(g);
-    if (t == 'class') {
-        let func = function(...args) {
-            return new g(...args);
-        };
-        func.class = g;
-        return func;
-    } else if (t == 'function') {
-        return function(...args) {
-            return g(...args);
-        }
-    } else {
-        return g;
-    }
-}
-
 // main parser entry
 let gums0 = Gum.map(g => g.name);
-let mako0 = Gum.map(mapper);
 function parseGum(src, extra) {
     extra = extra ?? [];
     let gums1 = extra.map(g => g.name);
-    let mako1 = extra.map(mapper);
     let gums = [...gums0, ...gums1];
-    let mako = [...mako0, ...mako1];
+    let mako = [...Gum, ...extra];
     let expr = new Function(gums, src);
     return expr(...mako);
 }
@@ -3553,5 +3533,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
+    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 };
