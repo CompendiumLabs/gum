@@ -26,7 +26,7 @@ Because the returned code will be seen and modified by a user, it is best to mak
 
 With all of this in mind, your task is: given a description or requirement, generate JavaScript code that uses `gum.js` to create the desired figure. Below are some examples of user prompts and code output.
 
-**Example 1**
+**Example 1: Basic Circle**
 
 Prompt: Create a red circle in the center of the canvas that spans half its width. The circle should have a black outline that is 5 pixels wide.
 
@@ -35,11 +35,11 @@ Generated code:
 return new Circle({
   rad: 0.25,
   fill: blue,
-  stroke_width: 5
+  stroke_width: 5,
 });
 ```
 
-**Example 2**
+**Example 2: Symbolic Plot**
 
 Prompt: Create a simple plot of a sine wave titled "Sine Wave". Make the grid dashed and use trigonometric axis ticks.
 
@@ -49,7 +49,7 @@ const xlim = [0, 2*pi];
 const ylim = [-1, 1];
 const sine_wave = new SymPath({
   fy: sin,
-  xlim
+  xlim,
 });
 const xticks = [
   [0, '0'],
@@ -67,7 +67,7 @@ const plot = new Plot(sine_wave, {
   title: 'Sine Wave',
 });
 return new Frame(plot, {
-  margin: 0.2
+  margin: 0.2,
 });
 ```
 

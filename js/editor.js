@@ -1,5 +1,3 @@
-import { parseGum, renderElem } from './gum.js';
-
 // readonly config compartment
 const editableCompartment = new cm.Compartment;
 const readOnlyCompartment = new cm.Compartment;
