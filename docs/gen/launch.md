@@ -52,29 +52,100 @@ Note that in this case, we added three lines of context at the top and only one 
 Suppose we are creating arrangements of shapes:
 
 ```javascript
+const circle = new Circle();
+const square = new Square();
+const triangle = new Triangle({aspect: 1});
+const hstack = new HStack([
+  circle,
+  square,
+  triangle,
+], {
+  spacing: 0.1,
+});
+return new Frame(hstack, {
+  border: 1,
+  padding: 0.1,
+  margin: 0.1,
+});
 ```
 
 And the user has requested changes using the following query:
 
-QUERY:
+QUERY: Repeat this arrangement twice vertically.
 
 Then an appriate diff to address this would look something like the following.
 
 ```diff
+@@ ... @@
+-return new Frame(hstack, {
+-  border: 1,
+-  padding: 0.1,
+-  margin: 0.1,
+-});
++const frame = new Frame(hstack, {
++  border: 1,
++  padding: 0.1,
++});
++const vstack = new VStack([
++  frame,
++  frame,
++], {
++  spacing: 0.1,
++});
++return new Frame(vstack, {
++  padding: 0.1,
++});
 ```
 
-**Diff Example 3: Modifying Elements**
+Notice that this diff is a bit more verbose than it strictly needs to be. However, we are erring on the side of contiguous diffs, so some of the arguments to the original `Frame` are removed then added back in for simplicity. Also, see how we removed the `margin` on the original `Frame` and replaced it with `spacing` on the outer `VStack`.
 
-Now suppose that we are creating an arrangement of emoji:
+**Diff Example 3: Multiple Chunks**
+
+Now suppose that we are dealing with a bar plot:
 
 ```javascript
+const popul = [
+  ['X', 2],
+  ['Y', 8],
+  ['Z', 4],
+];
+const bars = new BarPlot(popul, {
+  ylim: [0, 10],
+  yticks: 6,
+  xlabel: 'Country',
+  ylabel: 'Population',
+});
+return new Frame(bars, {
+  margin: 0.3,
+});
 ```
 
 The user has then requested changes with the following query:
 
-QUERY: 
+QUERY: Make the bar for country Y red. Add horizontal grid lines
 
-Here we can again make the changes using a slightly more complicated diff.
+We can again make the changes using a slightly more complicated diff.
 
 ```diff
+@@ .. @@
+-const popul = [
+-  ['X', 2],
+-  ['Y', 8],
+-  ['Z', 4],
+-];
++const rbar = new Rect({
++  fill: red,
++});
++const popul = [
++  ['X', 2],
++  ['Y', [8, rbar]],
++  ['Z', 4],
++];
+@@ .. @@
+   xlabel: 'Country',
+   ylabel: 'Population',
++  ygrid: true,
+ });
 ```
+
+In this case, we have an example in which the two edits are sufficiently far apart that it makes sense to split it into two chunks.
