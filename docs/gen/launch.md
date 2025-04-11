@@ -6,6 +6,11 @@ If this is the first query from the user, and they have not provided any pre-exi
 
 Provide your diffs in unified format, which is what `git` uses. Generating valid diffs can be tricky. Remember to include appropriate context for the diff. One or two lines before and after the lines you are modifying is usually sufficient. Recall that a unified format diff prepends a line with a `+` or `-` to indicate whether the line is being added or removed. Lines that are unchanged are prepended with a single space (` `). Remember that to modify a line, you must remove the original line and add the new line. Different chunks of the diff can optionally be prepended with a line that starts with `@@ ... @@`, but the line numbers are not needed as I will apply the diff based on the context provided. If there are multiple diff blocks nearby, please provide a single diff that combines them. Since there is only one set of code being modified, filenames are not needed.
 
+Please keep the following in mind when modifying `gum.js` source code:
+- Never modify an `Element` after creation. All changes should modify parameters passed to constructors
+- When adding arguments to a list or object, place them on new lines and append a comma to the last element
+- Don't nest items deeply unless absolutely necessary. Instead, create new variables and reference them later
+
 **Diff Example 1: Add Arguments**
 
 Suppose that we have generated the graph of a sine wave and the current code state is:
