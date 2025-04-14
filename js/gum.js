@@ -290,6 +290,10 @@ function is_string(x) {
     return typeof(x) == 'string';
 }
 
+function is_number(x) {
+    return typeof(x) == 'number';
+}
+
 function is_object(x) {
     return typeof(x) == 'object';
 }
@@ -1951,11 +1955,12 @@ class Merge extends MetaContainer {
  **/
 
 function escape_xml(text) {
-    return text.replace(/&/g, '&amp;')
-               .replace(/</g, '&lt;')
-               .replace(/>/g, '&gt;')
-               .replace(/"/g, '&quot;')
-               .replace(/'/g, '&apos;');
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
 }
 
 class Text extends Element {
@@ -2130,7 +2135,7 @@ class TextFrame extends Frame {
 
         // generate core elements
         let TextElement = latex ? Latex : emoji ? Emoji : Text;
-        let maker = s => is_string(s) ? new TextElement(s, text_attr) : s;
+        let maker = s => is_string(s) || is_number(s) ? new TextElement(s, text_attr) : s;
         let child = is_array(text) ?
             new VStack(text.map(maker), {expand: false, align, spacing}) :
             maker(text);
