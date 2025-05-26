@@ -2230,6 +2230,30 @@ class DataFill extends Polygon {
 // fields
 //
 
+class Arrowhead extends Polyline {
+    constructor({ direc, size = 0.5, angle = 90, base = false, ...attr } = {}) {
+        // get size and angle offsets
+        const [sx, sy] = ensure_vector(size, 2);
+        const [dx1, dy1] = [cos(d2r*(-direc-angle/2)), sin(d2r*(-direc-angle/2))];
+        const [dx2, dy2] = [cos(d2r*(-direc+angle/2)), sin(d2r*(-direc+angle/2))];
+
+        // generate arrowhead polygon
+        const points = [
+            [0.5 - sx * dx1, 0.5 - sy * dy1],
+            [0.5, 0.5],
+            [0.5 - sx * dx2, 0.5 - sy * dy2]
+        ];
+
+        // make base if requested
+        if (base) {
+            points.push(points[0]);
+        }
+
+        // pass to group for rotate
+        super({ points, ...attr });
+    }
+}
+
 class Arrow extends Group {
     constructor({ direc, pos = [0.5, 0.5], head = 0.3, tail = 2.0, shape = 'arrow', graph = true, ...attr0 } = {}) {
         const [head_attr, tail_attr, attr] = prefix_split(['head', 'tail'], attr0);
@@ -2238,7 +2262,7 @@ class Arrow extends Group {
         if (shape == 'circle') {
             shape = (_, a) => new Dot(a);
         } else if (shape == 'arrow') {
-            shape = (t, a) => new Arrowhead(t, a);
+            shape = (t, a) => new Arrowhead({ theta: t, ...a });
         } else {
             throw new Error(`Unrecognized arrow shape: ${shape}`);
         }
@@ -2294,17 +2318,17 @@ class SymField extends Field {
 //
 
 function get_center(elem) {
-    let [xmin, ymin, xmax, ymax] = elem.bounds;
-    let [xmid, ymid] = [0.5 * (xmin + xmax), 0.5 * (ymin + ymax)];
+    const [xmin, ymin, xmax, ymax] = elem.bounds;
+    const [xmid, ymid] = [0.5 * (xmin + xmax), 0.5 * (ymin + ymax)];
     return [xmid, ymid];
 }
 
 function get_direction(p1, p2) {
-    let [x1, y1] = p1;
-    let [x2, y2] = p2;
+    const [x1, y1] = p1;
+    const [x2, y2] = p2;
 
-    let [dx, dy] = [x2 - x1, y2 - y1];
-    let [ax, ay] = [abs(dx), abs(dy)];
+    const [dx, dy] = [x2 - x1, y2 - y1];
+    const [ax, ay] = [abs(dx), abs(dy)];
 
     if (dy <= -ax) {
         return 'n';
@@ -2318,8 +2342,8 @@ function get_direction(p1, p2) {
 }
 
 function get_anchor(elem, direc) {
-    let [xmin, ymin, xmax, ymax] = elem.bounds;
-    let [xmid, ymid] = get_center(elem);
+    const [xmin, ymin, xmax, ymax] = elem.bounds;
+    const [xmid, ymid] = get_center(elem);
 
     if (direc == 'n') {
         return [xmid, ymin];
@@ -2362,37 +2386,8 @@ function vec_direction(direc) {
     }
 }
 
-class Arrowhead extends Polyline {
-    constructor(direc, args) {
-        let {size, angle, base, ...attr} = args ?? {};
-        size = size ?? 0.5;
-        angle = angle ?? 90;
-        base = base ?? false;
-
-        // get size and angle offsets
-        let [sx, sy] = ensure_vector(size, 2);
-        let [dx1, dy1] = [cos(d2r*(-direc-angle/2)), sin(d2r*(-direc-angle/2))];
-        let [dx2, dy2] = [cos(d2r*(-direc+angle/2)), sin(d2r*(-direc+angle/2))];
-
-        // generate arrowhead polygon
-        let points = [
-            [0.5 - sx * dx1, 0.5 - sy * dy1],
-            [0.5, 0.5],
-            [0.5 - sx * dx2, 0.5 - sy * dy2]
-        ];
-
-        // make base if requested
-        if (base) {
-            points.push(points[0]);
-        }
-
-        // pass to group for rotate
-        super(points, attr);
-    }
-}
-
 function cubic_spline(x0, x1, d0, d1) {
-    let [a, b, c, d] = [
+    const [a, b, c, d] = [
         x0, d0,
         3*(x1 - x0) - (2*d0 + d1),
         -2*(x1 - x0) + (d0 + d1),
@@ -2401,21 +2396,20 @@ function cubic_spline(x0, x1, d0, d1) {
 }
 
 class CubicSpline extends SymPath {
-    constructor(pos0, pos1, direc0, direc1, args) {
-        let attr = args ?? {};
-        let [x0, y0] = pos0;
-        let [x1, y1] = pos1;
-        let [dx0, dy0] = direc0;
-        let [dx1, dy1] = direc1;
-        let fx = cubic_spline(x0, x1, dx0, dx1);
-        let fy = cubic_spline(y0, y1, dy0, dy1);
-        super({fx, fy, ...attr});
+    constructor({ pos0, pos1, direc0, direc1, ...attr } = {}) {
+        const [x0, y0] = pos0;
+        const [x1, y1] = pos1;
+        const [dx0, dy0] = direc0;
+        const [dx1, dy1] = direc1;
+        const fx = cubic_spline(x0, x1, dx0, dx1);
+        const fy = cubic_spline(y0, y1, dy0, dy1);
+        super({ fx, fy, ...attr });
     }
 }
 
 function unit_direc(direc) {
     if (is_scalar(direc)) {
-        let radians = d2r*direc;
+        const radians = d2r*direc;
         return [cos(radians), sin(radians)];
     } else {
         return normalize(direc, 2);
@@ -2427,31 +2421,29 @@ function vector_angle(vector) {
 }
 
 class ArrowPath extends Group {
-    constructor(pos_beg, pos_end, args) {
-        let {direc_beg, direc_end, arrow, arrow_beg, arrow_end, arrow_size, ...attr0} = args ?? {};
-        let [path_attr, arrow_beg_attr, arrow_end_attr, arrow_attr, attr] = prefix_split(
+    constructor({ pos_beg, pos_end, direc_beg, direc_end, arrow, arrow_beg, arrow_end, arrow_size = 0.03, ...attr0 } = {}) {
+        const [path_attr, arrow_beg_attr, arrow_end_attr, arrow_attr, attr] = prefix_split(
             ['path', 'arrow_beg', 'arrow_end', 'arrow'], attr0
         );
         arrow_beg = arrow ?? arrow_beg ?? false;
         arrow_end = arrow ?? arrow_end ?? true;
-        arrow_size = arrow_size ?? 0.03;
 
         // accumulate arguments
         arrow_beg_attr = {...arrow_attr, ...arrow_beg_attr};
         arrow_end_attr = {...arrow_attr, ...arrow_end_attr};
 
         // set default directions (gets normalized later)
-        let direc = sub(pos_end, pos_beg);
+        const direc = sub(pos_end, pos_beg);
         direc_beg = direc_beg ?? direc;
         direc_end = direc_end ?? direc;
 
         // get unit vectors
-        let [vector_beg, vector_end] = [direc_beg, direc_end].map(unit_direc);
-        let [angle_beg, angle_end] = [vector_beg, vector_end].map(vector_angle);
+        const [vector_beg, vector_end] = [direc_beg, direc_end].map(unit_direc);
+        const [angle_beg, angle_end] = [vector_beg, vector_end].map(vector_angle);
 
         // create cubic spline path
-        let path = new CubicSpline(pos_beg, pos_end, vector_beg, vector_end, path_attr);
-        let children = [path];
+        const path = new CubicSpline({ pos0: pos_beg, pos1: pos_end, direc0: vector_beg, direc1: vector_end, ...path_attr });
+        const children = [path];
 
         // make arrowheads
         if (arrow_beg) {
@@ -2464,34 +2456,27 @@ class ArrowPath extends Group {
         }
 
         // pass to Group
-        super(children, attr);
+        super({ children, ...attr });
     }
 }
 
 // this should provide a rect for positioning
 class Node extends Place {
-    constructor(text, pos, args) {
-        let {size, ...attr0} = args ?? {};
-        let [text_attr, attr] = prefix_split(['text'], attr0);
-        size = size ?? 0.1;
+    constructor({ children: children0, pos, size = 0.1, ...attr0 } = {}) {
+        const [text_attr, attr] = prefix_split(['text'], attr0);
 
-        // handle text node
-        if (!is_element(text)) {
-            text = new MultiText(text, text_attr);
-        }
-
-        // make frame
-        let attr1 = {flex: true, padding: 0.1, border: 1, ...attr};
-        let frame = new Frame(text, attr1);
+        // make frame: handle text / element / list
+        const text = is_element(child) ? child : new MultiText({ children: child, ...text_attr });
+        const frame = new Frame({ children: text, flex: true, padding: 0.1, border: 1, ...attr });
 
         // get realized size
         if (is_scalar(size) && frame.aspect != null) {
             size = aspect_invariant(size, frame.aspect);
         }
-        let rect = rad_rect(pos, size);
+        const rect = rad_rect(pos, size);
 
         // pass to place
-        super(frame, {rect});
+        super({ children: frame, rect });
     }
 
     get_center() {
@@ -2504,27 +2489,26 @@ class Node extends Place {
 }
 
 class Edge extends ArrowPath {
-    constructor(beg, end, args) {
-        let attr = args ?? {};
+    constructor({ beg, end, ...attr0 } = {}) {
+        const [attr, attr0] = prefix_split(['arrow'], attr0);
 
         // unpack inputs
-        let [node1, direc1] = is_element(beg) ? [beg, null] : beg;
-        let [node2, direc2] = is_element(end) ? [end, null] : end;
+        const [node1, direc1] = is_element(beg) ? [beg, null] : beg;
+        const [node2, direc2] = is_element(end) ? [end, null] : end;
 
         // auto-detect directions
-        let [center1, center2] = [node1.get_center(), node2.get_center()];
+        const [center1, center2] = [node1.get_center(), node2.get_center()];
         direc1 = norm_direc(direc1 ?? get_direction(center1, center2));
         direc2 = norm_direc(direc2 ?? get_direction(center2, center1));
 
         // get anchors and directions
-        let anchor1 = node1.get_anchor(direc1);
-        let anchor2 = node2.get_anchor(direc2);
-        let grad1 = vec_direction(direc1);
-        let grad2 = multiply(vec_direction(direc2), -1);
+        const anchor1 = node1.get_anchor(direc1);
+        const anchor2 = node2.get_anchor(direc2);
+        const grad1 = vec_direction(direc1);
+        const grad2 = mul(vec_direction(direc2), -1);
 
         // pass to arrowpath
-        let attr1 = {direc_beg: grad1, direc_end: grad2, ...attr};
-        super(anchor1, anchor2, attr1);
+        super({ pos_beg: anchor1, pos_end: anchor2, direc_beg: grad1, direc_end: grad2, ...attr });
     }
 }
 
@@ -2533,32 +2517,32 @@ class Edge extends ArrowPath {
 //
 
 class MultiBar extends Stack {
-    constructor(direc, lengths, args) {
+    constructor({ direc, lengths, ...attr0 } = {}) {
         // get standardized direction
         direc = get_orient(direc);
         lengths = is_scalar(lengths) ? [lengths] : lengths;
 
         // handle lengths cases
-        let boxes = lengths.map(lc => is_scalar(lc) ? [lc, null] : lc);
-        let total = sum(boxes.map(([l, c]) => l));
+        const boxes = lengths.map(lc => is_scalar(lc) ? [lc, null] : lc);
 
         // make stacked bars
-        let children = boxes.map(([l, c]) => [new Rect({fill: c}), l/total]);
+        const total = sum(boxes.map(([l, c]) => l));
+        const children = boxes.map(([l, c]) => [new Rect({ fill: c }), l / total]);
 
         // pass to bar
-        super(children, args);
+        super({ children, ...attr0 });
     }
 }
 
 class VMultiBar extends MultiBar {
-    constructor(lengths, args) {
-        super('v', lengths, args);
+    constructor(attr) {
+        super({ direc: 'v', ...attr });
     }
 }
 
 class HMultiBar extends MultiBar {
-    constructor(lengths, args) {
-        super('h', lengths, args);
+    constructor(attr) {
+        super({ direc: 'h', ...attr });
     }
 }
 
@@ -2566,27 +2550,23 @@ function make_bar(i, b, attr) {
     let {color, ...attr0} = attr ?? {};
     color = color ?? 'lightgray';
     let [h, c] = is_scalar(b) ? [b, null] : b;
-    let attr1 = {fill: color, ...attr0};
-    c = c ?? new RoundedRect(attr1);
+    c = c ?? new RoundedRect({ fill: color, ...attr0 });
     return [c, [i, h]];
 }
 
 class Bars extends Group {
-    constructor(data, args) {
-        let {direc, width, zero, ...attr} = args ?? {};
-        direc = get_orient(direc ?? 'v');
-        width = width ?? 0.9;
-        zero = zero ?? 0;
+    constructor({ bars, direc = 'v', width = 0.9, zero = 0, ...attr } = {}) {
+        direc = get_orient(direc);
 
         // make individual bars
-        let [elems, poses] = zip(...data.map((b, i) => make_bar(i, b, attr)));
-        let rects = poses.map(([x, y]) =>
+        const [elems, poses] = zip(...bars.map((b, i) => make_bar(i, b, attr)));
+        const rects = poses.map(([x, y]) =>
             direc == 'v' ? [x-width/2, zero, x+width/2, y] : [zero, x-width/2, y, x+width/2]
         );
+        const children = zip(elems, rects);
 
         // pass to Group
-        let children = zip(elems, rects);
-        super(children);
+        super({ children });
     }
 }
 
@@ -2595,50 +2575,41 @@ class Bars extends Group {
 //
 
 function make_ticklabel(s, prec, attr) {
-    let attr1 = {border: 0, padding: 0, ...attr};
-    let text = rounder(s, prec);
-    let node = new TextFrame(text, attr1);
-    return node;
+    return new TextFrame({ children: rounder(s, prec), border: 0, padding: 0, ...attr });
 }
 
-function ensure_tick(t, prec) {
-    prec = prec ?? 2;
+function ensure_tick(t, prec = 2) {
     if (is_scalar(t)) {
         return [t, make_ticklabel(t, prec)];
     } else if (is_array(t) && t.length == 2) {
-        let [p, x] = t;
-        if (is_element(x)) {
-            return t;
-        } else {
-            return [p, make_ticklabel(x, prec)];
-        }
+        const [p, x] = t;
+        return is_element(x) ? t : [p, make_ticklabel(x, prec)];
     } else {
         throw new Error(`Error: tick must be value or [value,label] but got "${t}"`);
     }
 }
 
 class Scale extends Group {
-    constructor(direc, locs, args) {
-        let {lim, ...attr} = args ?? {};
+    constructor({ direc, locs, ...attr } = {}) {
         direc = get_orient(direc);
-        let tick_dir = (direc == 'v') ? 'h' : 'v';
-        let tick = new UnitLine(tick_dir, 0.5);
+        const tick_dir = direc == 'v' ? 'h' : 'v';
+        const tick = new UnitLine({ direc: tick_dir, pos: 0.5 });
         let [lo, hi] = lim;
-        let rect = t => (direc == 'v') ? [lo, t-0.5, hi, t+0.5] : [t-0.5, lo, t+0.5, hi];
-        let children = locs.map(t => [tick, rect(t)]);
-        super(children, attr);
+        const rect = t => direc == 'v' ? [lo, t-0.5, hi, t+0.5] : [t-0.5, lo, t+0.5, hi];
+        const children = locs.map(t => [tick, rect(t)]);
+        super({ children, ...attr });
     }
 }
 
 class VScale extends Scale {
-    constructor(ticks, args) {
-        super('v', ticks, args);
+    constructor(attr) {
+        super({ direc: 'v', ...attr });
     }
 }
 
 class HScale extends Scale {
-    constructor(ticks, args) {
-        super('h', ticks, args);
+    constructor(attr) {
+        super({ direc: 'h', ...attr });
     }
 }
 
@@ -2653,39 +2624,38 @@ function invert_align(align) {
 // this is used by axis with the main coordinates defined
 // label elements must have an aspect to properly size them
 class Labels extends Group {
-    constructor(direc, ticks, args) {
-        let {align, prec, ...attr} = args ?? {};
+    constructor({ direc, ticks, align = 'center', prec = 2, ...attr } = {}) {
         direc = get_orient(direc);
         ticks = ticks.map(x => ensure_tick(x, prec));
-        align = align ?? 'center';
 
         // anchor vertical ticks to unit-aspect boxes
         if (direc == 'v') {
-            let talign = invert_align(align);
+            const talign = invert_align(align);
             ticks = ticks.map(([t, c]) =>
-                [t, new Anchor(c, talign, {aspect: 1, align: talign})]
+                [t, new Anchor({ children: c, aspect: 1, align: talign })]
             );
         }
 
         // place tick boxes using expanded lines
-        let rect = t => (direc == 'v') ?
+        const rect = t => direc == 'v' ?
             {pos: [0.5, t], rad: [0.5, 0], expand: true} :
             {pos: [t, 0.5], rad: [0, 0.5], expand: true};
-        let children = ticks.map(([t, c]) => [c, rect(t)]);
+        const children = ticks.map(([t, c]) => [c, rect(t)]);
 
-        super(children, {clip: false, ...attr});
+        // pass to Group
+        super({ children, clip: false, ...attr });
     }
 }
 
 class HLabels extends Labels {
-    constructor(ticks, args) {
-        super('h', ticks, args);
+    constructor(attr) {
+        super({ direc: 'h', ...attr });
     }
 }
 
 class VLabels extends Labels {
-    constructor(ticks, args) {
-        super('v', ticks, args);
+    constructor(attr) {
+        super({ direc: 'v', ...attr });
     }
 }
 
@@ -2705,40 +2675,32 @@ function get_ticklim(lim) {
 
 // this is designed to be plotted directly
 class Axis extends Group {
-    constructor(direc, ticks, args) {
-        let {
-            pos, lim, tick_size, tick_pos, label_size, label_offset, label_pos, prec, ...attr0
-        } = args ?? {};
-        let [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0);
+    constructor({ direc, ticks, pos = 0.5, lim = limit_base, tick_size = tick_size_base, tick_pos = 'both', label_size = label_size_base, label_offset = tick_label_offset_base, label_pos = 'center', prec = 2, ...attr0 } = {}) {
+        const [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0);
         direc = get_orient(direc);
-        label_size = label_size ?? tick_label_size_base;
-        label_offset = label_offset ?? tick_label_offset_base;
-        tick_size = tick_size ?? tick_size_base;
-        pos = pos ?? 0.5;
-        lim = lim ?? limit_base;
 
         // get numerical tick limits
-        let tick_lim = get_ticklim(tick_pos);
-        let tick_half = 0.5*tick_size;
+        const tick_lim = get_ticklim(tick_pos);
+        const tick_half = 0.5*tick_size;
 
         // sort out label position
-        let label_pos0 = (direc == 'v') ? 'left' : 'bottom';
+        const label_pos0 = direc == 'v' ? 'left' : 'bottom';
         label_pos = label_pos ?? label_pos0;
-        let lab_size = label_size*tick_size;
-        let lab_off = label_offset*tick_size;
-        let lab_outer = label_pos == 'left' || label_pos == 'bottom';
-        let lab_base = lab_outer ? (-tick_half-lab_off-lab_size) : tick_half+lab_off;
+        const lab_size = label_size*tick_size;
+        const lab_off = label_offset*tick_size;
+        const lab_outer = label_pos == 'left' || label_pos == 'bottom';
+        const lab_base = lab_outer ? (-tick_half-lab_off-lab_size) : tick_half+lab_off;
 
         // extract tick information
-        let [lo, hi] = lim;
+        const [lo, hi] = lim;
         ticks = is_scalar(ticks) ? linspace(lo, hi, ticks) : ticks;
         ticks = ticks.map(t => ensure_tick(t, prec));
-        let locs = ticks.map(([t, x]) => t);
+        const locs = ticks.map(([t, x]) => t);
 
         // accumulate children
-        let cline = new UnitLine(direc, 0.5, {lim, ...line_attr});
-        let scale = new Scale(direc, locs, {lim: tick_lim, ...tick_attr});
-        let label = new Labels(direc, ticks, {align: label_pos, ...label_attr});
+        const cline = new UnitLine({ direc, pos: 0.5, lim, ...line_attr });
+        const scale = new Scale({ direc, locs, lim: tick_lim, ...tick_attr });
+        const label = new Labels({ direc, ticks, align: label_pos, ...label_attr });
 
         // position children (main direction has data coordinates)
         let lbox, sbox;
@@ -2751,144 +2713,131 @@ class Axis extends Group {
         }
 
         // pass to Group
-        let tcoord = (direc == 'v') ? [0, hi, 1, lo] : [lo, 1, hi, 0];
-        let children = [[cline, sbox], [scale, sbox], [label, lbox]];
-        super(children, {coord: tcoord, ...attr});
+        const tcoord = direc == 'v' ? [0, hi, 1, lo] : [lo, 1, hi, 0];
+        const children = [[cline, sbox], [scale, sbox], [label, lbox]];
+        super({ children, coord: tcoord, ...attr });
         this.ticks = ticks;
 
         // set limits
         if (direc == 'v') {
-            let [ylo, yhi] = lim;
+            const [ylo, yhi] = lim;
             this.bounds = [pos, ylo, pos, yhi];
         } else {
-            let [xlo, xhi] = lim;
+            const [xlo, xhi] = lim;
             this.bounds = [xlo, pos, xhi, pos];
         }
     }
 }
 
 class HAxis extends Axis {
-    constructor(ticks, args) {
-        super('h', ticks, args);
+    constructor(attr) {
+        super({ direc: 'h', ...attr });
     }
 }
 
 class VAxis extends Axis {
-    constructor(ticks, args) {
-        super('v', ticks, args);
+    constructor(attr) {
+        super({ direc: 'v', ...attr });
     }
 }
 
 class XLabel extends Attach {
-    constructor(text, attr) {
-        let {offset, size, align, ...attr0} = attr ?? {};
-        offset = offset ?? label_offset_base;
-        size = size ?? label_size_base;
-        let label = is_element(text) ? text : new Text(text, attr0);
-        super(label, 'bottom', {offset, size, align});
+    constructor({ children: children0, offset = label_offset_base, size = label_size_base, align = 'bottom', ...attr } = {}) {
+        const text = check_singleton(children0);
+        const label = is_element(text) ? text : new Text({ children: text, ...attr });
+        super({ children: label, offset, size, align, ...attr });
     }
 }
 
 class YLabel extends Attach {
-    constructor(text, attr) {
-        let {offset, size, align, ...attr0} = attr ?? {};
-        offset = offset ?? label_offset_base;
-        size = size ?? label_size_base;
-        let label = is_element(text) ? text : new Text(text, attr0);
-        let rotate = new Rotate(label, -90, {invar: false});
-        super(rotate, 'left', {offset, size, align});
+    constructor({ children: children0, offset = label_offset_base, size = label_size_base, align = 'left', ...attr } = {}) {
+        const text = check_singleton(children0);
+        const label = is_element(text) ? text : new Text({ children: text, ...attr });
+        const rotate = new Place({ children: label, angle: -90, invar: false });
+        super({ children: rotate, offset, size, align, ...attr });
     }
 }
 
 class Title extends Frame {
-    constructor(text, attr) {
-        let label = is_element(text) ? text : new Text(text, attr);
-        super(label);
+    constructor({ children: children0, ...attr } = {}) {
+        const text = check_singleton(children0);
+        const label = is_element(text) ? text : new Text({ children: text, ...attr });
+        super({ children: label, ...attr });
     }
 }
 
 class Mesh extends Scale {
-    constructor(direc, locs, args) {
-        let {lim, opacity, ...attr} = args ?? {};
-        lim = lim ?? limit_base;
-        opacity = opacity ?? 0.2;
-        super(direc, locs, {lim, opacity, ...attr});
+    constructor({ direc, locs, lim = limit_base, opacity = 0.2, ...attr } = {}) {
+        super({ direc, locs, lim, opacity, ...attr });
     }
 }
 
 class HMesh extends Mesh {
-    constructor(locs, args) {
-        super('h', locs, args);
+    constructor(attr) {
+        super({ direc: 'h', ...attr });
     }
 }
 
 class VMesh extends Mesh {
-    constructor(locs, args) {
-        super('v', locs, args);
+    constructor(attr) {
+        super({ direc: 'v', ...attr });
     }
 }
 
-function make_legendbadge(c, attr0) {
-    attr0 = attr0 ?? {};
-    let attr;
+function make_legendbadge(c, attr) {
     if (is_string(c)) {
-        attr = {stroke: c, ...attr0};
+        attr = {stroke: c, ...attr};
     } else if (is_object(c)) {
-        attr = {...c, ...attr0};
+        attr = {...c, ...attr};
     } else {
         throw new Error(`Unrecognized legend badge specification: ${c}`);
     }
-    return new HLine(0.5, {aspect: 1, ...attr});
+    return new HLine({ pos: 0.5, aspect: 1, ...attr });
 }
 
 function make_legendlabel(s) {
-    return new Text(s);
+    return new Text({children: s});
 }
 
 class Legend extends Place {
-    constructor(data, args) {
-        let {badgewidth, vspacing, hspacing, rect, pos, rad, ...attr0} = args ?? {};
-        let [badge_attr, attr] = prefix_split(['badge'], attr0);
-        badgewidth = badgewidth ?? 0.1;
-        hspacing = hspacing ?? 0.025;
-        vspacing = vspacing ?? 0.1;
+    constructor({ lines, badgewidth = 0.1, vspacing = 0.1, hspacing = 0.025, rect, pos, rad, ...attr } = {}) {
+        const [badge_attr, attr] = prefix_split(['badge'], attr);
 
-        let [badges, labels] = zip(...data);
+        // construct legend badges and labels
+        const [badges, labels] = zip(...lines);
         badges = badges.map(b => is_element(b) ? b : make_legendbadge(b, badge_attr));
         labels = labels.map(t => is_element(t) ? t : make_legendlabel(t));
 
-        let bs = new VStack(badges, {spacing: vspacing});
-        let ls = new VStack(labels, {expand: false, align: 'left', spacing: vspacing});
-        let vs = new HStack([bs, ls], {spacing: hspacing});
+        // construct legend grid
+        const bs = new VStack({ children: badges, spacing: vspacing });
+        const ls = new VStack({ children: labels, expand: false, align: 'left', spacing: vspacing });
+        const vs = new HStack({ children: [bs, ls], spacing: hspacing });
+        const fr = new Frame({ children: vs, ...attr });
 
-        let fr = new Frame(vs, attr);
-        super(fr, {rect, pos, rad});
+        // pass to Place
+        super({ children: fr, rect, pos, rad });
     }
 }
 
 class Note extends Place {
-    constructor(text, args) {
-        let {latex, ...attr0} = args ?? {};
-        latex = latex ?? false;
-        let [text_attr, attr] = prefix_split(['text'], attr0);
-
-        let Maker = latex ? Latex : Text;
-        let label = new Maker(text, text_attr);
-        super(label, attr);
+    constructor({ children: children0, latex = false, ...attr } = {}) {
+        const [text_attr, attr] = prefix_split(['text'], attr);
+        const Maker = latex ? Latex : Text;
+        const label = new Maker({ children: text, ...text_attr });
+        super({ children: label, ...attr });
     }
 }
 
 function expand_limits(lim, fact) {
-    let [lo, hi] = lim;
-    let ex = fact*(hi-lo);
+    const [lo, hi] = lim;
+    const ex = fact*(hi-lo);
     return [lo-ex, hi+ex];
 }
 
 // find minimal containing limits
-function outer_limits(elems, padding) {
-    padding = padding ?? 0;
-    let [xpad, ypad] = ensure_vector(padding, 2);
-    let [xmin, ymin, xmax, ymax] = merge_rects(
+function outer_limits(elems, padding=0) {
+    const [xpad, ypad] = ensure_vector(padding, 2);
+    const [xmin, ymin, xmax, ymax] = merge_rects(
         ...elems.map(c => c.bounds).filter(z => z != null)
     );
     [xmin, xmax] = expand_limits([xmin, xmax], xpad);
@@ -2897,45 +2846,28 @@ function outer_limits(elems, padding) {
 }
 
 class Graph extends Group {
-    constructor(elems, args) {
-        let {coord, aspect, padding, flex, flip, ...attr} = args ?? {};
-        padding = padding ?? 0;
-        flex = flex ?? false;
-        flip = flip ?? true;
-
+    constructor({ children: children0, coord, aspect, padding = 0, flex = false, flip = true, ...attr } = {}) {
         // handle singleton line
-        if (is_element(elems)) elems = [elems];
+        const elems = is_element(children0) ? [children0] : children0;
 
-        // determine coordinate limits
+        // determine coordinate limits and aspect
         let [xmin, ymin, xmax, ymax] = coord ?? outer_limits(elems, padding);
         if (flip) [ymin, ymax] = [ymax, ymin];
         coord = [xmin, ymin, xmax, ymax];
-
-        // get automatic aspect
         if (!flex && aspect == null) aspect = rect_aspect(coord);
 
+        // though the coords are inverted, we dont want the children to be flipped visually
+        const children = elems.map(e => [e, {submap: [0, 1, 1, 0]}]);
+
         // pass to Group
-        let eargs = {submap: [0, 1, 1, 0]};
-        let elem1 = elems.map(e => [e, eargs]);
-        let attr1 = {aspect, coord, ...attr};
-        super(elem1, attr1);
+        super({ children, aspect, coord, ...attr });
     }
 }
 
 class Plot extends Group {
-    constructor(elems, args) {
-        let {
-            xlim, ylim, xaxis, yaxis, xticks, yticks, grid, xgrid, ygrid, xlabel, ylabel,
-            title, tick_size, label_size, label_offset, label_align, title_size, title_offset,
-            xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, xlabel_align, ylabel_align,
-            padding, prec, aspect, flex, fill, ...attr0
-        } = args ?? {};
-        xaxis = xaxis ?? true;
-        yaxis = yaxis ?? true;
-        xticks = xticks ?? num_ticks_base;
-        yticks = yticks ?? num_ticks_base;
-        tick_size = tick_size ?? tick_size_base;
-        flex = flex ?? false;
+    constructor({
+        children: children0, xlim, ylim, xaxis = true, yaxis = true, xticks = num_ticks_base, yticks = num_ticks_base, grid, xgrid, ygrid, xlabel, ylabel, title, tick_size = tick_size_base, label_size, label_offset, label_align, title_size = title_size_base, title_offset = title_offset_base, xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, xlabel_align, ylabel_align, padding, prec, aspect, flex = false, fill, ...attr0
+    } = {}) {
         aspect = flex ? null : (aspect ?? 'auto');
 
         // some advanced piping
@@ -2950,37 +2882,31 @@ class Plot extends Group {
         [xlabel_attr, ylabel_attr] = [{...label_attr, ...xlabel_attr}, {...label_attr, ...ylabel_attr}];
 
         // handle singleton line
-        if (is_element(elems)) {
-            elems = [elems];
-        }
+        const elems = is_element(children0) ? [children0] : children0;
 
         // determine coordinate limits
-        let bounds = outer_limits(elems, padding);
-        let [xmin, ymin, xmax, ymax] = bounds;
+        const bounds = outer_limits(elems, padding);
+        const [xmin, ymin, xmax, ymax] = bounds;
         xlim = xlim ?? [xmin, xmax]; [xmin, xmax] = xlim;
         ylim = ylim ?? [ymin, ymax]; [ymin, ymax] = ylim;
-        let coord = [xmin, ymin, xmax, ymax];
+        const coord = [xmin, ymin, xmax, ymax];
 
         // ensure consistent apparent tick size
-        let [xrange, yrange] = [xmax - xmin, ymax - ymin];
+        const [xrange, yrange] = [xmax - xmin, ymax - ymin];
         aspect = (aspect == 'auto') ? abs(xrange/yrange) : aspect;
-        let [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
+        const [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
         [xtick_size, ytick_size] = [yrange * xtick_size, xrange * ytick_size];
 
         // default xaxis generation
         if (xaxis === true) {
-            xaxis = new HAxis(xticks, {
-                pos: ymin, lim: xlim, tick_size: xtick_size, ...xaxis_attr
-            });
+            xaxis = new HAxis({ ticks: xticks, pos: ymin, lim: xlim, tick_size: xtick_size, ...xaxis_attr });
         } else if (xaxis === false) {
             xaxis = null;
         }
 
         // default yaxis generation
         if (yaxis === true) {
-            yaxis = new VAxis(yticks, {
-                pos: xmin, lim: ylim, tick_size: ytick_size, ...yaxis_attr
-            });
+            yaxis = new VAxis({ ticks: yticks, pos: xmin, lim: ylim, tick_size: ytick_size, ...yaxis_attr });
         } else if (yaxis === false) {
             yaxis = null;
         }
@@ -2992,34 +2918,34 @@ class Plot extends Group {
 
         // automatic grid path
         if (grid === true || xgrid === true) {
-            let xgridvals = (xaxis != null) ? xaxis.ticks.map(([x, t]) => x) : null;
-            xgrid = new HMesh(xgridvals, {lim: ylim, ...xgrid_attr});
+            const xgridvals = (xaxis != null) ? xaxis.ticks.map(([x, t]) => x) : null;
+            xgrid = new HMesh({ locs: xgridvals, lim: ylim, ...xgrid_attr });
         } else {
             xgrid = null;
         }
         if (grid === true || ygrid === true) {
-            let ygridvals = (yaxis != null) ? yaxis.ticks.map(([y, t]) => y) : null;
-            ygrid = new VMesh(ygridvals, {lim: xlim, ...ygrid_attr});
+            const ygridvals = (yaxis != null) ? yaxis.ticks.map(([y, t]) => y) : null;
+            ygrid = new VMesh({ locs: ygridvals, lim: xlim, ...ygrid_attr });
         } else {
             ygrid = null;
         }
 
         // create graph from core elements
-        let elems1 = [fill, xgrid, ygrid, ...elems, xaxis, yaxis].filter(z => z != null);
-        let graph = new Graph(elems1, {coord, aspect, flex});
+        const elems1 = [fill, xgrid, ygrid, ...elems, xaxis, yaxis].filter(z => z != null);
+        const graph = new Graph({ children: elems1, coord, aspect, flex });
 
         // create base layout
-        let children = [graph];
+        const children = [graph];
 
         // sort out label size and offset
         if (xlabel != null || ylabel != null) {
             label_size = label_size ?? label_size_base;
-            let [xlabelsize, ylabelsize] = aspect_invariant(label_size, aspect);
+            const [xlabelsize, ylabelsize] = aspect_invariant(label_size, aspect);
             xlabel_size = xlabel_size ?? xlabelsize;
             ylabel_size = ylabel_size ?? ylabelsize;
 
             label_offset = label_offset ?? label_offset_base;
-            let [xlabeloffset, ylabeloffset] = aspect_invariant(label_offset, aspect);
+            const [xlabeloffset, ylabeloffset] = aspect_invariant(label_offset, aspect);
             xlabel_offset = xlabel_offset ?? xlabeloffset;
             ylabel_offset = ylabel_offset ?? ylabeloffset;
 
@@ -3030,56 +2956,22 @@ class Plot extends Group {
 
         // optional axis labels
         if (xlabel != null) {
-            xlabel = new XLabel(xlabel, {
-                size: xlabel_size, offset: xlabel_offset, align: xlabel_align, ...xlabel_attr
-            });
+            xlabel = new XLabel({ children: xlabel, size: xlabel_size, offset: xlabel_offset, align: xlabel_align, ...xlabel_attr });
             children.push(xlabel);
         }
         if (ylabel != null) {
-            ylabel = new YLabel(ylabel, {
-                size: ylabel_size, offset: ylabel_offset, align: ylabel_align, ...ylabel_attr
-            });
+            ylabel = new YLabel({ children: ylabel, size: ylabel_size, offset: ylabel_offset, align: ylabel_align, ...ylabel_attr });
             children.push(ylabel);
         }
 
         // optional plot title
         if (title != null) {
-            title_size = title_size ?? title_size_base;
-            title_offset = title_offset ?? title_offset_base;
-            title = new Title(title, title_attr);
-            let title_rect = [0, -title_offset-title_size, 1, -title_offset];
-            children.push([title, title_rect]);
+            title = new Title({ children: title, ...title_attr });
+            children.push([title, [0, -title_offset-title_size, 1, -title_offset]]);
         }
 
         // pass to Group
-        let attr1 = {aspect, clip: false, ...attr};
-        super(children, attr1);
-    }
-}
-
-class BarPlot extends Plot {
-    constructor(data, args) {
-        let {direc, padding, aspect, ...attr0} = args ?? {};
-        let [bar_attr, attr] = prefix_split(['bar'], attr0);
-        direc = get_orient(direc ?? 'v');
-        aspect = aspect ?? phi;
-
-        // set up appropriate padding
-        let zpad = min(0.1, 1/data.length);
-        let padding0 = (direc == 'v') ? [zpad, 0] : [0, zpad];
-        padding = padding ?? padding0;
-
-        // generate actual bars
-        let [labs, bars] = zip(...data);
-        let bars1 = new Bars(bars, {direc, ...bar_attr});
-
-        // get ticks
-        let tick_name = (direc == 'v') ? 'xticks' : 'yticks';
-        let ticks = enumerate(labs);
-
-        // send to general plot
-        let attr1 = {aspect, padding, [tick_name]: ticks, ...attr};
-        super(bars1, attr1);
+        super({ children, aspect, clip: false, ...attr });
     }
 }
 
