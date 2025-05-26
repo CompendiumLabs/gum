@@ -981,14 +981,18 @@ class SVG extends Group {
  ** layout classes
  **/
 
+function single_child(children) {
+    if (children == null || children.length != 1) throw Error('Must have exactly one child');
+    return children[0];
+}
+
 // TODO: auto-adjust padding/margin for aspect
 //       it seems adjust only does this if child aspect is not null
 //       but we also want to do it if own aspect is not null
 class Frame extends Group {
     constructor({ children: children0, padding = 0, margin = 0, border = 0, aspect, adjust = true, flex = false, rotate, invar, align, shrink, shape, rounded, stroke, fill, ...attr0 } = {}) {
         // validate children
-        if (children0 == null || children0.length != 1) throw Error('Frame must have exactly one child');
-        const [ child ] = children0;
+        const child = single_child(children0);
 
         // handle border attributes
         const [border_attr, attr] = prefix_split(['border'], attr0);
@@ -1152,14 +1156,14 @@ class Stack extends Group {
 }
 
 class VStack extends Stack {
-    constructor({ children, ...attr } = {}) {
-        super({ direc: 'v', children, ...attr });
+    constructor(attr) {
+        super({ direc: 'v', ...attr });
     }
 }
 
 class HStack extends Stack {
-    constructor({ children, ...attr } = {}) {
-        super({ direc: 'h', children, ...attr });
+    constructor(attr) {
+        super({ direc: 'h', ...attr });
     }
 }
 
@@ -1173,105 +1177,85 @@ h_i = \frac{v_i}{\sum_{k=1}^M v_k}
 */
 
 class Grid extends Group {
-    constructor(children, args) {
-        let {rows, cols, widths, heights, spacing, aspect, ...attr} = args ?? {};
+    constructor({ children, rows, cols, widths, heights, spacing, aspect, ...attr } = {}) {
         spacing = ensure_vector(spacing ?? 0, 2);
         rows = rows ?? children.length;
         cols = cols ?? max(...children.map(row => row.length));
 
         // fill in missing rows and columns
-        let spacer = new Spacer();
-        let filler = repeat(spacer, cols);
+        const spacer = new Spacer();
+        const filler = repeat(spacer, cols);
         children = children.map(row => padvec(row, cols, spacer));
         children = padvec(children, rows, filler);
 
         // aggregate aspect ratios along rows and columns (assuming null goes to 1)
-        let aspect_grid = children.map(row => row.map(e => e.aspect ?? 1));
-        let log_aspect = aspect_grid.map(row => row.map(log));
+        const aspect_grid = children.map(row => row.map(e => e.aspect ?? 1));
+        const log_aspect = aspect_grid.map(row => row.map(log));
 
         // these are exact for equipartitioned grids (row or column)
-        let log_mu = mean(log_aspect.map(row => mean(row)));
-        let log_uj = zip(...log_aspect).map(mean).map(x => x - log_mu);
-        let log_vi = log_aspect.map(mean).map(x => log_mu - x);
+        const log_mu = mean(log_aspect.map(row => mean(row)));
+        const log_uj = zip(...log_aspect).map(mean).map(x => x - log_mu);
+        const log_vi = log_aspect.map(mean).map(x => log_mu - x);
 
         // implement findings
         widths = widths ?? normalize(log_uj.map(exp));
         heights = heights ?? normalize(log_vi.map(exp));
-        let aspect0 = exp(log_mu - mean(widths.map(log)) + mean(heights.map(log)));
+        const aspect_ideal = exp(log_mu - mean(widths.map(log)) + mean(heights.map(log)));
 
         // adjust widths and heights to account for spacing
-        let [spacex, spacey] = spacing;
-        let [scalex, scaley] = [1 - spacex * (cols-1), 1 - spacey * (rows-1)];
+        const [spacex, spacey] = spacing;
+        const [scalex, scaley] = [1 - spacex * (cols-1), 1 - spacey * (rows-1)];
         widths = widths.map(w => scalex * w);
         heights = heights.map(h => scaley * h);
-        aspect = (1-spacey*(rows-1))/(1-spacex*(cols-1)) * aspect0;
+        aspect = (1-spacey*(rows-1))/(1-spacex*(cols-1)) * aspect_ideal;
 
         // get top left positions
-        let lpos = cumsum(widths.map(w => w + spacex));
-        let tpos = cumsum(heights.map(h => h + spacey));
-        let cbox = zip(lpos, widths).map(([l, w]) => [l, l + w]);
-        let rbox = zip(tpos, heights).map(([t, h]) => [t, t + h]);
+        const lpos = cumsum(widths.map(w => w + spacex));
+        const tpos = cumsum(heights.map(h => h + spacey));
+        const cbox = zip(lpos, widths).map(([l, w]) => [l, l + w]);
+        const rbox = zip(tpos, heights).map(([t, h]) => [t, t + h]);
 
         // make grid
-        let grid = meshgrid(rbox, cbox).map(([[y0, y1], [x0, x1]]) => [x0, y0, x1, y1]);
-        let attr1 = {aspect: aspect ?? aspect0, ...attr};
-        super(zip(children.flat(), grid), attr1);
+        const grid = meshgrid(rbox, cbox).map(([[y0, y1], [x0, x1]]) => [x0, y0, x1, y1]);
+        const childgrid = zip(children.flat(), grid);
+
+        // pass to Group
+        super({ children: childgrid, aspect, ...attr });
     }
 }
 
 class Place extends Group {
-    constructor(child, args) {
-        let {rect, pos, rad, rotate, expand, invar, align, pivot, ...attr} = args ?? {};
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? [0.5, 0.5];
+    constructor({ children: children0, rect, pos = [0.5, 0.5], rad = [0.5, 0.5], rotate, expand, invar, align, pivot, ...attr } = {}) {
+        const child = single_child(children0);
 
         // find child position
         rect = rect ?? rad_rect(pos, rad);
-        let spec = [child, {rect, rotate, expand, invar, align, pivot}];
+        const children = [[child, {rect, rotate, expand, invar, align, pivot}]];
 
         // pass to Group
-        let attr1 = {clip: false, ...attr};
-        super([spec], attr1);
-    }
-}
-
-class Bounds extends Group {
-    constructor(child, rect, args) {
-        let {expand, align, coord, clip, ...attr} = args ?? {};
-        let spec = [child, {rect, expand, align, coord}];
-        let attr1 = {clip: clip ?? false, ...attr};
-        super([spec], attr1);
-    }
-}
-
-class Rotate extends Group {
-    constructor(child, rotate, args) {
-        let {expand, invar, align, pivot, ...attr} = args ?? {};
-        let spec = [child, {rotate, expand, invar, align, pivot}];
-        let attr1 = {clip: true, ...attr};
-        super([spec], attr1);
+        super({ children, clip: false, ...attr });
     }
 }
 
 class Flip extends Group {
-    constructor(direc, child, args) {
-        direc = get_orient(direc);
-        let rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1];
-        let spec = [child, rect];
-        let attr1 = {clip: true, ...args};
-        super([spec], attr1);
+    constructor({ children: children0, direction, ...attr } = {}) {
+        const child = single_child(children0);
+        const direc = get_orient(direction);
+        const rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1];
+        const children = [[child, rect]];
+        super({ children, clip: true, ...attr });
     }
 }
 
 class VFlip extends Flip {
-    constructor(child, args) {
-        super('v', child, args);
+    constructor(attr) {
+        super({ direction: 'v', ...attr });
     }
 }
 
 class HFlip extends Flip {
-    constructor(child, args) {
-        super('h', child, args);
+    constructor(attr) {
+        super({ direction: 'h', ...attr });
     }
 }
 
@@ -1279,43 +1263,39 @@ let anchor_rect = {
     'left': [0, 0, 0, 1], 'right': [1, 0, 1, 1],
     'top': [0, 0, 1, 0], 'bottom': [0, 1, 1, 1]
 };
+
 class Anchor extends Group {
-    constructor(child, side, args) {
-        let {align, ...attr} = args ?? {};
+    constructor({ children: children0, side, align, ...attr } = {}) {
+        const child = single_child(children0);
 
         // get anchor rect
-        let rect = anchor_rect[side];
+        const rect = anchor_rect[side];
         align = align ?? 1 - align_frac(side);
 
         // pass to Group
-        let spec = {rect, align, expand: true};
-        super([[child, spec]], {clip: false, ...attr});
+        const children = [[child, {rect, align, expand: true}]];
+        super({ children, clip: false, ...attr });
     }
 }
 
 class Attach extends Group {
-    constructor(child, side, args) {
-        let {offset, size, align, ...attr} = args ?? {};
-        offset = offset ?? 0;
-        size = size ?? 1;
+    constructor({ children: children0, offset = 0, size = 1, align, side, ...attr } = {}) {
+        const child = single_child(children0);
 
-        let extent = size + offset;
-        let rmap = {
+        const extent = size + offset;
+        const rmap = {
             'left': [-extent, 0, -offset, 1], 'right': [1+offset, 0, 1+extent, 1],
             'top': [0, -extent, 1, -offset], 'bottom': [0, 1+offset, 1, 1+extent]
         };
 
-        let spec = {rect: rmap[side], align};
-        let attr1 = {clip: false, ...attr};
-        super([[child, spec]], attr1);
+        const children = [[child, {rect: rmap[side], align}]];
+        super({ children, clip: false, ...attr });
     }
 }
 
 class Points extends Group {
-    constructor(points, args) {
-        let {size, shape, stroke, fill, stroke_width, ...attr} = args ?? {};
+    constructor({ points = [], size = 0.01, shape, stroke, fill, stroke_width, ...attr } = {}) {
         shape = shape ?? new Dot({stroke, fill, stroke_width});
-        size = size ?? 0.01;
 
         // handle different forms
         points = points.map(p => is_scalar(p[0]) ? [p] : p);
@@ -1323,34 +1303,32 @@ class Points extends Group {
         points = points.map(p => (p.length >= 3) ? p : [...p, size]);
 
         // pass to Group
-        let children = points.map(([s, p, r]) => [s, rad_rect(p, r)]);
-        let attr1 = {clip: false, ...attr};
-        super(children, attr1);
+        const children = points.map(([s, p, r]) => [s, rad_rect(p, r)]);
+        super({ children, clip: false, ...attr });
     }
 }
 
 class Absolute extends Element {
-    constructor(child, size, args) {
-        let attr = args ?? {};
-        super('g', false);
-        this.child = child;
+    constructor({ children, size, ...attr } = {}) {
+        super({ tag: 'g', unary: false, ...attr });
+        this.child = single_child(children);
         this.size = size;
         this.place = attr;
     }
 
     inner(ctx) {
-        let { prect } = ctx;
-        let { child, place } = this;
-        let { aspect } = child;
+        const { prect } = ctx;
+        const { child, place } = this;
+        const { aspect } = child;
 
         // get relative size from absolute size
-        let bsize = rect_dims(prect);
-        let psize = ensure_vector(this.size, 2);
-        let rad = divide(div(psize, bsize), 2);
+        const bsize = rect_dims(prect);
+        const psize = ensure_vector(this.size, 2);
+        const rad = divide(div(psize, bsize), 2);
 
         // render child element
-        let args = parse_bounds({rad, aspect, ...place});
-        let ctx1 = ctx.map(args);
+        const args = parse_bounds({rad, aspect, ...place});
+        const ctx1 = ctx.map(args);
         return this.child.svg(ctx1);
     }
 }
@@ -3352,7 +3330,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3477,5 +3455,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
+    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 };
