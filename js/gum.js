@@ -7,33 +7,33 @@ import { emoji_table } from './emoji.js';
 //
 
 // namespace
-let ns_svg = 'http://www.w3.org/2000/svg';
+const ns_svg = 'http://www.w3.org/2000/svg';
 
 // sizing
-let size_base = 500;
-let rect_base = [0, 0, size_base, size_base];
-let coord_base = [0, 0, 1, 1];
-let prec_base = 2;
+const size_base = 500;
+const rect_base = [0, 0, size_base, size_base];
+const coord_base = [0, 0, 1, 1];
+const prec_base = 2;
 
 // fonts
-let font_family_base = 'IBMPlexSans';
-let font_weight_base = 100;
-let font_size_base = 12;
+const font_family_base = 'IBMPlexSans';
+const font_weight_base = 100;
+const font_size_base = 12;
 
 // plot defaults
-let num_ticks_base = 5;
-let tick_size_base = 0.025;
-let tick_label_size_base = 2.0;
-let tick_label_offset_base = 0.5;
-let label_size_base = 0.06;
-let label_offset_base = 0.15;
-let title_size_base = 0.1;
-let title_offset_base = 0.1;
-let limit_base = [0, 1];
-let N_base = 100;
+const num_ticks_base = 5;
+const tick_size_base = 0.025;
+const tick_label_size_base = 2.0;
+const tick_label_offset_base = 0.5;
+const label_size_base = 0.06;
+const label_offset_base = 0.15;
+const title_size_base = 0.1;
+const title_offset_base = 0.1;
+const limit_base = [0, 1];
+const N_base = 100;
 
 // default styling
-let svg_props_base = {
+const svg_props_base = {
     stroke: 'black',
     fill: 'none',
     font_family: font_family_base,
@@ -49,7 +49,7 @@ function canvas_text_sizer(ctx, text, args) {
     actual = actual ?? false;
 
     ctx.font = `${weight} ${size}px ${family}`;
-    let met = ctx.measureText(text);
+    const met = ctx.measureText(text);
 
     let x, y, w, h;
     if (actual) {
@@ -70,8 +70,8 @@ function canvas_text_sizer(ctx, text, args) {
 // try for browser environment
 let text_sizer = null;
 try {
-    let canvas = document.createElement('canvas');
-    let ctx = canvas.getContext('2d');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
     text_sizer = function(text, args) {
         return canvas_text_sizer(ctx, text, args);
     }
@@ -87,9 +87,9 @@ function* gzip(...iterables) {
     if (iterables.length == 0) {
         return;
     }
-    let iterators = iterables.map(i => i[Symbol.iterator]());
+    const iterators = iterables.map(i => i[Symbol.iterator]());
     while (true) {
-        let results = iterators.map(iter => iter.next());
+        const results = iterators.map(iter => iter.next());
         if (results.some(res => res.done)) {
             return;
         } else {
@@ -103,8 +103,8 @@ function zip(...iterables) {
 }
 
 function reshape(arr, shape) {
-    let [n, m] = shape;
-    let ret = [];
+    const [n, m] = shape;
+    const ret = [];
     for (let i = 0; i < n; i++) {
         ret.push(arr.slice(i*m, (i+1)*m));
     }
@@ -112,7 +112,7 @@ function reshape(arr, shape) {
 }
 
 function split(arr, len) {
-    let n = Math.ceil(arr.length / len);
+    const n = Math.ceil(arr.length / len);
     return reshape(arr, [n, len]);
 }
 
@@ -179,8 +179,8 @@ function subtract(arr, scalar) {
 }
 
 function cumsum(arr, first) {
-    let sum = 0;
-    let ret = arr.map(x => sum += x);
+    const sum = 0;
+    const ret = arr.map(x => sum += x);
     return (first ?? true) ? [0, ...ret.slice(0, -1)] : ret;
 }
 
@@ -191,26 +191,26 @@ function norm(vals, degree) {
 
 function normalize(vals, degree) {
     degree = degree ?? 1;
-    let mag = norm(vals, degree);
+    const mag = norm(vals, degree);
     return (mag == 0) ? vals.map(v => 0) : vals.map(v => v/mag);
 }
 
 function range(i0, i1, step) {
     step = step ?? 1;
     [i0, i1] = (i1 === undefined) ? [0, i0] : [i0, i1];
-    let n = floor((i1-i0)/step);
+    const n = floor((i1-i0)/step);
     return [...Array(n).keys()].map(i => i0 + step*i);
 }
 
 function linspace(x0, x1, n) {
     if (n == 1) { return [0.5*(x0+x1)]; };
-    let step = (x1-x0)/(n-1);
+    const step = (x1-x0)/(n-1);
     return [...Array(n).keys()].map(i => x0 + step*i);
 }
 
 function enumerate(x) {
-    let n = x.length;
-    let idx = range(n);
+    const n = x.length;
+    const idx = range(n);
     return zip(idx, x);
 }
 
@@ -220,7 +220,7 @@ function repeat(x, n) {
 
 function padvec(vec, len, val) {
     if (vec.length >= len) return vec;
-    let m = len - vec.length;
+    const m = len - vec.length;
     return [...vec, ...repeat(val, m)];
 }
 
@@ -230,9 +230,9 @@ function meshgrid(x, y) {
 
 function lingrid(xlim, ylim, N) {
     if (N >= 100) throw new Error('N is restricted to be less than 100');
-    let [Nx, Ny] = ensure_vector(N, 2);
-    let xgrid = linspace(...xlim, Nx);
-    let ygrid = linspace(...ylim, Ny);
+    const [Nx, Ny] = ensure_vector(N, 2);
+    const xgrid = linspace(...xlim, Nx);
+    const ygrid = linspace(...ylim, Ny);
     return meshgrid(xgrid, ygrid);
 }
 
@@ -330,21 +330,21 @@ class NamedString extends String {
 }
 
 // functions
-let exp = Math.exp;
-let log = Math.log;
-let sin = Math.sin;
-let cos = Math.cos;
-let tan = Math.tan;
-let abs = Math.abs;
-let pow = Math.pow;
-let sqrt = Math.sqrt;
-let sign = Math.sign;
-let floor = Math.floor;
-let ceil = Math.ceil;
-let round = Math.round;
-let atan = Math.atan;
-let isNan = Number.isNaN;
-let isInf = x => !Number.isFinite(x);
+const exp = Math.exp;
+const log = Math.log;
+const sin = Math.sin;
+const cos = Math.cos;
+const tan = Math.tan;
+const abs = Math.abs;
+const pow = Math.pow;
+const sqrt = Math.sqrt;
+const sign = Math.sign;
+const floor = Math.floor;
+const ceil = Math.ceil;
+const round = Math.round;
+const atan = Math.atan;
+const isNan = Number.isNaN;
+const isInf = x => !Number.isFinite(x);
 
 // null on empty
 function min(...vals) {
@@ -357,17 +357,17 @@ function max(...vals) {
 }
 
 function clamp(x, lim) {
-    let [lo, hi] = lim;
+    const [lo, hi] = lim;
     return max(lo, min(x, hi));
 }
 
 function mask(x, lim) {
-    let [lo, hi] = lim;
+    const [lo, hi] = lim;
     return (x >= lo && x <= hi) ? x : null;
 }
 
 function rescale(x, lim) {
-    let [lo, hi] = lim;
+    const [lo, hi] = lim;
     return (x-lo)/(hi-lo);
 }
 
@@ -380,26 +380,26 @@ function logit(p) {
 }
 
 function smoothstep(x, lim) {
-    let [lo, hi] = lim ?? [0, 1];
-    let t = clamp((x-lo)/(hi-lo), [0, 1]);
+    const [lo, hi] = lim ?? [0, 1];
+    const t = clamp((x-lo)/(hi-lo), [0, 1]);
     return t*t*(3 - 2*t);
 }
 
 // constants
-let e = new NamedNumber('e', Math.E);
-let pi = new NamedNumber('pi', Math.PI);
-let phi = new NamedNumber('phi', (1+sqrt(5))/2);
-let r2d = new NamedNumber('r2d', 180/Math.PI);
-let d2r = new NamedNumber('d2r', Math.PI/180);
-let blue = new NamedString('blue', '#1e88e5');
-let red = new NamedString('red', '#ff0d57');
-let green = new NamedString('green', '#4caf50');
+const e = new NamedNumber('e', Math.E);
+const pi = new NamedNumber('pi', Math.PI);
+const phi = new NamedNumber('phi', (1+sqrt(5))/2);
+const r2d = new NamedNumber('r2d', 180/Math.PI);
+const d2r = new NamedNumber('d2r', Math.PI/180);
+const blue = new NamedString('blue', '#1e88e5');
+const red = new NamedString('red', '#ff0d57');
+const green = new NamedString('green', '#4caf50');
 
 //
 // random number generation
 //
 
-let random = Math.random;
+const random = Math.random;
 
 function uniform(lo, hi) {
     return lo + (hi-lo)*random();
@@ -409,9 +409,9 @@ function uniform(lo, hi) {
 function normal(mean, stdv) {
     mean = mean ?? 0;
     stdv = stdv ?? 1;
-    let [u, v] = [1 - random(), random()];
-    let [r, t] = [sqrt(-2*log(u)), 2*pi*v];
-    let [a, b] = [r*cos(t), r*sin(t)];
+    const [u, v] = [1 - random(), random()];
+    const [r, t] = [sqrt(-2*log(u)), 2*pi*v];
+    const [a, b] = [r*cos(t), r*sin(t)];
     return [a, b].map(x => mean + stdv*x);
 }
 
@@ -426,7 +426,7 @@ function pos_rect(r) {
     } else if (is_scalar(r)) {
         return [0, 0, r, r];
     } else if (r.length == 2) {
-        let [rx, ry] = r;
+        const [rx, ry] = r;
         return [0, 0, rx, ry];
     } else {
         return r;
@@ -439,7 +439,7 @@ function pad_rect(p) {
     } else if (is_scalar(p)) {
         return [p, p, p, p];
     } else if (p.length == 2) {
-        let [px, py] = p;
+        const [px, py] = p;
         return [px, py, px, py];
     } else {
         return p;
@@ -448,14 +448,14 @@ function pad_rect(p) {
 
 // map padding/margin into internal boxes
 function map_padmar(p, m, a) {
-    let [pl, pt, pr, pb] = p;
-    let [ml, mt, mr, mb] = m;
-    let [pw, ph] = [pl+1+pr, pt+1+pb];
-    let [tw, th] = [ml+pw+mr, mt+ph+mb];
-    let crect = [(ml+pl)/tw, (mt+pt)/th, 1-(mr+pr)/tw, 1-(mb+pb)/th];
-    let brect = [ml/tw, mt/th, 1-mr/tw, 1-mb/th];
-    let basp = (a != null) ? a*(pw/ph) : null;
-    let tasp = (a != null) ? a*(tw/th) : null;
+    const [pl, pt, pr, pb] = p;
+    const [ml, mt, mr, mb] = m;
+    const [pw, ph] = [pl+1+pr, pt+1+pb];
+    const [tw, th] = [ml+pw+mr, mt+ph+mb];
+    const crect = [(ml+pl)/tw, (mt+pt)/th, 1-(mr+pr)/tw, 1-(mb+pb)/th];
+    const brect = [ml/tw, mt/th, 1-mr/tw, 1-mb/th];
+    const basp = (a != null) ? a*(pw/ph) : null;
+    const tasp = (a != null) ? a*(tw/th) : null;
     return [crect, brect, basp, tasp];
 }
 
@@ -478,33 +478,33 @@ function rad_rect(p, r0) {
 }
 
 function merge_rects(...rects) {
-    let [xa, ya, xb, yb] = zip(...rects);
-    let [xs, ys] = [[...xa, ...xb], [...ya, ...yb]];
+    const [xa, ya, xb, yb] = zip(...rects);
+    const [xs, ys] = [[...xa, ...xb], [...ya, ...yb]];
     return [
         min(...xs), min(...ys), max(...xs), max(...ys)
     ];
 }
 
 function merge_points(...points) {
-    let [xs, ys] = zip(...points);
+    const [xs, ys] = zip(...points);
     return [
         min(...xs), min(...ys), max(...xs), max(...ys)
     ];
 }
 
 function rect_dims(rect) {
-    let [xa, ya, xb, yb] = rect;
-    let [w, h] = [xb - xa, yb - ya];
+    const [xa, ya, xb, yb] = rect;
+    const [w, h] = [xb - xa, yb - ya];
     return [abs(w), abs(h)];
 }
 
 function rect_center(rect) {
-    let [xa, ya, xb, yb] = rect;
+    const [xa, ya, xb, yb] = rect;
     return [(xa + xb)/2, (ya + yb)/2];
 }
 
 function rect_aspect(rect) {
-    let [w, h] = rect_dims(rect);
+    const [w, h] = rect_dims(rect);
     return abs(w/h);
 }
 
@@ -512,18 +512,18 @@ function aspect_invariant(value, aspect, alpha) {
     aspect = aspect ?? 1;
     alpha = alpha ?? 0.5;
 
-    let wfact = aspect**alpha;
-    let hfact = aspect**(1-alpha);
+    const wfact = aspect**alpha;
+    const hfact = aspect**(1-alpha);
 
     if (is_scalar(value)) {
         value = [value, value];
     }
 
     if (value.length == 2) {
-        let [vw, vh] = value;
+        const [vw, vh] = value;
         return [vw*wfact, vh/hfact];
     } else if (value.length == 4) {
-        let [vl, vt, vr, vb] = value;
+        const [vl, vt, vr, vb] = value;
         return [vl*wfact, vt/hfact, vr*wfact, vb/hfact];
     }
 }
@@ -533,13 +533,13 @@ function aspect_invariant(value, aspect, alpha) {
 //
 
 function prefix_split(pres, attr) {
-    let attr1 = {...attr};
-    let pres1 = pres.map(p => `${p}_`);
-    let out = pres.map(p => Object());
-    let keys = Object.keys(attr).map(k => {
+    const attr1 = {...attr};
+    const pres1 = pres.map(p => `${p}_`);
+    const out = pres.map(p => Object());
+    Object.keys(attr).map(k => {
         pres.forEach((p, i) => {
             if (k.startsWith(pres1[i])) {
-                let k1 = k.slice(p.length+1);
+                const k1 = k.slice(p.length+1);
                 out[i][k1] = attr1[k];
                 delete attr1[k];
             }
@@ -597,52 +597,30 @@ function props_repr(d, prec) {
 
 // Converts a #ffffff hex string into an [r,g,b] array
 function hex2rgb(hex) {
-    let result1 = /^#?([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})$/i.exec(hex);
+    const result1 = /^#?([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})$/i.exec(hex);
     if (result1) return result1.slice(1).map(c => parseInt(c, 16));
-    let result2 = /^#?([a-fA-F\d])([a-fA-F\d])([a-fA-F\d])$/i.exec(hex);
+    const result2 = /^#?([a-fA-F\d])([a-fA-F\d])([a-fA-F\d])$/i.exec(hex);
     if (result2) return result2.slice(1).map(c => parseInt(`${c}${c}`, 16));
     return null;
 }
 
 function rgb2hex(rgb) {
-    let [r, g, b] = rgb.map(c => round(c).toString(16).padStart(2, '0'));
+    const [r, g, b] = rgb.map(c => round(c).toString(16).padStart(2, '0'));
     return `#${r}${g}${b}`;
 }
 
-function rgb2hsl(color) {
-    let [r, g, b] = color.map(c => c/255);
-    let min = Math.min(r, g, b);
-    let max = Math.max(r, g, b);
-    let h, s, l = (max + min) / 2;
-
-    if (max == min) {
-        h = s = 0; // achromatic
-    } else {
-        let d = max - min;
-        s = (l > 0.5 ? d / (2 - max - min) : d / (max + min));
-        switch(max) {
-            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-            case g: h = (b - r) / d + 2; break;
-            case b: h = (r - g) / d + 4; break;
-        }
-        h /= 6;
-    }
-
-    return [h, s, l];
-}
-
 function interpolate_vectors(c1, c2, alpha) {
-    let len = min(c1.length, c2.length);
+    const len = min(c1.length, c2.length);
     return range(len).map(i => {
-        let x = c1[i] + alpha*(c2[i]-c1[i]);
+        const x = c1[i] + alpha*(c2[i]-c1[i]);
         return rounder(x, 3);
     });
 }
 
 function interpolate_hex(c1, c2, alpha) {
-    let v1 = hex2rgb(c1);
-    let v2 = hex2rgb(c2);
-    let v = interpolate_vectors(v1, v2, alpha);
+    const v1 = hex2rgb(c1);
+    const v2 = hex2rgb(c2);
+    const v = interpolate_vectors(v1, v2, alpha);
     return rgb2hex(v);
 }
 
@@ -663,8 +641,8 @@ function degree_mod(degree, lower, upper) {
 function rotate_aspect(aspect, degree) {
     if (degree == null) { return aspect; }
     if (aspect == null) { return null; }
-    let rotate = degree_mod(degree, -90, 90);
-    let theta = (pi/180)*abs(rotate);
+    const rotate = degree_mod(degree, -90, 90);
+    const theta = (pi/180)*abs(rotate);
     return rotate_aspect_radians(aspect, theta);
 }
 
@@ -688,9 +666,9 @@ function align_frac(align) {
 }
 
 function rect_remap(rect, frac) {
-    let [x1, y1, x2, y2] = rect;
-    let [w, h] = [x2 - x1, y2 - y1];
-    let [fx1, fy1, fx2, fy2] = frac;
+    const [x1, y1, x2, y2] = rect;
+    const [w, h] = [x2 - x1, y2 - y1];
+    const [fx1, fy1, fx2, fy2] = frac;
     return [
         x1 + fx1*w, y1 + fy1*h,
         x1 + fx2*w, y1 + fy2*h
@@ -698,8 +676,7 @@ function rect_remap(rect, frac) {
 }
 
 class Context {
-    constructor(prect, args) {
-        let {coord, submap, rrect, trans, prec, debug} = args ?? {};
+    constructor(prect, { coord, submap, rrect, trans, prec, debug } = {}) {
         this.prect = prect;
         this.rrect = rrect;
         this.coord = coord;
@@ -711,53 +688,45 @@ class Context {
 
     // map using both domain (frac) and range (rect)
     coord_to_pixel(coord) {
-        let [cx, cy] = coord;
-        let [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
-        let [cw, ch] = [cx2 - cx1, cy2 - cy1];
-        let [px1, py1, px2, py2] = this.prect;
-        let [pw, ph] = [px2 - px1, py2 - py1];
-        let [fx, fy] = [(cx-cx1)/cw, (cy-cy1)/ch];
-        let [px, py] = [px1 + fx*pw, py1 + fy*ph];
+        const [cx, cy] = coord;
+        const [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
+        const [cw, ch] = [cx2 - cx1, cy2 - cy1];
+        const [px1, py1, px2, py2] = this.prect;
+        const [pw, ph] = [px2 - px1, py2 - py1];
+        const [fx, fy] = [(cx-cx1)/cw, (cy-cy1)/ch];
+        const [px, py] = [px1 + fx*pw, py1 + fy*ph];
         return [px, py];
     }
 
     // used for sizes such as radii or vectors
     coord_to_pixel_size(size) {
-        let [sw, sh] = size;
-        let [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
-        let [cw, ch] = [cx2 - cx1, cy2 - cy1];
-        let [px1, py1, px2, py2] = this.prect;
-        let [pw, ph] = [px2 - px1, py2 - py1];
-        let [px, py] = [sw*abs(pw)/abs(cw), sh*abs(ph)/abs(ch)];
+        const [sw, sh] = size;
+        const [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
+        const [cw, ch] = [cx2 - cx1, cy2 - cy1];
+        const [px1, py1, px2, py2] = this.prect;
+        const [pw, ph] = [px2 - px1, py2 - py1];
+        const [px, py] = [sw*abs(pw)/abs(cw), sh*abs(ph)/abs(ch)];
         return [px, py];
     }
 
     // used for whole rectangles
     coord_to_pixel_rect(crect) {
-        let [x1, y1, x2, y2] = crect;
-        let [c1, c2] = [[x1, y1], [x2, y2]];
-        let p1 = this.coord_to_pixel(c1);
-        let p2 = this.coord_to_pixel(c2);
-        let prect = [...p1, ...p2];
+        const [x1, y1, x2, y2] = crect;
+        const [c1, c2] = [[x1, y1], [x2, y2]];
+        const p1 = this.coord_to_pixel(c1);
+        const p2 = this.coord_to_pixel(c2);
+        const prect = [...p1, ...p2];
         return prect;
     }
 
     // NOTE: this is the main mapping function! be very careful when changing it!
     // implement placement logic: map from coordinate rect (rect) to pixel rect (prect)
     // also outputs coordinate system (coord), rotation rect (rrect), and transform string (trans)
-    map(args) {
-        let {rect, aspect, rotate, expand, invar, align, pivot, coord, submap} = args ?? {};
-        rect = rect ?? coord_base;
-        rotate = rotate ?? 0;
-        expand = expand ?? false;
-        invar = invar ?? true;
-        align = align ?? 'center';
-        pivot = pivot ?? 'center';
-
+    map({ rect = coord_base, aspect, rotate = 0 , expand = false, invar = true, align = 'center', pivot = 'center', coord, submap } = {}) {
         // remap rotation angle
-        let degrees = degree_mod(rotate, -90, 90); // map to [-90, 90]
-        let theta0 = abs(degrees)*(pi/180); // in radians
-        let theta = invar ? 0 : theta0; // account for rotate?
+        const degrees = degree_mod(rotate, -90, 90); // map to [-90, 90]
+        const theta0 = abs(degrees)*(pi/180); // in radians
+        const theta = invar ? 0 : theta0; // account for rotate?
 
         // sort out alignment
         let [halign, valign] = ensure_vector(align, 2);
@@ -770,34 +739,34 @@ class Context {
         vpivot = align_frac(vpivot);
 
         // get true pixel rect
-        let [px1, py1, px2, py2] = this.coord_to_pixel_rect(rect);
-        let [pw0, ph0] = [px2 - px1, py2 - py1];
+        const [px1, py1, px2, py2] = this.coord_to_pixel_rect(rect);
+        const [pw0, ph0] = [px2 - px1, py2 - py1];
 
         // embedded rectangle aspect
-        let asp0 = pw0/ph0 ?? 1; // pixel rect (zero size is 1)
-        let asgn = asp0 == 0 ? (ph0 >= 0 ? 1 : -1) : sign(asp0)
-        let rasp = (aspect != null) ? asgn * aspect : asp0; // mimic outer if inner is null, but always match outer sign
-        let asp1 = rotate_aspect_radians(rasp, theta);
+        const asp0 = pw0/ph0 ?? 1; // pixel rect (zero size is 1)
+        const asgn = asp0 == 0 ? (ph0 >= 0 ? 1 : -1) : sign(asp0)
+        const rasp = (aspect != null) ? asgn * aspect : asp0; // mimic outer if inner is null, but always match outer sign
+        const asp1 = rotate_aspect_radians(rasp, theta);
 
         // shrink down if aspect mismatch
-        let wide = abs(asp1) > abs(asp0);
-        let [hexpand, vexpand] = ensure_vector(expand, 2);
-        let [tw, th] = [cos(theta)+sin(theta)/rasp, rasp*sin(theta)+cos(theta)];
-        let [rw0, rh0] = [pw0/tw, ph0/th];
-        let [pw1, ph1] = ((wide & hexpand) | (!wide & !vexpand)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
-        let [rw1, rh1] = [pw1*tw, ph1*th];
+        const wide = abs(asp1) > abs(asp0);
+        const [hexpand, vexpand] = ensure_vector(expand, 2);
+        const [tw, th] = [cos(theta)+sin(theta)/rasp, rasp*sin(theta)+cos(theta)];
+        const [rw0, rh0] = [pw0/tw, ph0/th];
+        const [pw1, ph1] = ((wide & hexpand) | (!wide & !vexpand)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
+        const [rw1, rh1] = [pw1*tw, ph1*th];
 
         // get rotated/unrotated pixel rect
-        let cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
-        let cy = (1-valign)*py1 + valign*py2 + (0.5-valign)*rh1;
-        let prect = [cx-0.5*pw1, cy-0.5*ph1, cx+0.5*pw1, cy+0.5*ph1];
-        let rrect = invar ? prect : [cx-0.5*rw1, cy-0.5*rh1, cx+0.5*rw1, cy+0.5*rh1];
+        const cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
+        const cy = (1-valign)*py1 + valign*py2 + (0.5-valign)*rh1;
+        const prect = [cx-0.5*pw1, cy-0.5*ph1, cx+0.5*pw1, cy+0.5*ph1];
+        const rrect = invar ? prect : [cx-0.5*rw1, cy-0.5*rh1, cx+0.5*rw1, cy+0.5*rh1];
 
         // get transform string
-        let vx = (1-hpivot)*px1 + hpivot*px2;
-        let vy = (1-vpivot)*py1 + vpivot*py2;
-        let [sx, sy] = [vx, vy].map(z => rounder(z, this.prec));
-        let trans = (rotate != 0) ? `rotate(${rounder(rotate, this.prec)} ${rounder(sx, this.prec)} ${rounder(sy, this.prec)})` : null;
+        const vx = (1-hpivot)*px1 + hpivot*px2;
+        const vy = (1-vpivot)*py1 + vpivot*py2;
+        const [sx, sy] = [vx, vy].map(z => rounder(z, this.prec));
+        const trans = (rotate != 0) ? `rotate(${rounder(rotate, this.prec)} ${rounder(sx, this.prec)} ${rounder(sy, this.prec)})` : null;
 
         // remap subcoords
         if (this.submap != null) coord = rect_remap(coord ?? coord_base, this.submap);
@@ -2998,7 +2967,7 @@ class Image extends Element {
 //
 
 let Gum = [
-    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3123,5 +3092,5 @@ function injectImages(elem) {
 //
 
 export {
-    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
+    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 };
