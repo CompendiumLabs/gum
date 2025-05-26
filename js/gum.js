@@ -2,9 +2,9 @@
 
 import { emoji_table } from './emoji.js';
 
-/**
- ** defaults
- **/
+//
+// defaults
+//
 
 // namespace
 let ns_svg = 'http://www.w3.org/2000/svg';
@@ -79,9 +79,9 @@ try {
     // console.log(error);
 }
 
-/**
- ** array utils
- **/
+//
+// array utils
+//
 
 function* gzip(...iterables) {
     if (iterables.length == 0) {
@@ -120,9 +120,9 @@ function concat(arrs) {
     return arrs.flat();
 }
 
-/**
- ** vector utils
- **/
+//
+// vector utils
+//
 
 function sum(arr) {
     arr = arr.filter(v => v != null);
@@ -236,9 +236,9 @@ function lingrid(xlim, ylim, N) {
     return meshgrid(xgrid, ygrid);
 }
 
-/**
- ** object utils
- **/
+//
+// object utils
+//
 
 function map_object(obj, fn) {
     return Object.fromEntries(
@@ -252,9 +252,9 @@ function filter_object(obj, fn) {
     );
 }
 
-/**
- ** type utils
- **/
+//
+// type utils
+//
 
 function ensure_vector(x, n) {
     if (!is_array(x)) {
@@ -310,9 +310,9 @@ function is_metaelement(x) {
     return x instanceof MetaElement;
 }
 
-/**
- ** core math
- **/
+//
+// core math
+//
 
 // to be used in functions
 class NamedNumber extends Number {
@@ -395,9 +395,9 @@ let blue = new NamedString('blue', '#1e88e5');
 let red = new NamedString('red', '#ff0d57');
 let green = new NamedString('green', '#4caf50');
 
-/**
- ** random number generation
- **/
+//
+// random number generation
+//
 
 let random = Math.random;
 
@@ -415,9 +415,9 @@ function normal(mean, stdv) {
     return [a, b].map(x => mean + stdv*x);
 }
 
-/**
- ** coordinate utils
- **/
+//
+// coordinate utils
+//
 
 // convenience mapper for rectangle positions
 function pos_rect(r) {
@@ -528,9 +528,9 @@ function aspect_invariant(value, aspect, alpha) {
     }
 }
 
-/**
- ** attributes
- **/
+//
+// attributes
+//
 
 function prefix_split(pres, attr) {
     let attr1 = {...attr};
@@ -554,9 +554,9 @@ function prefix_add(pre, attr) {
     );
 }
 
-/**
- ** string formatters
- **/
+//
+// string formatters
+//
 
 function demangle(k) {
     return k.replace('_', '-');
@@ -591,9 +591,9 @@ function props_repr(d, prec) {
         .join(' ');
 }
 
-/**
- ** color handling
- **/
+//
+// color handling
+//
 
 // Converts a #ffffff hex string into an [r,g,b] array
 function hex2rgb(hex) {
@@ -651,9 +651,9 @@ function interpolate_palette(c1, c2, n) {
         .map(alpha => interpolate_vectors(c1, c2, alpha));
 }
 
-/**
- ** core classes
- **/
+//
+// core classes
+//
 
 function degree_mod(degree, lower, upper) {
     return ((degree + lower) % (upper-lower)) - lower;
@@ -807,8 +807,9 @@ class Context {
     }
 }
 
+// NOTE: if children gets here, it was ignored by the constructor (so dump it)
 class Element {
-    constructor({ tag, unary, aspect = null, ...attr } = {}) {
+    constructor({ tag, unary, aspect = null, children, ...attr } = {}) {
         // core display
         this.tag = tag;
         this.unary = unary;
@@ -977,13 +978,16 @@ class SVG extends Group {
     }
 }
 
-/**
- ** layout classes
- **/
+//
+// layout classes
+//
 
-function single_child(children) {
-    if (children == null || children.length != 1) throw Error('Must have exactly one child');
-    return children[0];
+function check_singleton(children) {
+    const is_array = Array.isArray(children);
+    if (children == null || (is_array && children.length != 1)) {
+        throw Error('Must have exactly one child');
+    }
+    return is_array ? children[0] : children;
 }
 
 // TODO: auto-adjust padding/margin for aspect
@@ -992,7 +996,7 @@ function single_child(children) {
 class Frame extends Group {
     constructor({ children: children0, padding = 0, margin = 0, border = 0, aspect, adjust = true, flex = false, rotate, invar, align, shrink, shape, rounded, stroke, fill, ...attr0 } = {}) {
         // validate children
-        const child = single_child(children0);
+        const child = check_singleton(children0);
 
         // handle border attributes
         const [border_attr, attr] = prefix_split(['border'], attr0);
@@ -1226,7 +1230,7 @@ class Grid extends Group {
 
 class Place extends Group {
     constructor({ children: children0, rect, pos = [0.5, 0.5], rad = [0.5, 0.5], rotate, expand, invar, align, pivot, ...attr } = {}) {
-        const child = single_child(children0);
+        const child = check_singleton(children0);
 
         // find child position
         rect = rect ?? rad_rect(pos, rad);
@@ -1240,7 +1244,7 @@ class Place extends Group {
 class Flip extends Group {
     constructor({ children: children0, direc, ...attr } = {}) {
         direc = get_orient(direc);
-        const child = single_child(children0);
+        const child = check_singleton(children0);
         const rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1];
         const children = [[child, rect]];
         super({ children, clip: true, ...attr });
@@ -1266,7 +1270,7 @@ let anchor_rect = {
 
 class Anchor extends Group {
     constructor({ children: children0, side, align, ...attr } = {}) {
-        const child = single_child(children0);
+        const child = check_singleton(children0);
 
         // get anchor rect
         const rect = anchor_rect[side];
@@ -1280,7 +1284,7 @@ class Anchor extends Group {
 
 class Attach extends Group {
     constructor({ children: children0, offset = 0, size = 1, align, side, ...attr } = {}) {
-        const child = single_child(children0);
+        const child = check_singleton(children0);
 
         const extent = size + offset;
         const rmap = {
@@ -1311,7 +1315,7 @@ class Points extends Group {
 class Absolute extends Element {
     constructor({ children, size, ...attr } = {}) {
         super({ tag: 'g', unary: false, ...attr });
-        this.child = single_child(children);
+        this.child = check_singleton(children);
         this.size = size;
         this.place = attr;
     }
@@ -1333,9 +1337,9 @@ class Absolute extends Element {
     }
 }
 
-/**
- ** basic geometry
- **/
+//
+// basic geometry
+//
 
 // this can have an aspect, which is utilized by layouts
 class Spacer extends Element {
@@ -1505,14 +1509,13 @@ class Ray extends Element {
     }
 }
 
-/**
- ** path builder
- **/
+//
+// path builder
+//
 
 class Pointstring extends Element {
-    constructor(tag, points, args) {
-        let attr = args ?? {};
-        super(tag, true, attr);
+    constructor({ tag, points, ...attr } = {}) {
+        super({ tag, unary: true, ...attr });
         this.points = points;
         if (points.length > 0) {
             this.bounds = merge_points(...points);
@@ -1520,52 +1523,46 @@ class Pointstring extends Element {
     }
 
     props(ctx) {
-        let points = this.points.map(p => ctx.coord_to_pixel(p));
-        let str = points.map(
+        const pixels = this.points.map(p => ctx.coord_to_pixel(p));
+        const points = pixels.map(
             ([x, y]) => `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`
         ).join(' ');
-        return {points: str, ...this.attr};
+        return {points, ...this.attr};
     }
 }
 
 class Polyline extends Pointstring {
-    constructor(points, attr) {
-        const attr1 = {fill: 'none', ...attr};
-        super('polyline', points, attr1);
+    constructor({ points, ...attr } = {}) {
+        super({ tag: 'polyline', points, fill: 'none', ...attr });
     }
 }
 
 class Polygon extends Pointstring {
-    constructor(points, attr) {
-        super('polygon', points, attr);
+    constructor({ points, ...attr } = {}) {
+        super({ tag: 'polygon', points, ...attr });
     }
 }
 
 class Triangle extends Polygon {
-    constructor(args) {
-        let {pos, rad, ...attr} = args ?? {};
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? 0.5;
-
+    constructor({ pos = [0.5, 0.5], rad = 0.5, ...attr } = {}) {
         // get vertices
-        let [px, py] = pos;
-        let [rx, ry] = ensure_vector(rad, 2);
-        let points = [[px - rx, py + ry], [px + rx, py + ry], [px, py - ry]];
+        const [px, py] = pos;
+        const [rx, ry] = ensure_vector(rad, 2);
+        const points = [[px - rx, py + ry], [px + rx, py + ry], [px, py - ry]];
 
         // pass to Polygon
-        super(points, attr);
+        super({ points, ...attr });
     }
 }
 
 class Path extends Element {
-    constructor(cmds, args) {
-        let attr = args ?? {};
-        super('path', true, attr);
+    constructor({ cmds, ...attr } = {}) {
+        super({ tag: 'path', unary: true, ...attr });
         this.cmds = cmds;
     }
 
     props(ctx) {
-        let d = this.cmds.map(c => c.data(ctx)).join(' ');
+        const d = this.cmds.map(c => c.data(ctx)).join(' ');
         return {d, ...this.attr};
     }
 }
@@ -1591,7 +1588,7 @@ class MoveCmd extends Command {
     }
 
     args(ctx) {
-        let [x, y] = ctx.coord_to_pixel(this.pos);
+        const [x, y] = ctx.coord_to_pixel(this.pos);
         return `${rounder(x, ctx.prec)} ${rounder(y, ctx.prec)}`;
     }
 }
@@ -1603,7 +1600,7 @@ class LineCmd extends Command {
     }
 
     args(ctx) {
-        let [x, y] = ctx.coord_to_pixel(this.pos);
+        const [x, y] = ctx.coord_to_pixel(this.pos);
         return `${rounder(x, ctx.prec)} ${rounder(y, ctx.prec)}`;
     }
 }
@@ -1618,8 +1615,8 @@ class ArcCmd extends Command {
     }
 
     args(ctx) {
-        let [x1, y1] = ctx.coord_to_pixel(this.pos);
-        let [rx, ry] = ctx.coord_to_pixel_size(this.rad);
+        const [x1, y1] = ctx.coord_to_pixel(this.pos);
+        const [rx, ry] = ctx.coord_to_pixel_size(this.rad);
         return `${rounder(rx, ctx.prec)} ${rounder(ry, ctx.prec)} 0 ${this.large} ${this.sweep} ${rounder(x1, ctx.prec)} ${rounder(y1, ctx.prec)}`;
     }
 }
@@ -1634,25 +1631,25 @@ class CornerCmd {
     }
 
     data(ctx) {
-        let [x0, y0] = ctx.coord_to_pixel(this.pos0);
-        let [x1, y1] = ctx.coord_to_pixel(this.pos1);
+        const [x0, y0] = ctx.coord_to_pixel(this.pos0);
+        const [x1, y1] = ctx.coord_to_pixel(this.pos1);
 
         // compute aspect ratio
-        let [dx, dy] = [Math.abs(x1 - x0), Math.abs(y1 - y0)];
-        let aspect = dx / dy;
+        const [dx, dy] = [Math.abs(x1 - x0), Math.abs(y1 - y0)];
+        const aspect = dx / dy;
 
         // are we in quadrants 1/3 or 2/4?
-        let [top, right] = [x1 < x0, y1 < y0];
-        let [diag, wide] = [top == right, aspect > 1];
+        const [top, right] = [x1 < x0, y1 < y0];
+        const [diag, wide] = [top == right, aspect > 1];
 
         // get corner point and fitted radius
-        let [cx, cy] = diag ? [x0, y1] : [x1, y0];
-        let rad = Math.min(dx, dy);
+        const [cx, cy] = diag ? [x0, y1] : [x1, y0];
+        const rad = Math.min(dx, dy);
 
         // get the intra-radial points
-        let sigx = right ? -1 : 1; let sigy = top ? 1 : -1;
-        let [x0p, y0p] = diag ? [cx, cy + sigy*rad] : [cx + sigx*rad, cy];
-        let [x1p, y1p] = diag ? [cx + sigx*rad, cy] : [cx, cy + sigy*rad];
+        const sigx = right ? -1 : 1; const sigy = top ? 1 : -1;
+        const [x0p, y0p] = diag ? [cx, cy + sigy*rad] : [cx + sigx*rad, cy];
+        const [x1p, y1p] = diag ? [cx + sigx*rad, cy] : [cx, cy + sigy*rad];
 
         // full command
         return (
@@ -1670,35 +1667,30 @@ function norm_angle(deg) {
 }
 
 class Arc extends Path {
-    constructor(deg0, deg1, args) {
-        let {pos, rad, ...attr} = args ?? {};
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? [0.5, 0.5];
+    constructor({ deg0, deg1, pos = [0.5, 0.5], rad = [0.5, 0.5], ...attr } = {}) {
         deg0 = norm_angle(deg0);
         deg1 = norm_angle(deg1);
 
         // get radian angles
-        let th0 = d2r * deg0;
-        let th1 = d2r * deg1;
+        const th0 = d2r * deg0;
+        const th1 = d2r * deg1;
 
         // get start/stop points
-        let [x0, y0] = pos;
-        let [rx, ry] = rad;
-        let pos0 = [x0 + rx * cos(th0), y0 - ry * sin(th0)];
-        let pos1 = [x0 + rx * cos(th1), y0 - ry * sin(th1)];
+        const [x0, y0] = pos; const [rx, ry] = rad;
+        const pos0 = [x0 + rx * cos(th0), y0 - ry * sin(th0)];
+        const pos1 = [x0 + rx * cos(th1), y0 - ry * sin(th1)];
 
         // get large/sweep flags
-        let delta = deg1 - deg0;
-        if (delta < 0) delta += 360;
-        let large = delta > 180 ? 1 : 0;
-        let sweep = delta < 0 ? 1 : 0;
+        const delta = norm_angle(deg1 - deg0);
+        const large = delta > 180 ? 1 : 0;
+        const sweep = delta < 0 ? 1 : 0;
 
         // send commands to path
-        let cmds = [
+        const cmds = [
             new MoveCmd(pos0),
             new ArcCmd(pos1, rad, large, sweep),
         ];
-        super(cmds, attr);
+        super({ cmds, ...attr });
     }
 }
 
@@ -1714,18 +1706,15 @@ function parse_rounded(rounded) {
 
 // supports different rounded for each corner
 class RoundedRect extends Path {
-    constructor(args) {
-        let {rounded, border, ...attr} = args ?? {};
-        rounded = rounded ?? 0;
-        border = border ?? 1;
+    constructor({ rounded = 0, border = 1, ...attr } = {}) {
 
         // convert to array of arrays
-        let [rtl, rtr, rbr, rbl] = parse_rounded(rounded);
-        let [rtlx, rtly] = rtl; let [rtrx, rtry] = rtr;
-        let [rbrx, rbry] = rbr; let [rblx, rbly] = rbl;
+        const [rtl, rtr, rbr, rbl] = parse_rounded(rounded);
+        const [rtlx, rtly] = rtl; const [rtrx, rtry] = rtr;
+        const [rbrx, rbry] = rbr; const [rblx, rbly] = rbl;
 
         // make command list
-        let cmds = [
+        const cmds = [
             new MoveCmd([1 - rtrx, 0]),
             new LineCmd([rtlx, 0]),
             new CornerCmd([rtlx, 0], [0, rtly]),
@@ -1738,14 +1727,13 @@ class RoundedRect extends Path {
         ];
 
         // pass to Path
-        let attr1 = {stroke_width: border, ...attr};
-        super(cmds, attr1);
+        super({ cmds, stroke_width: border, ...attr });
     }
 }
 
-/**
- ** filters and effects
- **/
+//
+// filters and effects
+//
 
 // random 6-digit hex
 function random_hex() {
@@ -1753,9 +1741,9 @@ function random_hex() {
 }
 
 class MetaElement {
-    constructor(tag, args) {
+    constructor({ tag, ...attr } = {}) {
         this.tag = tag;
-        this.args = args ?? {};
+        this.attr = attr;
     }
 
     inside(ctx) {
@@ -1763,8 +1751,8 @@ class MetaElement {
     }
 
     svg(ctx) {
-        let inside = this.inside();
-        let props = Object.entries(this.args).map(([k, v]) =>
+        const inside = this.inside();
+        const props = Object.entries(this.attr).map(([k, v]) =>
             `${k.replace('_', '-')}="${v}"`
         ).join(' ');
         if (inside == null) {
@@ -1776,8 +1764,8 @@ class MetaElement {
 }
 
 class MetaGroup extends MetaElement {
-    constructor(tag, children, args) {
-        super(tag, args);
+    constructor({ tag, children, ...attr } = {}) {
+        super({ tag, ...attr });
         this.children = children;
     }
 
@@ -1787,14 +1775,14 @@ class MetaGroup extends MetaElement {
 }
 
 class Defs extends MetaGroup {
-    constructor(children, args) {
-        super('defs', children, args);
+    constructor({ children, ...attr } = {}) {
+        super({ tag: 'defs', children, ...attr });
     }
 }
 
 class Style extends MetaElement {
-    constructor(text, args) {
-        super('style', {type: 'text/css', ...args});
+    constructor({ text, ...attr } = {}) {
+        super({ tag: 'style', type: 'text/css', ...attr });
         this.text = text;
     }
 
@@ -1804,59 +1792,47 @@ class Style extends MetaElement {
 }
 
 class Effect extends MetaElement {
-    constructor(name, args) {
-        super(`fe${name}`, args);
-        let klass = this.constructor.name.toLowerCase();
-        this.result = args.result ?? `${klass}_${random_hex()}`;
+    constructor({ name, ...attr } = {}) {
+        super({ tag: `fe${name}`, ...attr });
+        const klass = this.constructor.name.toLowerCase();
+        this.result = attr.result ?? `${klass}_${random_hex()}`;
     }
 }
 
 class Filter extends MetaGroup {
-    constructor(name, effects, args) {
-        super('filter', effects, {id: name, ...args});
+    constructor({ name, effects, ...attr } = {}) {
+        super({ tag: 'filter', effects, id: name, ...attr });
     }
 }
 
 class DropShadow extends Effect {
-    constructor(args) {
-        let {dx, dy, blur, color, ...attr} = args ?? {};
-        dx = dx ?? 0;
-        dy = dy ?? 0;
-        blur = blur ?? 0;
-        color = color ?? 'black';
-
-        let attr1 = {dx, dy, stdDeviation: blur, flood_color: color, ...attr};
-        super('DropShadow', attr1);
+    constructor({ dx = 0, dy = 0, blur = 0, color = 'black', ...attr } = {}) {
+        super({ dx, dy, stdDeviation: blur, flood_color: color, ...attr });
     }
 }
 
 class GaussianBlur extends Effect {
-    constructor(args) {
-        let {blur, ...attr} = args ?? {};
-        blur = blur ?? 0;
-
-        let attr1 = {stdDeviation: blur, ...attr};
-        super('GaussianBlur', attr1);
+    constructor({ blur = 0, ...attr } = {}) {
+        super({ tag: 'GaussianBlur', stdDeviation: blur, ...attr });
     }
 }
 
 class MergeNode extends MetaElement {
-    constructor(input, args) {
-        let attr = {'in': input, ...args};
-        super('feMergeNode', attr);
+    constructor({ input, ...attr } = {}) {
+        super({ tag: 'feMergeNode', in: input, ...attr });
     }
 }
 
 class Merge extends MetaGroup {
-    constructor(effects, args) {
-        let nodes = effects.map(e => MergeNode(e.result));
-        super('feMerge', nodes, args);
+    constructor({ effects, ...attr } = {}) {
+        const nodes = effects.map(e => new MergeNode({ input: e.result }));
+        super({ tag: 'feMerge', nodes, ...attr });
     }
 }
 
-/**
- ** text elements
- **/
+//
+// text elements
+//
 
 function escape_xml(text) {
     return String(text)
@@ -1867,30 +1843,33 @@ function escape_xml(text) {
         .replace(/'/g, '&apos;');
 }
 
+function check_string(children) {
+    const child = check_singleton(children);
+    if (typeof child !== 'string') {
+        throw Error('Must be a string');
+    }
+    return child;
+}
+
 class Text extends Element {
-    constructor(text, args) {
-        let {font_family, font_weight, font_size, color, offset, ...attr0} = args ?? {};
-        let [calc_args, attr] = prefix_split(['calc'], attr0);
-        color = color ?? 'black';
-        offset = offset ?? [0, -0.13];
+    constructor({ children: children0, font_family, font_weight, font_size, color = 'black', offset = [0, -0.13], ...attr } = {}) {
+        const text = check_string(children0);
+        const [calc_args, attr] = prefix_split(['calc'], attr);
 
         // compute text box
-        let fargs = {family: font_family, weight: font_weight, size: font_size, ...calc_args};
-        let [xoff0, yoff0, width0, height0] = text_sizer(text, fargs);
+        const fargs = {family: font_family, weight: font_weight, size: font_size, ...calc_args};
+        const [xoff0, yoff0, width0, height0] = text_sizer(text, fargs);
 
         // get position and size
-        let offset1 = add([xoff0/height0, yoff0/height0], offset);
-        let size = [width0, height0];
-        let aspect = width0/height0;
+        const offset1 = add([xoff0/height0, yoff0/height0], offset);
+        const size = [width0, height0];
+        const aspect = width0/height0;
 
         // pass to element
-        let attr1 = {aspect, font_family, font_weight, font_size, stroke: color, fill: color, ...attr};
-        super('text', false, attr1);
-
-        // store metrics
+        super({ tag: 'text', unary: false, aspect, font_family, font_weight, font_size, stroke: color, fill: color, ...attr });
+        this.text = escape_xml(text);
         this.offset = offset1;
         this.size = size;
-        this.text = escape_xml(text);
     }
 
     // because text will always be displayed upright,
@@ -1898,28 +1877,27 @@ class Text extends Element {
     // and then offset it by the given offset
     props(ctx) {
         // get ordered bounds
-        let [xa, ya] = ctx.coord_to_pixel([0, 0]);
-        let [xb, yb] = ctx.coord_to_pixel([1, 1]);
-        let [x0, y0] = [Math.min(xa, xb), Math.min(ya, yb)];
-        let [w0, h0] = [Math.abs(xb - xa), Math.abs(yb - ya)];
+        const [xa, ya] = ctx.coord_to_pixel([0, 0]);
+        const [xb, yb] = ctx.coord_to_pixel([1, 1]);
+        const [x0, y0] = [Math.min(xa, xb), Math.min(ya, yb)];
+        const [w0, h0] = [Math.abs(xb - xa), Math.abs(yb - ya)];
 
         // get display position
-        let [xoff, yoff] = ctx.coord_to_pixel_size(this.offset);
-        let [x, y] = [x0 + xoff, y0 + yoff + h0];
+        const [xoff, yoff] = ctx.coord_to_pixel_size(this.offset);
+        const [x, y] = [x0 + xoff, y0 + yoff + h0];
 
         // get font size
-        let { font_size } = this.attr;
-        let h = font_size ?? h0;
+        const { font_size } = this.attr;
+        const h = font_size ?? h0;
 
         // handle horizontal centering
         if (font_size != null) {
-            let frac = font_size / h0;
+            const frac = font_size / h0;
             x += w0 * (1 - frac) / 2;
         }
 
         // get adjusted size
-        let base = {x, y, font_size: `${h}px`};
-        return {...base, ...this.attr};
+        return { x, y, font_size: `${h}px`, ...this.attr };
     }
 
     inner(ctx) {
@@ -1928,25 +1906,21 @@ class Text extends Element {
 }
 
 class TextSize extends Absolute {
-    constructor(text, size, args) {
-        let child = new Text(text, args);
-        let expand = [true, false];
-        let { aspect } = child;
-        super(child, size, {expand});
+    constructor({ children: children0, size, ...attr } = {}) {
+        const children = new Text({ children: children0, ...attr });
+        super({ children, size, expand: [true, false], ...attr });
     }
 }
 
 class MultiText extends VStack {
-    constructor(texts, args) {
-        let {spacing, align, ...attr} = args ?? {};
-        texts = is_array(texts) ? texts : [texts];
-        let children = texts.map(t => new Text(t, attr));
-        super(children, {spacing, align});
+    constructor({ children: children0, spacing, align, ...attr }) {
+        const children = children0.map(t => new Text({ t, ...attr}));
+        super({ children, spacing, align });
     }
 }
 
 class Emoji extends Text {
-    constructor(tag, args) {
+    constructor({ tag, ...attr } = {}) {
         let text = emoji_table[tag];
         let text_attr = {};
         if (text == null) {
@@ -1954,8 +1928,7 @@ class Emoji extends Text {
             text_attr.fill = red;
             text_attr.stroke = red;
         }
-        let attr1 = {...text_attr, ...args};
-        super(text, attr1);
+        super({ children: text, ...text_attr, ...attr });
     }
 }
 
@@ -1966,13 +1939,11 @@ function get_attributes(elem) {
 }
 
 class Latex extends Element {
-    constructor(text, args) {
-        let {offset, scale, ...attr} = args ?? {};
-        offset = offset ?? [0, 0];
-        scale = scale ?? 1;
+    constructor({ children, offset = [0, 0], scale = 1, ...attr } = {}) {
+        const text = check_string(children);
 
         // render with mathjax (or do nothing if mathjax is not available)
-        let svg_attr, math, width, height;
+        let svg_attr, math, width, height, aspect;
         if (typeof MathJax !== 'undefined') {
             // render with mathjax
             let output = MathJax.tex2svg(text);
@@ -1986,6 +1957,7 @@ class Latex extends Element {
             let viewBox = svg.getAttribute('viewBox');
             let viewNum = viewBox.split(' ').map(Number);
             [width, height] = viewNum.slice(2);
+            aspect = width/height;
 
             // get tag info and inner svg
             svg_attr = get_attributes(svg);
@@ -1995,31 +1967,26 @@ class Latex extends Element {
         }
 
         // pass to element
-        let aspect = width/height;
-        let attr1 = {aspect, ...svg_attr,...attr};
-        super('svg', false, attr1);
-
-        // store metrics
+        super({ tag: 'svg', unary: false, aspect, ...svg_attr, ...attr });
+        this.math = math;
         this.offset = offset;
         this.scale = scale;
-        this.math = math;
     }
 
     props(ctx) {
         // get ordered bounds
-        let [xa, ya] = ctx.coord_to_pixel([0, 0]);
-        let [xb, yb] = ctx.coord_to_pixel([1, 1]);
-        let [x0, y0] = [Math.min(xa, xb), Math.min(ya, yb)];
+        const [xa, ya] = ctx.coord_to_pixel([0, 0]);
+        const [xb, yb] = ctx.coord_to_pixel([1, 1]);
+        const [x0, y0] = [Math.min(xa, xb), Math.min(ya, yb)];
 
         // get display position
-        let [xoff, yoff] = ctx.coord_to_pixel_size(this.offset);
-        let [w0, h0] = ctx.coord_to_pixel_size([1, 1]);
-        let [w, h] = [w0 * this.scale, h0 * this.scale];
-        let [x, y] = [x0 + xoff, y0 + yoff];
+        const [xoff, yoff] = ctx.coord_to_pixel_size(this.offset);
+        const [w0, h0] = ctx.coord_to_pixel_size([1, 1]);
+        const [w, h] = [w0 * this.scale, h0 * this.scale];
+        const [x, y] = [x0 + xoff, y0 + yoff];
 
         // get adjusted size
-        let base = {x, y, width: w, height: h, font_size: `${h}px`};
-        return {...base, ...this.attr};
+        return { x, y, width: w, height: h, font_size: `${h}px`, ...this.attr };
     }
 
     inner(ctx) {
@@ -2028,74 +1995,58 @@ class Latex extends Element {
 }
 
 class TextFrame extends Frame {
-    constructor(text, args) {
-        let {padding, border, spacing, align, latex, emoji, ...attr0} = args ?? {};
-        let [text_attr, attr] = prefix_split(['text'], attr0);
-        border = border ?? 1;
-        padding = padding ?? 0.1;
-        spacing = spacing ?? 0.02;
-        latex = latex ?? false;
-        emoji = emoji ?? false;
+    constructor({ children: children0, padding = 0.1, border = 1, spacing = 0.02, align, latex = false, emoji = false, ...attr } = {}) {
+        const [text_attr, attr] = prefix_split(['text'], attr);
 
         // generate core elements
-        let TextElement = latex ? Latex : emoji ? Emoji : Text;
-        let maker = s => is_string(s) || is_number(s) ? new TextElement(s, text_attr) : s;
-        let child = is_array(text) ?
-            new VStack(text.map(maker), {expand: false, align, spacing}) :
-            maker(text);
+        const TextElement = latex ? Latex : emoji ? Emoji : Text;
+        const maker = s => is_string(s) || is_number(s) ?
+            new TextElement({ children: s, ...text_attr }) : s;
+        const children = children0.length > 1 ?
+            new VStack({ children: children0.map(maker), expand: false, align, spacing }) :
+            maker(children0[0] ?? '');
 
         // pass to Group
-        let attr1 = {padding, border, align, ...attr};
-        super(child, attr1);
+        super({ children, padding, border, align, ...attr });
     }
 }
 
 class TitleFrame extends Frame {
-    constructor(child, title, attr) {
-        let {title_size, title_fill, title_offset, title_rounded, title_border, adjust, padding, margin, border, aspect, ...attr0} = attr ?? {};
-        let [title_attr0, frame_attr0] = prefix_split(['title'], attr0);
-        title_size = title_size ?? 0.075;
-        title_fill = title_fill ?? 'white';
-        title_offset = title_offset ?? 0;
-        title_border = title_border ?? 1;
-        title_rounded = title_rounded ?? 0.1;
-        adjust = adjust ?? false;
-        padding = padding ?? 0;
-        margin = margin ?? 0;
-        border = border ?? 1;
+    constructor({ children: children0, title, title_size = 0.075, title_fill = 'white', title_offset = 0, title_rounded = 0.1, title_border = 1, adjust = false, padding = 0, margin = 0, border = 1, aspect, ...attr0 } = {}) {
+        const child = check_singleton(children0);
+        const [title_attr0, frame_attr0] = prefix_split(['title'], attr0);
 
         // adjust padding for title
         if (adjust) {
             margin = pad_rect(margin);
             padding = pad_rect(padding);
-            let [pl, pt, pr, pb] = padding;
-            let [ml, mt, mr, mb] = margin;
+            const [pl, pt, pr, pb] = padding;
+            const [ml, mt, mr, mb] = margin;
             padding = [pl, pt + title_size, pr, pb];
             margin = [ml, mt + title_size, mr, mb];
         }
 
         // fill in default attributes
-        let frame_attr = {margin, border, ...frame_attr0};
-        let title_attr = {fill: title_fill, border: title_border, rounded: title_rounded, ...title_attr0};
+        const frame_attr = {margin, border, ...frame_attr0};
+        const title_attr = {fill: title_fill, border: title_border, rounded: title_rounded, ...title_attr0};
 
         // make title box
-        let base = title_offset * title_size;
-        let text = new TextFrame(title, title_attr);
-        let place = new Place(text, {pos: [0.5, base], rad: [null, title_size], expand: true});
+        const base = title_offset * title_size;
+        const text = new TextFrame({ children: title, ...title_attr });
+        const place = new Place({ children: text, pos: [0.5, base], rad: [null, title_size], expand: true });
 
         // make outer frame
-        let frame = new Frame(child, {padding});
-        let aspect1 = aspect ?? frame.aspect;
-        let group = new Group([frame, place], {clip: false, aspect: aspect1});
+        const frame = new Frame({ children: child, padding });
+        const group = new Group({ children: [frame, place], clip: false, aspect: aspect ?? frame.aspect });
 
         // apply margin only frame
-        super(group, frame_attr);
+        super({ children: group, ...frame_attr });
     }
 }
 
-/**
- ** parametric paths
- **/
+//
+// parametric paths
+//
 
  function func_or_scalar(x) {
     if (is_scalar(x)) {
@@ -2106,15 +2057,12 @@ class TitleFrame extends Frame {
 }
 
 // determines actual values given combinations of limits, values, and functions
-function sympath(args) {
-    let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N} = args ?? {};
-    tlim = tlim ?? limit_base;
-    clip = clip ?? true;
+function sympath({fx, fy, xlim, ylim, tlim = limit_base, xvals, yvals, tvals, clip = true, N} = {}) {
     fx = func_or_scalar(fx);
     fy = func_or_scalar(fy);
 
     // determine data size
-    let Ns = new Set([tvals, xvals, yvals].filter(v => v != null).map(v => v.length));
+    const Ns = new Set([tvals, xvals, yvals].filter(v => v != null).map(v => v.length));
     if (Ns.size > 1) {
         throw new Error(`Error: data sizes must be in aggreement but got ${Ns}`);
     } else if (Ns.size == 1) {
@@ -2139,13 +2087,13 @@ function sympath(args) {
     // clip values
     if (clip) {
         if (xlim != null) {
-            let [xmin, xmax] = xlim;
+            const [xmin, xmax] = xlim;
             xvals = xvals.map(x =>
                 (xmin <= x && x <= xmax) ? x : null
             );
         }
         if (ylim != null) {
-            let [ymin, ymax] = ylim;
+            const [ymin, ymax] = ylim;
             yvals = yvals.map(y =>
                 (ymin <= y && y <= ymax) ? y : null
             );
@@ -2156,88 +2104,82 @@ function sympath(args) {
 }
 
 class SymPath extends Polyline {
-    constructor(args) {
-        let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N, ...attr} = args ?? {};
-
+    constructor({ fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N, ...attr } = {}) {
         // compute path values
         [tvals, xvals, yvals] = sympath({
             fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N
         });
 
         // get valid point pairs
-        let points = zip(xvals, yvals).filter(
+        const points = zip(xvals, yvals).filter(
             ([x, y]) => (x != null) && (y != null)
         );
 
         // pass to element
-        super(points, attr);
+        super({ points, ...attr });
     }
 }
 
 class SymFill extends Polygon {
-    constructor(args) {
-        let {fx1, fy1, fx2, fy2, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
+    constructor({ fx1, fy1, fx2, fy2, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr } = {}) {
 
         // compute point values
-        let [tvals1, xvals1, yvals1] = sympath({
+        const [tvals1, xvals1, yvals1] = sympath({
             fx: fx1, fy: fy1, xlim, ylim, tlim, xvals, yvals, tvals, N
         });
-        let [tvals2, xvals2, yvals2] = sympath({
+        const [tvals2, xvals2, yvals2] = sympath({
             fx: fx2, fy: fy2, xlim, ylim, tlim, xvals, yvals, tvals, N
         });
 
         // get valid point pairs
-        let points = [...zip(xvals1, yvals1), ...zip(xvals2, yvals2).reverse()].filter(
+        const points = [...zip(xvals1, yvals1), ...zip(xvals2, yvals2).reverse()].filter(
             ([x, y]) => (x != null) && (y != null)
         );
 
         // pass to element
-        super(points, attr);
+        super({ points, ...attr });
     }
 }
 
 class SymPoly extends Polygon {
-    constructor(args) {
-        let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
+    constructor({ fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr } = {}) {
 
         // compute point values
-        let [tvals1, xvals1, yvals1] = sympath({
+        const [tvals1, xvals1, yvals1] = sympath({
             fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N
         });
-        let points = zip(xvals1, yvals1);
+
+        // get valid point pairs
+        const points = zip(xvals1, yvals1);
 
         // pass to element
-        super(points, attr);
+        super({ points, ...attr });
     }
 }
 
 class SymPoints extends Group {
-    constructor(args) {
-        let {fx, fy, fs, fr, size, shape, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
-        size = size ?? 0.01;
+    constructor({ fx, fy, fs, fr, size = 0.01, shape, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr } = {}) {
         shape = shape ?? new Dot();
         fr = fr ?? (() => size);
         fs = fs ?? (() => shape);
 
         // compute point values
-        [tvals, xvals, yvals] = sympath({
+        const [tvals, xvals, yvals] = sympath({
             fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N
         });
 
         // make points
-        let points = zip(tvals, xvals, yvals);
-        let children = enumerate(points).map(([i, [t, x, y]]) =>
+        const points = zip(tvals, xvals, yvals);
+        const children = enumerate(points).map(([i, [t, x, y]]) =>
             [fs(x, y, t, i), rad_rect([x, y], fr(x, y, t, i))]
         );
 
         // pass  to element
-        let attr1 = {clip: false, ...attr};
-        super(children, attr1);
+        super({ children, clip: false, ...attr });
     }
 }
 
-function datapoints(args) {
-    let {xvals, yvals, xlim, ylim, N} = args ?? {};
+function datapoints({ xvals, yvals, xlim, ylim, N } = {}) {
     if (xvals == null) {
         N = N ?? yvals.length;
         xlim = xlim ?? [0, N-1];
@@ -2252,54 +2194,45 @@ function datapoints(args) {
 }
 
 class DataPath extends Polyline {
-    constructor(args) {
-        let {xvals, yvals, xlim, ylim, ...attr} = args ?? {};
-        let points = datapoints({xvals, yvals, xlim, ylim});
-        super(points, attr);
+    constructor({ xvals, yvals, xlim, ylim, ...attr } = {}) {
+        const points = datapoints({ xvals, yvals, xlim, ylim });
+        super({ points, ...attr });
     }
 }
 
 class DataPoints extends Points {
-    constructor(args) {
-        let {xvals, yvals, xlim, ylim, ...attr} = args ?? {};
-        let points = datapoints({xvals, yvals, xlim, ylim});
-        super(points, attr);
+    constructor({ xvals, yvals, xlim, ylim, ...attr } = {}) {
+        const points = datapoints({ xvals, yvals, xlim, ylim });
+        super({ points, ...attr });
     }
 }
 
 class DataFill extends Polygon {
-    constructor(args) {
-        let {xvals1, yvals1, xvals2, yvals2, xlim, ylim, ...attr} = args ?? {};
+    constructor({ xvals1, yvals1, xvals2, yvals2, xlim, ylim, ...attr } = {}) {
 
         // repeat constants
-        let N = max(...[xvals1, yvals1, xvals2, yvals2].map(v => v?.length));
-        [xvals1, yvals1, xvals2, yvals2] = [xvals1, yvals1, xvals2, yvals2].map(
+        const N = max(...[xvals1, yvals1, xvals2, yvals2].map(v => v?.length));
+        const [xvals1, yvals1, xvals2, yvals2] = [xvals1, yvals1, xvals2, yvals2].map(
             v => (v != null) ? ensure_vector(v, N) : null
         );
 
         // make forward-backard shape
-        let points1 = datapoints({xvals: xvals1, yvals: yvals1, xlim, ylim, N});
-        let points2 = datapoints({xvals: xvals2, yvals: yvals2, xlim, ylim, N});
-        let points = [...points1, ...points2.reverse()];
+        const points1 = datapoints({xvals: xvals1, yvals: yvals1, xlim, ylim, N});
+        const points2 = datapoints({xvals: xvals2, yvals: yvals2, xlim, ylim, N});
+        const points = [...points1, ...points2.reverse()];
 
         // pass to pointstring
-        super(points, attr);
+        super({ points, ...attr });
     }
 }
 
-/**
- ** fields
- **/
+//
+// fields
+//
 
 class Arrow extends Group {
-    constructor(direc, args) {
-        let {pos, head, tail, shape, graph, ...attr0} = args ?? {};
-        let [head_attr, tail_attr, attr] = prefix_split(['head', 'tail'], attr0);
-        pos = pos ?? [0.5, 0.5];
-        head = head ?? 0.3;
-        tail = tail ?? 2.0;
-        shape = shape ?? 'arrow';
-        graph = graph ?? true;
+    constructor({ direc, pos = [0.5, 0.5], head = 0.3, tail = 2.0, shape = 'arrow', graph = true, ...attr0 } = {}) {
+        const [head_attr, tail_attr, attr] = prefix_split(['head', 'tail'], attr0);
 
         // baked in shapes
         if (shape == 'circle') {
@@ -2314,7 +2247,7 @@ class Arrow extends Group {
         let theta;
         if (is_scalar(direc)) {
             theta = direc;
-            let radians = d2r*direc;
+            const radians = d2r*direc;
             direc = [cos(radians), sin(radians)];
         } else {
             theta = r2d*Math.atan2(direc[1], direc[0]);
@@ -2325,47 +2258,40 @@ class Arrow extends Group {
         direc = graph ? mul(direc, [1, -1]) : direc;
 
         // create head (override with null direction)
-        let head_elem;
-        if (norm(direc, 2) == 0) {
-            head_elem = new Dot({pos, rad: head, ...head_attr});
-        } else {
-            head_elem = new Place(shape(theta, {...head_attr}), {pos, rad: head});
-        }
+        const arrow = shape(theta, {...head_attr})
+        const head_elem = norm(direc, 2) == 0 ?
+            new Dot({ pos, rad: head, ...head_attr }) :
+            new Place({ children: arrow, pos, rad: head });
 
         // create tail
-        let tail_direc = direc.map(z => -tail*z);
-        let tail_elem = new Line(pos, add(pos, tail_direc), tail_attr);
+        const tail_direc = direc.map(z => -tail*z);
+        const tail_pos = add(pos, tail_direc);
+        const tail_elem = new Line({ p1: pos, p2: tail_pos, ...tail_attr });
 
-        super([head_elem, tail_elem], attr);
+        super({ children: [head_elem, tail_elem], ...attr });
     }
 }
 
 class Field extends Points {
-    constructor(points, direcs, args) {
-        let {marker, ...attr0} = args ?? {};
-        let [marker_attr, attr] = prefix_split(['marker'], attr0);
-        marker = marker ?? ((p, d, attr) => new Arrow(d, attr));
-        let field = zip(points, direcs).map(([p, d]) => [marker(p, d, marker_attr), p]);
-        super(field, attr);
+    constructor({ points, direcs, marker, ...attr0 } = {}) {
+        marker = marker ?? ((p, d, a) => new Arrow({ pos: p, direc: d, ...a }));
+        const [marker_attr, attr] = prefix_split(['marker'], attr0);
+        const field = zip(points, direcs).map(([p, d]) => [marker(p, d, marker_attr), p]);
+        super({ points: field, ...attr });
     }
 }
 
 class SymField extends Field {
-    constructor(func, args) {
-        let {xlim, ylim, N, ...attr} = args ?? {};
-        xlim = xlim ?? limit_base;
-        ylim = ylim ?? limit_base;
-        N = N ?? 10;
-
-        let points = lingrid(xlim, ylim, N);
-        let direcs = points.map(func);
-        super(points, direcs, attr);
+    constructor({ func, xlim = limit_base, ylim = limit_base, N = 10, ...attr } = {}) {
+        const points = lingrid(xlim, ylim, N);
+        const direcs = points.map(func);
+        super({ points, direcs, ...attr });
     }
 }
 
-/**
- ** networks
- **/
+//
+// networks
+//
 
 function get_center(elem) {
     let [xmin, ymin, xmax, ymax] = elem.bounds;
@@ -2602,9 +2528,9 @@ class Edge extends ArrowPath {
     }
 }
 
-/**
- ** bar components
- **/
+//
+// bar components
+//
 
 class MultiBar extends Stack {
     constructor(direc, lengths, args) {
@@ -2664,9 +2590,9 @@ class Bars extends Group {
     }
 }
 
-/**
- ** plotting elements
- **/
+//
+// plotting elements
+//
 
 function make_ticklabel(s, prec, attr) {
     let attr1 = {border: 0, padding: 0, ...attr};
@@ -3157,9 +3083,9 @@ class BarPlot extends Plot {
     }
 }
 
-/**
- ** Images
- **/
+//
+// Images
+//
 
 class Image extends Element {
     constructor(href, args) {
@@ -3175,149 +3101,12 @@ class Image extends Element {
     }
 }
 
-/**
- ** Interactive
- **/
-
-class Interactive {
-    constructor(vars, func) {
-        this.func = func;
-        this.vars = vars;
-    }
-
-    element() {
-        let vals = map_object(this.vars, v => v.value);
-        return this.func(vals);
-    }
-}
-
-class Variable {
-    constructor(init, args) {
-        args = args ?? {};
-        this.value = init;
-        this.attr = filter_object(args, v => v != null);
-    }
-
-    update(val) {
-        this.value = val;
-    }
-}
-
-class Slider extends Variable {
-    constructor(init, args) {
-        let {min, max, step, ...attr} = args ?? {};
-        min = min ?? 0;
-        max = max ?? 100;
-        step = step ?? 1;
-
-        let attr1 = {min, max, step, ...attr};
-        super(init, attr1);
-    }
-}
-
-class Toggle extends Variable {
-    constructor(init, args) {
-        init = init ?? true;
-        super(init, args);
-    }
-}
-
-class List extends Variable {
-    constructor(init, args) {
-        let {choices, ...attr} = args ?? {};
-        choices = choices ?? {};
-
-        if (is_array(choices)) {
-            choices = Object.fromEntries(choices.map(v => [v, v]));
-        }
-
-        let attr1 = {choices, ...attr};
-        super(init, attr1);
-    }
-}
-
-/**
- ** Animation
- **/
-
-class Transition {
-    constructor(args) {
-        let {tlim} = args ?? {};
-        this.tlim = tlim ?? [null, null];
-    }
-
-    frac(t, tlimf) {
-        let [t0, t1] = this.tlim;
-        let [t0f, t1f] = tlimf;
-        t0 = t0 ?? t0f;
-        t1 = t1 ?? t1f;
-        let f = (t - t0) / (t1 - t0);
-        return max(0, min(1, f));
-    }
-}
-
-class Continuous extends Transition {
-    constructor(lim, args) {
-        super(args);
-        this.lim = lim;
-    }
-
-    value(t, tlimf) {
-        let f = this.frac(t, tlimf);
-        let [lo, hi] = this.lim;
-        return lo + (hi - lo) * f;
-    }
-}
-
-class Discrete extends Transition {
-    constructor(vals, args) {
-        super(args);
-        this.vals = vals;
-    }
-
-    value(t, tlimf) {
-        let f = this.frac(t, tlimf);
-        let i0 = floor(f * this.vals.length);
-        let i = min(i0, this.vals.length - 1);
-        return this.vals[i];
-    }
-}
-
-class Animation {
-    constructor(vars, func, args) {
-        let {tlim, N} = args ?? {};
-        tlim = tlim ?? [0, 1];
-        N = N ?? 10;
-
-        // total frames
-        let [t0f, t1f] = tlim;
-        let time = linspace(t0f, t1f, N);
-
-        // animation state
-        this.frames = time.map(t => {
-            let vals = map_object(vars, v => v.value(t, tlim));
-            return func(vals);
-        });
-    }
-
-    frame(i) {
-        let frame = this.frames[i];
-        return renderElem(frame);
-    }
-
-    *animate() {
-        for (let i = 0; i < this.frames.length; i++) {
-            yield this.frame(i);
-        }
-    }
-}
-
-/**
- ** scripting
- **/
+//
+// scripting
+//
 
 let Gum = [
-    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3437,10 +3226,10 @@ function injectImages(elem) {
     });
 }
 
-/**
- ** exports
- **/
+//
+// exports
+//
 
 export {
-    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
+    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 };
