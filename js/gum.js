@@ -872,22 +872,6 @@ function parse_bounds(bnd) {
     }
 }
 
-function match_rect_sign(coord1, coord2) {
-    let [cx1, cy1, cx2, cy2] = coord1;
-    let [px1, py1, px2, py2] = coord2;
-    if (cx2 < cx1 && px2 > px1) {
-        [cx1, cx2] = [cx2, cx1];
-    } else if (cx2 > cx1 && px2 < px1) {
-        [cx1, cx2] = [cx2, cx1];
-    }
-    if (cy2 < cy1 && py2 > py1) {
-        [cy1, cy2] = [cy2, cy1];
-    } else if (cy2 > cy1 && py2 < py1) {
-        [cy1, cy2] = [cy2, cy1];
-    }
-    return [cx1, cy1, cx2, cy2];
-}
-
 class Container extends Element {
     constructor(children, args) {
         let {tag, aspect, coord, clip, debug, ...attr} = args ?? {};
