@@ -1238,9 +1238,9 @@ class Place extends Group {
 }
 
 class Flip extends Group {
-    constructor({ children: children0, direction, ...attr } = {}) {
+    constructor({ children: children0, direc, ...attr } = {}) {
+        direc = get_orient(direc);
         const child = single_child(children0);
-        const direc = get_orient(direction);
         const rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1];
         const children = [[child, rect]];
         super({ children, clip: true, ...attr });
@@ -1339,8 +1339,8 @@ class Absolute extends Element {
 
 // this can have an aspect, which is utilized by layouts
 class Spacer extends Element {
-    constructor(args) {
-        super(null, null, args);
+    constructor(attr) {
+        super({ tag: 'g', unary: true, ...attr });
     }
 
     svg(ctx) {
@@ -1349,56 +1349,53 @@ class Spacer extends Element {
 }
 
 class Line extends Element {
-    constructor(p1, p2, args) {
-        let attr = args ?? {};
-        super('line', true, attr);
+    constructor({ p1, p2, ...attr } = {}) {
+        super({ tag: 'line', unary: true, ...attr });
         [this.p1, this.p2] = [p1, p2];
         this.bounds = merge_points(p1, p2);
     }
 
     props(ctx) {
-        let [x1, y1] = ctx.coord_to_pixel(this.p1);
-        let [x2, y2] = ctx.coord_to_pixel(this.p2);
+        const [x1, y1] = ctx.coord_to_pixel(this.p1);
+        const [x2, y2] = ctx.coord_to_pixel(this.p2);
         return {x1, y1, x2, y2, ...this.attr};
     }
 }
 
 class UnitLine extends Line {
-    constructor(direc, pos, args) {
-        let {lim, ...attr} = args ?? {};
-        let [lo, hi] = lim ?? limit_base;
+    constructor({ direc, pos = 0.5, lim = limit_base, ...attr } = {}) {
         direc = get_orient(direc);
-        let [p1, p2] = (direc == 'v') ? [[pos, lo], [pos, hi]] : [[lo, pos], [hi, pos]];
-        super(p1, p2, attr);
+        const [lo, hi] = lim;
+        const [p1, p2] = (direc == 'v') ?
+            [[pos, lo], [pos, hi]] :
+            [[lo, pos], [hi, pos]];
+        super({ p1, p2, ...attr });
     }
 }
 
 class VLine extends UnitLine {
-    constructor(pos, args) {
-        super('v', pos, args);
+    constructor(attr) {
+        super({ direc: 'v', ...attr });
     }
 }
 
 class HLine extends UnitLine {
-    constructor(pos, args) {
-        super('h', pos, args);
+    constructor(attr) {
+        super({ direc: 'h', ...attr });
     }
 }
 
 class Rect extends Element {
-    constructor(args) {
-        let {pos, rad, rect, rounded, ...attr} = args ?? {};
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? [0.5, 0.5];
+    constructor({ pos = [0.5, 0.5], rad = [0.5, 0.5], rect, rounded, ...attr } = {}) {
         rect = rect ?? rad_rect(pos, rad);
-        super('rect', true, attr);
+        super({ tag: 'rect', unary: true, ...attr });
         this.rect = rect;
         this.rounded = rounded;
         this.bounds = merge_rects(this.rect);
     }
 
     props(ctx) {
-        let [x1, y1, x2, y2] = ctx.coord_to_pixel_rect(this.rect);
+        const [x1, y1, x2, y2] = ctx.coord_to_pixel_rect(this.rect);
 
         // orient increasing
         let [x, y] = [x1, y1];
@@ -1418,21 +1415,15 @@ class Rect extends Element {
         }
 
         // output properties
-        let base = {x, y, width: w, height: h, rx, ry};
-        return {...base, ...this.attr};
+        return {x, y, width: w, height: h, rx, ry, ...this.attr};
     }
 }
 
 class Square extends Rect {
-    constructor(args) {
-        let {pos, rad, ...attr} = args ?? {};
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? 0.5;
-
-        let [x, y] = pos;
-        let rect = [x - rad, y - rad, x + rad, y + rad];
-        let base = {rect, aspect: 1};
-        super({...base, ...attr});
+    constructor({ pos = [0.5, 0.5], rad = 0.5, ...attr } = {}) {
+        const [x, y] = pos;
+        const rect = [x - rad, y - rad, x + rad, y + rad];
+        super({ rect, aspect: 1, ...attr });
     }
 }
 
@@ -1469,10 +1460,7 @@ class Dot extends Circle {
 }
 
 class Ray extends Element {
-    constructor(theta, args) {
-        let {aspect, ...attr} = args ?? {};
-        theta = theta ?? 45;
-
+    constructor({ theta = 45, aspect, ...attr } = {}) {
         // map into (-90, 90];
         if (theta < -90 || theta > 90) {
             theta = ((theta + 90) % 180) - 90;
@@ -1490,13 +1478,13 @@ class Ray extends Element {
             direc = 0;
             aspect = 1;
         } else {
-            let direc0 = tan(theta*(pi/180));
+            const direc0 = tan(theta*(pi/180));
             direc = direc0;
             aspect = 1/abs(direc0);
         }
 
         // pass to Element
-        super('line', true, {aspect, ...attr});
+        super({ tag: 'line', unary: true, aspect, ...attr });
         this.direc = direc;
     }
 
@@ -1511,10 +1499,9 @@ class Ray extends Element {
         } else {
             [p1, p2] = [[0, 1], [1, 0]];
         }
-        let [x1, y1] = ctx.coord_to_pixel(p1);
-        let [x2, y2] = ctx.coord_to_pixel(p2);
-        let base = {x1, y1, x2, y2};
-        return {...base, ...this.attr};
+        const [x1, y1] = ctx.coord_to_pixel(p1);
+        const [x2, y2] = ctx.coord_to_pixel(p2);
+        return {x1, y1, x2, y2, ...this.attr};
     }
 }
 
