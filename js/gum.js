@@ -808,11 +808,13 @@ class Context {
 }
 
 class Element {
-    constructor(tag, unary, args) {
-        let {aspect, ...attr} = args ?? {};
+    constructor({ tag, unary, aspect = null, ...attr } = {}) {
+        // core display
         this.tag = tag;
         this.unary = unary;
-        this.aspect = aspect ?? null;
+
+        // layout params
+        this.aspect = aspect;
 
         // store non-null attributes
         this.attr = filter_object(attr, v => v != null);
@@ -830,22 +832,18 @@ class Element {
         ctx = ctx ?? new Context(rect_base);
 
         // collect all properties
-        let pvals = this.props(ctx);
+        const pvals = this.props(ctx);
         if (ctx.trans != null) {
-            let trans = `${pvals.transform ?? ''} ${ctx.trans}`.trim();
+            const trans = `${pvals.transform ?? ''} ${ctx.trans}`.trim();
             pvals = {...pvals, transform: trans};
         }
 
         // convert to strings
-        let props = props_repr(pvals, ctx.prec);
-        let pre = props.length > 0 ? ' ' : '';
+        const props = props_repr(pvals, ctx.prec);
+        const pre = props.length > 0 ? ' ' : '';
 
         // optional debug info
-        let debug = '';
-        if (ctx.debug) {
-            let klass = this.constructor.name;
-            debug = ` gum-class="${klass}"`;
-        }
+        const debug = ctx.debug ? ` gum-class="${this.constructor.name}"` : '';
 
         // return final svg
         if (this.unary) {
@@ -872,13 +870,8 @@ function parse_bounds(bnd) {
     }
 }
 
-class Container extends Element {
-    constructor(children, args) {
-        let {tag, aspect, coord, clip, debug, ...attr} = args ?? {};
-        tag = tag ?? 'g';
-        clip = clip ?? true;
-        debug = debug ?? false;
-
+class Group extends Element {
+    constructor({ children, aspect, coord, tag = 'g', clip = true, debug = false, ...attr } = {}) {
         // handle singleton
         if (is_element(children) || is_metaelement(children)) {
             children = [children];
@@ -895,19 +888,18 @@ class Container extends Element {
 
         // infer aspect of clipped contents
         if (aspect == null && clip) {
-            let ctx = new Context(coord_base);
-            let rects = children
+            const ctx = new Context(coord_base);
+            const rects = children
                 .filter(([c, a]) => c.aspect != null)
                 .map(([c, a]) => ctx.map({aspect: c.aspect, ...a}).rrect);
             if (rects.length > 0) {
-                let total = merge_rects(...rects);
+                const total = merge_rects(...rects);
                 aspect = rect_aspect(total);
             }
         }
 
         // pass to Element
-        let attr1 = {aspect: aspect, ...attr};
-        super(tag, false, attr1);
+        super({ tag, unary: false, aspect, ...attr });
         this.children = children;
         this.coord = coord;
         this.bounds = bounds;
@@ -915,24 +907,24 @@ class Container extends Element {
     }
 
     inner(ctx) {
-        // empty container
+        // empty group
         if (this.children.length == 0) {
             return '\n';
         }
 
         // map to new contexts and render
-        let cargs = {coord: this.coord};
+        const cargs = {coord: this.coord};
         let inside = this.children.map(([c, a]) => c.svg(
             ctx.map({aspect: c.aspect, ...cargs, ...a})
         )).filter(s => s.length > 0).join('\n');
 
         // debug rects
         if (this.debug || ctx.debug) {
-            let dstr = this.children.map(([c, a]) => {
-                let ctx1 = ctx.map({aspect: c.aspect, ...cargs, ...a});
-                let ctx2 = ctx.map({...cargs, ...a});
-                let rect1 = new Rect({stroke: 'red'});
-                let rect2 = new Rect({stroke_dasharray: 4, stroke: 'blue'});
+            const dstr = this.children.map(([c, a]) => {
+                const ctx1 = ctx.map({aspect: c.aspect, ...cargs, ...a});
+                const ctx2 = ctx.map({...cargs, ...a});
+                const rect1 = new Rect({stroke: 'red'});
+                const rect2 = new Rect({stroke_dasharray: 4, stroke: 'blue'});
                 return `${rect1.svg(ctx1)}\n${rect2.svg(ctx2)}`;
             }).join('\n');
             inside = `${inside}\n${dstr}`;
@@ -943,23 +935,17 @@ class Container extends Element {
     }
 }
 
-class SVG extends Container {
-    constructor(children, args) {
-        let {clip, size, prec, bare, filters, ...attr} = args ?? {};
-        clip = clip ?? true;
-        size = size ?? size_base;
-        prec = prec ?? prec_base;
-        bare = bare ?? false;
-        filters = filters ?? null;
-
+class SVG extends Group {
+    constructor({ children, size = size_base, prec = prec_base, bare = false, filters = null, ...attr } = {}) {
+        // handle filters
         if (filters != null) {
-            let defs = new Defs(filters);
+            const defs = new Defs(filters);
             children = [defs, ...children];
         }
 
-        let svg_props = bare ? {} : svg_props_base;
-        let attr1 = {tag: 'svg', clip: clip, ...svg_props, ...attr};
-        super(children, attr1);
+        // pass to Group
+        const svg_props = bare ? {} : svg_props_base;
+        super({ tag: 'svg', children, ...svg_props, ...attr });
 
         if (is_scalar(size)) {
             if (this.aspect == null) {
@@ -976,17 +962,17 @@ class SVG extends Container {
     }
 
     props(ctx) {
-        let [w, h] = this.size;
-        let box = `0 0 ${w} ${h}`;
-        let base = {viewBox: box, xmlns: ns_svg};
+        const [w, h] = this.size;
+        const box = `0 0 ${w} ${h}`;
+        const base = {viewBox: box, xmlns: ns_svg};
         return {...base, ...this.attr};
     }
 
     svg(args) {
         args = args ?? {};
-        let rect = [0, 0, ...this.size];
-        let aspec = rect_aspect(rect);
-        let ctx = new Context(rect, {aspec, prec: this.prec, ...args});
+        const rect = [0, 0, ...this.size];
+        const aspec = rect_aspect(rect);
+        const ctx = new Context(rect, {aspec, prec: this.prec, ...args});
         return super.svg(ctx);
     }
 }
@@ -995,27 +981,17 @@ class SVG extends Container {
  ** layout classes
  **/
 
-class Group extends Container {
-    constructor(children, args) {
-        super(children, args);
-    }
-}
-
 // TODO: auto-adjust padding/margin for aspect
 //       it seems adjust only does this if child aspect is not null
 //       but we also want to do it if own aspect is not null
-class Frame extends Container {
-    constructor(child, args) {
-        let {
-            padding, margin, border, aspect, adjust, flex, rotate, invar, align,
-            shrink, shape, rounded, stroke, fill, ...attr0
-        } = args ?? {};
-        let [border_attr, attr] = prefix_split(['border'], attr0);
-        border = border ?? 0;
-        padding = padding ?? 0;
-        margin = margin ?? 0;
-        adjust = adjust ?? true;
-        flex = flex ?? false;
+class Frame extends Group {
+    constructor({ children: children0, padding = 0, margin = 0, border = 0, aspect, adjust = true, flex = false, rotate, invar, align, shrink, shape, rounded, stroke, fill, ...attr0 } = {}) {
+        // validate children
+        if (children0 == null || children0.length != 1) throw Error('Frame must have exactly one child');
+        const [ child ] = children0;
+
+        // handle border attributes
+        const [border_attr, attr] = prefix_split(['border'], attr0);
 
         // ensure shape is a function
         if (shape == null) {
@@ -1033,28 +1009,29 @@ class Frame extends Container {
         margin = pad_rect(margin);
 
         // aspect adjusted padding/margin
-        if (adjust && child.aspect != null) {
+        if (adjust && child != null && child.aspect != null) {
             padding = aspect_invariant(padding, 1/child.aspect);
             margin = aspect_invariant(margin, 1/child.aspect);
         }
 
         // get box sizes
-        let casp = rotate_aspect(child.aspect, rotate);
-        let iasp = aspect ?? casp;
-        let [crect, brect, basp, tasp] = map_padmar(padding, margin, iasp);
+        const casp = rotate_aspect(child.aspect, rotate);
+        const iasp = aspect ?? casp;
+        const [crect, brect, basp, tasp] = map_padmar(padding, margin, iasp);
         aspect = flex ? null : (aspect ?? tasp);
 
         // make border box
-        let rargs = {stroke_width: border, stroke, fill, ...border_attr};
-        let rect = shape(rargs);
+        const rargs = {stroke_width: border, stroke, fill, ...border_attr};
+        const rect = shape(rargs);
 
         // gather children
-        let children = [[child, {rect: crect, rotate, invar, align, shrink}]];
-        children.unshift([rect, brect]);
+        const children = [
+            [rect, brect],
+            [child, {rect: crect, rotate, invar, align, shrink}],
+        ];
 
-        // pass to Container
-        let attr1 = {aspect, clip: false, ...attr};
-        super(children, attr1);
+        // pass to Group
+        super({ children, aspect, clip: false, ...attr });
     }
 }
 
@@ -1071,32 +1048,23 @@ function get_orient(direc) {
 // fill in missing values to ensure: sum(vals) == target
 function distribute_extra(vals, target) {
     target = target ?? 1;
-    let nmiss = vals.filter(v => v == null).length;
-    let total = sum(vals);
-    let fill = (nmiss > 0) ? (target-total)/nmiss : 0;
+    const nmiss = vals.filter(v => v == null).length;
+    const total = sum(vals);
+    const fill = (nmiss > 0) ? (target-total)/nmiss : 0;
     return vals.map(v => v ?? fill);
 }
 
 // expects list of Element or [Element, height]
 // this is written as vertical, horizonal swaps dimensions and inverts aspects
-class Stack extends Container {
-    constructor(direc, children, args) {
-        let {expand, align, spacing, aspect, debug, ...attr} = args ?? {};
-        expand = expand ?? true;
-        align = align ?? 'center';
-        spacing = spacing ?? 0;
-        aspect = aspect ?? 'auto';
-        debug = debug ?? false;
+class Stack extends Group {
+    constructor({ direc, children: children0, expand = true, align = 'center', spacing = 0, aspect = 'auto', debug = false, ...attr } = {}) {
         direc = get_orient(direc);
 
         // short circuit if empty
-        let n = children.length;
-        if (n == 0) {
-            return super([], {aspect: aspect, ...attr});
-        }
+        if (children0.length == 0) return super({ children: [], aspect, ...attr });
 
         // fill in missing heights with null
-        let [elements, heights] = zip(...children.map(c => {
+        const [elements, heights] = zip(...children0.map(c => {
             if (is_element(c)) { return [c, null]; }
             else if (is_scalar(c)) { return [new Spacer(), c]; }
             else { return c; }
@@ -1104,7 +1072,7 @@ class Stack extends Container {
 
         // get aspects and adjust for direction
         let aspects = elements.map(c => c.aspect);
-        let hasa = any(zip(heights, aspects).map(
+        const hasa = any(zip(heights, aspects).map(
             ([h, a]) => a != null && h != null
         )) || all(aspects.map(a => a != null));
         if (direc == 'h') {
@@ -1123,9 +1091,9 @@ class Stack extends Container {
             heights = zip(heights, aspects).map(([h, a]) => (a != null) ? 1/a : h);
 
             // renormalize heights and find ideal aspect
-            let has = zip(heights, aspects);
-            let atot = sum(has.map(([h, a]) => (a != null) ? h : null));
-            let utot = sum(has.map(([h, a]) => (a == null) ? h : null));
+            const has = zip(heights, aspects);
+            const atot = sum(has.map(([h, a]) => (a != null) ? h : null));
+            const utot = sum(has.map(([h, a]) => (a == null) ? h : null));
             heights = has.map(([h, a]) => (a != null) ? (1-utot)*(h/atot) : h);
             aspect_ideal = (1-utot)/atot;
 
@@ -1137,17 +1105,17 @@ class Stack extends Container {
             let widths = zip(heights, aspects).map(([h, a]) => (a != null) ? h*a : null);
 
             // ideal aspect determined by widest element
-            let wmax = max(...widths) ?? 1;
+            const wmax = max(...widths) ?? 1;
             widths = widths.map(w => (w != null) ? w/wmax : 1);
             aspect_ideal = wmax;
 
             // set wlims according to alignment
-            let afrac = align_frac(align);
+            const afrac = align_frac(align);
             wlims = widths.map(w => (w != null) ? [afrac*(1-w), afrac+(1-afrac)*w] : [0, 1]);
         }
 
         // convert heights to cumulative intervals (with spacing)
-        let pos = -spacing;
+        const pos = -spacing;
         let hlims = heights.map(y => [pos += spacing, pos += y]);
         hlims = hlims.map(([h1, h2]) => [h1/pos, h2/pos]);
         aspect_ideal = (aspect_ideal != null) ? aspect_ideal/pos : null;
@@ -1178,21 +1146,20 @@ class Stack extends Container {
             children = [...children, ...boxes];
         }
 
-        // pass to Container
-        let attr1 = {aspect: aspect, ...attr};
-        super(children, attr1);
+        // pass to Group
+        super({ children, aspect, ...attr });
     }
 }
 
 class VStack extends Stack {
-    constructor(children, args) {
-        super('v', children, args);
+    constructor({ children, ...attr } = {}) {
+        super({ direc: 'v', children, ...attr });
     }
 }
 
 class HStack extends Stack {
-    constructor(children, args) {
-        super('h', children, args);
+    constructor({ children, ...attr } = {}) {
+        super({ direc: 'h', children, ...attr });
     }
 }
 
@@ -1205,7 +1172,7 @@ h_i = \frac{v_i}{\sum_{k=1}^M v_k}
 \log(a) = \log(\mu) - \frac{1}{N} \sum_{j=1}^N \log(w_j) + \frac{1}{M} \sum_{i=1}^M \log(h_i)
 */
 
-class Grid extends Container {
+class Grid extends Group {
     constructor(children, args) {
         let {rows, cols, widths, heights, spacing, aspect, ...attr} = args ?? {};
         spacing = ensure_vector(spacing ?? 0, 2);
@@ -1252,7 +1219,7 @@ class Grid extends Container {
     }
 }
 
-class Place extends Container {
+class Place extends Group {
     constructor(child, args) {
         let {rect, pos, rad, rotate, expand, invar, align, pivot, ...attr} = args ?? {};
         pos = pos ?? [0.5, 0.5];
@@ -1262,13 +1229,13 @@ class Place extends Container {
         rect = rect ?? rad_rect(pos, rad);
         let spec = [child, {rect, rotate, expand, invar, align, pivot}];
 
-        // pass to container
+        // pass to Group
         let attr1 = {clip: false, ...attr};
         super([spec], attr1);
     }
 }
 
-class Bounds extends Container {
+class Bounds extends Group {
     constructor(child, rect, args) {
         let {expand, align, coord, clip, ...attr} = args ?? {};
         let spec = [child, {rect, expand, align, coord}];
@@ -1277,7 +1244,7 @@ class Bounds extends Container {
     }
 }
 
-class Rotate extends Container {
+class Rotate extends Group {
     constructor(child, rotate, args) {
         let {expand, invar, align, pivot, ...attr} = args ?? {};
         let spec = [child, {rotate, expand, invar, align, pivot}];
@@ -1286,7 +1253,7 @@ class Rotate extends Container {
     }
 }
 
-class Flip extends Container {
+class Flip extends Group {
     constructor(direc, child, args) {
         direc = get_orient(direc);
         let rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1];
@@ -1312,7 +1279,7 @@ let anchor_rect = {
     'left': [0, 0, 0, 1], 'right': [1, 0, 1, 1],
     'top': [0, 0, 1, 0], 'bottom': [0, 1, 1, 1]
 };
-class Anchor extends Container {
+class Anchor extends Group {
     constructor(child, side, args) {
         let {align, ...attr} = args ?? {};
 
@@ -1320,13 +1287,13 @@ class Anchor extends Container {
         let rect = anchor_rect[side];
         align = align ?? 1 - align_frac(side);
 
-        // pass to container
+        // pass to Group
         let spec = {rect, align, expand: true};
         super([[child, spec]], {clip: false, ...attr});
     }
 }
 
-class Attach extends Container {
+class Attach extends Group {
     constructor(child, side, args) {
         let {offset, size, align, ...attr} = args ?? {};
         offset = offset ?? 0;
@@ -1344,7 +1311,7 @@ class Attach extends Container {
     }
 }
 
-class Points extends Container {
+class Points extends Group {
     constructor(points, args) {
         let {size, shape, stroke, fill, stroke_width, ...attr} = args ?? {};
         shape = shape ?? new Dot({stroke, fill, stroke_width});
@@ -1355,7 +1322,7 @@ class Points extends Container {
         points = points.map(p => is_element(p[0]) ? p : [shape, ...p]);
         points = points.map(p => (p.length >= 3) ? p : [...p, size]);
 
-        // pass to container
+        // pass to Group
         let children = points.map(([s, p, r]) => [s, rad_rect(p, r)]);
         let attr1 = {clip: false, ...attr};
         super(children, attr1);
@@ -1492,12 +1459,8 @@ class Square extends Rect {
 }
 
 class Ellipse extends Element {
-    constructor(args) {
-        let {pos, rad, ...attr} = args ?? {};
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? [0.5, 0.5];
-
-        super('ellipse', true, attr);
+    constructor({ pos = [0.5, 0.5], rad = [0.5, 0.5], ...attr } = {}) {
+        super({ 'tag': 'ellipse', 'unary': true, ...attr });
         this.pos = pos;
         this.rad = rad;
 
@@ -1507,31 +1470,23 @@ class Ellipse extends Element {
     }
 
     props(ctx) {
-        let [cx, cy] = ctx.coord_to_pixel(this.pos);
-        let [rx, ry] = ctx.coord_to_pixel_size(this.rad);
-        let base = {cx, cy, rx, ry};
+        const [cx, cy] = ctx.coord_to_pixel(this.pos);
+        const [rx, ry] = ctx.coord_to_pixel_size(this.rad);
+        const base = {cx, cy, rx, ry};
         return {...base, ...this.attr};
     }
 }
 
 class Circle extends Ellipse {
-    constructor(args) {
-        let {pos, rad, ...attr} = args ?? {};
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? 0.5;
-
-        let rad2 = [rad, rad];
-        let base = {pos, rad: rad2, aspect: 1};
-        super({...base, ...attr});
+    constructor({ pos = [0.5, 0.5], rad = 0.5, ...attr } = {}) {
+        const rad2 = [rad, rad];
+        super({ pos, rad: rad2, aspect: 1, ...attr });
     }
 }
 
 class Dot extends Circle {
-    constructor(args) {
-        let {stroke, fill, rad, ...attr} = args ?? {};
-        stroke = stroke ?? 'black';
-        fill = fill ?? 'black';
-        super({stroke, fill, rad, ...attr});
+    constructor({ stroke = 'black', fill = 'black', rad = 0.5, ...attr }) {
+        super({ stroke, fill, rad, ...attr });
     }
 }
 
@@ -1855,7 +1810,7 @@ class MetaElement {
     }
 }
 
-class MetaContainer extends MetaElement {
+class MetaGroup extends MetaElement {
     constructor(tag, children, args) {
         super(tag, args);
         this.children = children;
@@ -1866,7 +1821,7 @@ class MetaContainer extends MetaElement {
     }
 }
 
-class Defs extends MetaContainer {
+class Defs extends MetaGroup {
     constructor(children, args) {
         super('defs', children, args);
     }
@@ -1891,7 +1846,7 @@ class Effect extends MetaElement {
     }
 }
 
-class Filter extends MetaContainer {
+class Filter extends MetaGroup {
     constructor(name, effects, args) {
         super('filter', effects, {id: name, ...args});
     }
@@ -1927,7 +1882,7 @@ class MergeNode extends MetaElement {
     }
 }
 
-class Merge extends MetaContainer {
+class Merge extends MetaGroup {
     constructor(effects, args) {
         let nodes = effects.map(e => MergeNode(e.result));
         super('feMerge', nodes, args);
@@ -2124,7 +2079,7 @@ class TextFrame extends Frame {
             new VStack(text.map(maker), {expand: false, align, spacing}) :
             maker(text);
 
-        // pass to container
+        // pass to Group
         let attr1 = {padding, border, align, ...attr};
         super(child, attr1);
     }
@@ -2291,7 +2246,7 @@ class SymPoly extends Polygon {
     }
 }
 
-class SymPoints extends Container {
+class SymPoints extends Group {
     constructor(args) {
         let {fx, fy, fs, fr, size, shape, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
         size = size ?? 0.01;
@@ -2371,7 +2326,7 @@ class DataFill extends Polygon {
  ** fields
  **/
 
-class Arrow extends Container {
+class Arrow extends Group {
     constructor(direc, args) {
         let {pos, head, tail, shape, graph, ...attr0} = args ?? {};
         let [head_attr, tail_attr, attr] = prefix_split(['head', 'tail'], attr0);
@@ -2580,7 +2535,7 @@ function vector_angle(vector) {
     return r2d*Math.atan2(vector[1], vector[0]);
 }
 
-class ArrowPath extends Container {
+class ArrowPath extends Group {
     constructor(pos_beg, pos_end, args) {
         let {direc_beg, direc_end, arrow, arrow_beg, arrow_end, arrow_size, ...attr0} = args ?? {};
         let [path_attr, arrow_beg_attr, arrow_end_attr, arrow_attr, attr] = prefix_split(
@@ -2617,7 +2572,7 @@ class ArrowPath extends Container {
             children.push([head_end, {pos: pos_end, rad: arrow_size}]);
         }
 
-        // pass to container
+        // pass to Group
         super(children, attr);
     }
 }
@@ -2725,7 +2680,7 @@ function make_bar(i, b, attr) {
     return [c, [i, h]];
 }
 
-class Bars extends Container {
+class Bars extends Group {
     constructor(data, args) {
         let {direc, width, zero, ...attr} = args ?? {};
         direc = get_orient(direc ?? 'v');
@@ -2738,7 +2693,7 @@ class Bars extends Container {
             direc == 'v' ? [x-width/2, zero, x+width/2, y] : [zero, x-width/2, y, x+width/2]
         );
 
-        // pass to container
+        // pass to Group
         let children = zip(elems, rects);
         super(children);
     }
@@ -2771,7 +2726,7 @@ function ensure_tick(t, prec) {
     }
 }
 
-class Scale extends Container {
+class Scale extends Group {
     constructor(direc, locs, args) {
         let {lim, ...attr} = args ?? {};
         direc = get_orient(direc);
@@ -2806,7 +2761,7 @@ function invert_align(align) {
 
 // this is used by axis with the main coordinates defined
 // label elements must have an aspect to properly size them
-class Labels extends Container {
+class Labels extends Group {
     constructor(direc, ticks, args) {
         let {align, prec, ...attr} = args ?? {};
         direc = get_orient(direc);
@@ -2858,7 +2813,7 @@ function get_ticklim(lim) {
 }
 
 // this is designed to be plotted directly
-class Axis extends Container {
+class Axis extends Group {
     constructor(direc, ticks, args) {
         let {
             pos, lim, tick_size, tick_pos, label_size, label_offset, label_pos, prec, ...attr0
@@ -2904,7 +2859,7 @@ class Axis extends Container {
             lbox = [lo, pos+lab_base, hi, pos+lab_base+lab_size];
         }
 
-        // pass to container
+        // pass to Group
         let tcoord = (direc == 'v') ? [0, hi, 1, lo] : [lo, 1, hi, 0];
         let children = [[cline, sbox], [scale, sbox], [label, lbox]];
         super(children, {coord: tcoord, ...attr});
@@ -3050,7 +3005,7 @@ function outer_limits(elems, padding) {
     return [xmin, ymin, xmax, ymax];
 }
 
-class Graph extends Container {
+class Graph extends Group {
     constructor(elems, args) {
         let {coord, aspect, padding, flex, flip, ...attr} = args ?? {};
         padding = padding ?? 0;
@@ -3068,7 +3023,7 @@ class Graph extends Container {
         // get automatic aspect
         if (!flex && aspect == null) aspect = rect_aspect(coord);
 
-        // pass to container
+        // pass to Group
         let eargs = {submap: [0, 1, 1, 0]};
         let elem1 = elems.map(e => [e, eargs]);
         let attr1 = {aspect, coord, ...attr};
@@ -3076,7 +3031,7 @@ class Graph extends Container {
     }
 }
 
-class Plot extends Container {
+class Plot extends Group {
     constructor(elems, args) {
         let {
             xlim, ylim, xaxis, yaxis, xticks, yticks, grid, xgrid, ygrid, xlabel, ylabel,
@@ -3205,7 +3160,7 @@ class Plot extends Container {
             children.push([title, title_rect]);
         }
 
-        // pass to container
+        // pass to Group
         let attr1 = {aspect, clip: false, ...attr};
         super(children, attr1);
     }
@@ -3397,7 +3352,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3423,7 +3378,7 @@ function parseGum(src, extra) {
 
 function renderElem(elem, args) {
     if (is_element(elem)) {
-        elem = (elem instanceof SVG) ? elem : new SVG(elem, args);
+        elem = (elem instanceof SVG) ? elem : new SVG({ children: [elem], ...args });
         return elem.svg();
     } else {
         return String(elem);
@@ -3522,5 +3477,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
+    Gum, Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 };
