@@ -245,6 +245,10 @@ function filter_object(obj, fn) {
 // type utils
 //
 
+function ensure_array(x) {
+    return is_array(x) ? x : [x];
+}
+
 function ensure_vector(x, n) {
     if (!is_array(x)) {
         return range(n).map(i => x);
@@ -763,7 +767,7 @@ class Context {
     }
 }
 
-// layout keys
+// spec keys
 const spec_keys = ['rect', 'aspect', 'rotate', 'expand', 'invar', 'align', 'pivot'];
 
 // NOTE: if children gets here, it was ignored by the constructor (so dump it)
@@ -812,10 +816,6 @@ class Element {
     }
 }
 
-function ensure_array(x) {
-    return is_array(x) ? x : [x];
-}
-
 // detect realized aspect of children
 function detect_aspect(children, coord) {
     const ctx = new Context(rect_base);
@@ -826,7 +826,7 @@ function detect_aspect(children, coord) {
 }
 
 class Group extends Element {
-    constructor({ children, tag = 'g', coord, aspect, clip = true, ...attr } = {}) {
+    constructor({ children, coord, aspect, tag = 'g', clip = true, ...attr } = {}) {
         children = ensure_array(children);
 
         // extract specs from children
@@ -877,7 +877,7 @@ class SVG extends Group {
 
     props(ctx) {
         const [w, h] = this.size;
-        const box = `0 0 ${w} ${h}`;
+        const box = `0 0 ${rounder(w, this.prec)} ${rounder(h, this.prec)}`;
         const base = {viewBox: box, xmlns: ns_svg};
         return {...base, ...this.attr};
     }
@@ -907,11 +907,8 @@ function check_singleton(children) {
 //       it seems adjust only does this if child aspect is not null
 //       but we also want to do it if own aspect is not null
 class Frame extends Group {
-    constructor({ children, padding = 0, margin = 0, border = 0, aspect, adjust = true, flex = false, rotate, invar, align, shrink, shape, rounded, stroke, fill, ...attr0 } = {}) {
-        // validate children
+    constructor({ children, padding = 0, margin = 0, border = 0, aspect, adjust = true, flex = false, shape, rounded, stroke, fill, ...attr0 } = {}) {
         const child = check_singleton(children);
-
-        // handle border attributes
         const [border_attr, attr] = prefix_split(['border'], attr0);
 
         // ensure shape is a function
@@ -919,7 +916,7 @@ class Frame extends Group {
             if (rounded == null) {
                 shape = (a => new Rect(a));
             } else {
-                shape = (a => new RoundedRect({rounded, ...a}));
+                shape = (a => new RoundedRect({ rounded, ...a }));
             }
         } else {
             shape = ensure_function(shape);
@@ -930,29 +927,25 @@ class Frame extends Group {
         margin = pad_rect(margin);
 
         // aspect adjusted padding/margin
-        if (adjust && child != null && child.aspect != null) {
-            padding = aspect_invariant(padding, 1/child.aspect);
-            margin = aspect_invariant(margin, 1/child.aspect);
+        const { aspect: child_aspect } = child.spec;
+        if (adjust && child_aspect != null) {
+            padding = aspect_invariant(padding, 1 / child_aspect);
+            margin = aspect_invariant(margin, 1 / child_aspect);
         }
 
         // get box sizes
-        const casp = rotate_aspect(child.aspect, rotate);
-        const iasp = aspect ?? casp;
+        const iasp = aspect ?? child_aspect;
         const [crect, brect, basp, tasp] = map_padmar(padding, margin, iasp);
         aspect = flex ? null : (aspect ?? tasp);
 
         // make border box
-        const rargs = {stroke_width: border, stroke, fill, ...border_attr};
-        const rect = shape(rargs);
+        const rect = shape({ rect: brect, stroke_width: border, stroke, fill, ...border_attr });
 
-        // gather children
-        children = [
-            [rect, brect],
-            [child, {rect: crect, rotate, invar, align, shrink}],
-        ];
+        // assign rect to child
+        child.spec.rect = crect;
 
         // pass to Group
-        super({ children, aspect, clip: false, ...attr });
+        super({ children: [rect, child], aspect, clip: false, ...attr });
     }
 }
 
