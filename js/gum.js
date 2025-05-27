@@ -22,10 +22,10 @@ const font_size_base = 12;
 
 // plot defaults
 const num_ticks_base = 5;
-const tick_size_base = 0.025;
-const tick_label_size_base = 2.0;
+const tick_size_base = 1;
+const tick_label_size_base = 1.5;
 const tick_label_offset_base = 0.5;
-const label_size_base = 0.06;
+const label_size_base = 0.5;
 const label_offset_base = 0.15;
 const title_size_base = 0.1;
 const title_offset_base = 0.1;
@@ -668,12 +668,11 @@ function rect_remap(rect, frac) {
 }
 
 class Context {
-    constructor(prect, { coord, submap, rrect, trans, prec } = {}) {
+    constructor(prect, { coord, trans, submap, prec } = {}) {
         this.prect = prect;
-        this.rrect = rrect;
         this.coord = coord;
-        this.submap = submap;
         this.trans = trans;
+        this.submap = submap;
         this.prec = prec;
     }
 
@@ -744,14 +743,13 @@ class Context {
         const [hexpand, vexpand] = ensure_vector(expand, 2);
         const [tw, th] = [cos(theta)+sin(theta)/rasp, rasp*sin(theta)+cos(theta)];
         const [rw0, rh0] = [pw0/tw, ph0/th];
-        const [pw1, ph1] = ((wide & hexpand) | (!wide & !vexpand)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
+        const [pw1, ph1] = ((wide & hexpand) || (!wide & !vexpand)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
         const [rw1, rh1] = [pw1*tw, ph1*th];
 
         // get rotated/unrotated pixel rect
         const cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
         const cy = (1-valign)*py1 + valign*py2 + (0.5-valign)*rh1;
         const prect = [cx-0.5*pw1, cy-0.5*ph1, cx+0.5*pw1, cy+0.5*ph1];
-        const rrect = invar ? prect : [cx-0.5*rw1, cy-0.5*rh1, cx+0.5*rw1, cy+0.5*rh1];
 
         // get transform string
         const vx = (1-hpivot)*px1 + hpivot*px2;
@@ -763,12 +761,12 @@ class Context {
         if (this.submap != null) coord = rect_remap(coord ?? coord_base, this.submap);
 
         // return new context
-        return new Context(prect, {coord, submap, rrect, trans, prec: this.prec});
+        return new Context(prect, {coord, trans, submap, prec: this.prec});
     }
 }
 
 // spec keys
-const spec_keys = ['rect', 'aspect', 'rotate', 'expand', 'invar', 'align', 'pivot', 'size'];
+const spec_keys = ['rect', 'aspect', 'expand', 'coord', 'rotate', 'invar', 'align', 'pivot'];
 
 // NOTE: if children gets here, it was ignored by the constructor (so dump it)
 class Element {
@@ -833,9 +831,8 @@ class Group extends Element {
         if (clip && aspect == null) aspect = detect_aspect(children, coord);
 
         // pass to Element
-        super({ tag, unary: false, aspect, ...attr });
+        super({ tag, unary: false, coord, aspect, ...attr });
         this.children = children;
-        this.coord = coord;
     }
 
     inner(ctx) {
@@ -843,10 +840,9 @@ class Group extends Element {
         if (this.children.length == 0) return '\n';
 
         // map to new contexts and render
-        const { coord } = this;
-        let inside = this.children.map(c => c.svg(
-            ctx.map({ coord, ...c.spec })
-        )).filter(s => s.length > 0).join('\n');
+        let inside = this.children
+            .map(c => c.svg(ctx.map(c.spec)))
+            .filter(s => s.length > 0).join('\n');
 
         // return padded
         return `\n${inside}\n`;
@@ -1167,7 +1163,7 @@ class Anchor extends Group {
         child.spec.expand = true;
 
         // pass to Group
-        super({ children: [child], clip: false, ...attr });
+        super({ children: child, clip: false, ...attr });
     }
 }
 
@@ -2468,19 +2464,9 @@ class Bars extends Group {
 // plotting elements
 //
 
-function make_ticklabel(s, prec, attr) {
-    return new TextFrame({ children: rounder(s, prec), border: 0, padding: 0, ...attr });
-}
-
-function ensure_tick(t, prec = 2) {
-    if (is_scalar(t)) {
-        return [t, make_ticklabel(t, prec)];
-    } else if (is_array(t) && t.length == 2) {
-        const [p, x] = t;
-        return is_element(x) ? t : [p, make_ticklabel(x, prec)];
-    } else {
-        throw new Error(`Error: tick must be value or [value,label] but got "${t}"`);
-    }
+function ensure_tick(tick, prec = 2) {
+    const [str, pos] = is_scalar(tick) ? [tick, tick] : tick
+    return new Text({ children: rounder(str, prec), pos })
 }
 
 function invert_align(align) {
@@ -2488,143 +2474,147 @@ function invert_align(align) {
            align == 'right' ? 'left' :
            align == 'bottom' ? 'top' :
            align == 'top' ? 'bottom' :
-           align;
+           align
 }
 
 function invert_direc(direc) {
     return direc == 'v' ? 'h' :
            direc == 'h' ? 'v' :
-           direc;
+           direc
 }
 
 class Scale extends Group {
-    constructor({ direc, locs, lim = limit_base, ...attr } = {}) {
-        direc = get_orient(direc);
-        const tick_dir = invert_direc(direc);
-        const children = locs.map(t => {
-            const rect = direc == 'v' ? [lo, t, hi, t] : [t, lo, t, hi];
-            return new UnitLine({ direc: tick_dir, lim, rect });
-        });
-        super({ children, ...attr });
+    constructor({ direc, locs, lim = limit_base, tick_lim = limit_base, ...attr } = {}) {
+        direc = get_orient(direc)
+        const [ lo, hi ] = lim
+        const coord = direc == 'v' ? [0, hi, 1, lo] : [lo, 0, hi, 1]
+        const tick_dir = invert_direc(direc)
+        const children = locs.map(t => new UnitLine({ direc: tick_dir, pos: t, lim: tick_lim }))
+        super({ children, coord, clip: false, ...attr })
     }
 }
 
 class VScale extends Scale {
     constructor(attr) {
-        super({ direc: 'v', ...attr });
+        super({ direc: 'v', ...attr })
     }
 }
 
 class HScale extends Scale {
     constructor(attr) {
-        super({ direc: 'h', ...attr });
+        super({ direc: 'h', ...attr })
     }
 }
 
 // this is used by axis with the main coordinates defined
 // label elements must have an aspect to properly size them
 class Labels extends Group {
-    constructor({ direc, ticks, align = 'center', prec = 2, ...attr } = {}) {
-        direc = get_orient(direc);
-        ticks = ticks.map(x => ensure_tick(x, prec));
+    constructor({ children, direc, locs, align = 'center', prec = 2, ...attr } = {}) {
+        direc = get_orient(direc)
 
-        // anchor vertical ticks to unit-aspect boxes
+        // make children with tick data (if given)
+        if (locs != null) children = locs.map(x => ensure_tick(x, prec))
+
+            // anchor vertical ticks to unit-aspect boxes
         if (direc == 'v') {
-            const talign = invert_align(align);
-            ticks = ticks.map(([t, c]) =>
-                [t, new Anchor({ children: c, aspect: 1, align: talign })]
-            );
+            const talign = invert_align(align)
+            children = children.map(c => {
+                const { pos } = c.attr
+                return new Anchor({ children: c, aspect: 1, side: talign, align: talign, pos })
+            })
         }
 
         // place tick boxes using expanded lines
-        const rect = t => direc == 'v' ?
-            {pos: [0.5, t], rad: [0.5, 0], expand: true} :
-            {pos: [t, 0.5], rad: [0, 0.5], expand: true};
-        const children = ticks.map(([t, c]) => [c, rect(t)]);
+        children.forEach(c => {
+            const { pos } = c.attr;
+            c.spec.rect = direc == 'v' ? [0, pos, 1, pos] : [pos, 0, pos, 1]
+            c.spec.expand = true
+        });
 
         // pass to Group
-        super({ children, clip: false, ...attr });
+        super({ children, clip: false, ...attr })
     }
 }
 
 class HLabels extends Labels {
     constructor(attr) {
-        super({ direc: 'h', ...attr });
+        super({ direc: 'h', ...attr })
     }
 }
 
 class VLabels extends Labels {
     constructor(attr) {
-        super({ direc: 'v', ...attr });
+        super({ direc: 'v', ...attr })
     }
 }
 
 function get_ticklim(lim) {
     if (lim == null || lim == 'up' || lim == 'right') {
-        return [0.5, 1];
+        return [0.5, 1]
     } else if (lim == 'down' || lim == 'left') {
-        return [0, 0.5];
+        return [0, 0.5]
     } else if (lim == 'both') {
-        return [0, 1];
+        return [0, 1]
     } else if (lim == 'none') {
-        return [0.5, 0.5];
+        return [0.5, 0.5]
     } else {
-        return lim;
+        return lim
     }
 }
 
 // this is designed to be plotted directly
 class Axis extends Group {
-    constructor({ direc, ticks, pos = 0.5, lim = limit_base, tick_size = tick_size_base, tick_pos = 'both', label_size = label_size_base, label_offset = tick_label_offset_base, label_pos = 'center', prec = 2, ...attr0 } = {}) {
-        const [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0);
-        direc = get_orient(direc);
+    constructor({ children, direc, ticks, pos = 0.5, lim = limit_base, tick_size = tick_size_base, tick_pos = 'both', tick_label_size = tick_label_size_base, tick_label_offset = tick_label_offset_base, label_pos, prec = 2, ...attr0 } = {}) {
+        const [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0)
+        direc = get_orient(direc)
+        const [ lo, hi ] = lim
 
         // get numerical tick limits
-        const tick_lim = get_ticklim(tick_pos);
-        const tick_half = 0.5*tick_size;
+        const tick_lim = get_ticklim(tick_pos)
+        const tick_half = 0.5 * tick_size
 
         // sort out label position
-        const label_pos0 = direc == 'v' ? 'left' : 'bottom';
-        label_pos = label_pos ?? label_pos0;
-        const lab_size = label_size*tick_size;
-        const lab_off = label_offset*tick_size;
-        const lab_outer = label_pos == 'left' || label_pos == 'bottom';
-        const lab_base = lab_outer ? (-tick_half-lab_off-lab_size) : tick_half+lab_off;
+        const label_pos0 = direc == 'v' ? 'left' : 'bottom'
+        label_pos = label_pos ?? label_pos0
+        const lab_size = tick_label_size * tick_size
+        const lab_off = tick_label_offset * tick_size
+        const lab_outer = label_pos == 'left' || label_pos == 'bottom'
+        const lab_base = lab_outer ? (-tick_half - lab_off - lab_size) : tick_half + lab_off
 
         // extract tick information
-        const [lo, hi] = lim;
-        ticks = is_scalar(ticks) ? linspace(lo, hi, ticks) : ticks;
-        ticks = ticks.map(t => ensure_tick(t, prec));
-        const locs = ticks.map(([t, x]) => t);
-
-        // accumulate children
-        const cline = new UnitLine({ direc, pos: 0.5, lim, ...line_attr });
-        const scale = new Scale({ direc, locs, lim: tick_lim, ...tick_attr });
-        const label = new Labels({ direc, ticks, align: label_pos, ...label_attr });
+        if (ticks != null) {
+            ticks = is_scalar(ticks) ? linspace(lo, hi, ticks) : ticks
+            children = ticks.map(t => ensure_tick(t, prec))
+        }
+        const locs = children.map(c => c.attr.pos)
 
         // position children (main direction has data coordinates)
         let lbox, sbox;
         if (direc == 'v') {
-            sbox = [pos-tick_half, lo, pos+tick_half, hi];
-            lbox = [pos+lab_base, lo, pos+lab_base+lab_size, hi];
+            sbox = [ pos - tick_half, lo, pos + tick_half, hi ]
+            lbox = [ pos + lab_base, lo, pos + lab_base + lab_size, hi ]
         } else {
-            sbox = [lo, pos-tick_half, hi, pos+tick_half];
-            lbox = [lo, pos+lab_base, hi, pos+lab_base+lab_size];
+            sbox = [ lo, pos - tick_half, hi, pos + tick_half ]
+            lbox = [ lo, pos + lab_base, hi, pos + lab_base + lab_size ]
         }
 
+        // accumulate children
+        const cline = new UnitLine({ rect: sbox, direc, pos: 0.5, lim, ...line_attr })
+        const scale = new Scale({ rect: sbox, direc, locs, lim, tick_lim, ...tick_attr })
+        const label = new Labels({ rect: lbox, children, direc, align: label_pos, ...label_attr })
+
         // pass to Group
-        const tcoord = direc == 'v' ? [0, hi, 1, lo] : [lo, 1, hi, 0];
-        const children = [[cline, sbox], [scale, sbox], [label, lbox]];
-        super({ children, coord: tcoord, ...attr });
-        this.ticks = ticks;
+        children = [ cline, scale, label ]
+        const tcoord = direc == 'v' ? [0, lo, 1, hi] : [lo, 1, hi, 0]
+        super({ children, coord: tcoord, clip: false, ...attr })
 
         // set limits
         if (direc == 'v') {
-            const [ylo, yhi] = lim;
-            this.bounds = [pos, ylo, pos, yhi];
+            const [ ylo, yhi ] = lim
+            this.bounds = [ pos, ylo, pos, yhi ]
         } else {
-            const [xlo, xhi] = lim;
-            this.bounds = [xlo, pos, xhi, pos];
+            const [ xlo, xhi ] = lim
+            this.bounds = [ xlo, pos, xhi, pos ]
         }
     }
 }
@@ -2896,7 +2886,7 @@ class Image extends Element {
 //
 
 let Gum = [
-    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3021,5 +3011,5 @@ function injectImages(elem) {
 //
 
 export {
-    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
+    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 };
