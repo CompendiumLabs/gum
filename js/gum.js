@@ -33,7 +33,7 @@ const limit_base = [0, 1];
 const N_base = 100;
 
 // default styling
-const svg_props_base = {
+const svg_attr_base = {
     stroke: 'black',
     fill: 'none',
     font_family: font_family_base,
@@ -41,30 +41,19 @@ const svg_props_base = {
 };
 
 // canvas text sizer
-function canvas_text_sizer(ctx, text, args) {
-    let {family, weight, size, actual} = args ?? {};
-    family = family ?? font_family_base;
-    weight = weight ?? font_weight_base;
-    size = size ?? font_size_base;
-    actual = actual ?? false;
-
+function canvas_text_sizer(ctx, text, {
+    family = font_family_base, weight = font_weight_base, size = font_size_base, actual = false
+} = {}) {
     ctx.font = `${weight} ${size}px ${family}`;
     const met = ctx.measureText(text);
-
-    let x, y, w, h;
-    if (actual) {
-        x = -met.actualBoundingBoxLeft;
-        y = -met.actualBoundingBoxDescent;
-        w = met.actualBoundingBoxRight - x;
-        h = met.actualBoundingBoxAscent - y;
-    } else {
-        x = 0;
-        y = 0;
-        w = met.width;
-        h = size;
-    }
-
-    return [x, y, w, h];
+    return actual ? [
+        -met.actualBoundingBoxLeft,
+        -met.actualBoundingBoxDescent,
+        met.actualBoundingBoxRight,
+        met.actualBoundingBoxAscent
+    ] : [
+        0, 0, met.width, size
+    ];
 }
 
 // try for browser environment
@@ -242,13 +231,13 @@ function lingrid(xlim, ylim, N) {
 
 function map_object(obj, fn) {
     return Object.fromEntries(
-        Object.entries(obj).map(([k, v]) => [k, fn(v)])
+        Object.entries(obj).map(([k, v]) => [k, fn(k, v)])
     );
 }
 
 function filter_object(obj, fn) {
     return Object.fromEntries(
-        Object.entries(obj).filter(([k, v]) => fn(v))
+        Object.entries(obj).filter(([k, v]) => fn(k, v))
     );
 }
 
@@ -508,9 +497,8 @@ function rect_aspect(rect) {
     return abs(w/h);
 }
 
-function aspect_invariant(value, aspect, alpha) {
+function aspect_invariant(value, aspect, alpha = 0.5) {
     aspect = aspect ?? 1;
-    alpha = alpha ?? 0.5;
 
     const wfact = aspect**alpha;
     const hfact = aspect**(1-alpha);
@@ -520,11 +508,11 @@ function aspect_invariant(value, aspect, alpha) {
     }
 
     if (value.length == 2) {
-        const [vw, vh] = value;
-        return [vw*wfact, vh/hfact];
+        const [ vw, vh ] = value;
+        return [ vw * wfact, vh / hfact ];
     } else if (value.length == 4) {
-        const [vl, vt, vr, vb] = value;
-        return [vl*wfact, vt/hfact, vr*wfact, vb/hfact];
+        const [ vl, vt, vr, vb ] = value;
+        return [ vl * wfact, vt / hfact, vr * wfact, vb / hfact ];
     }
 }
 
@@ -676,14 +664,13 @@ function rect_remap(rect, frac) {
 }
 
 class Context {
-    constructor(prect, { coord, submap, rrect, trans, prec, debug } = {}) {
+    constructor(prect, { coord, submap, rrect, trans, prec } = {}) {
         this.prect = prect;
         this.rrect = rrect;
         this.coord = coord;
         this.submap = submap;
         this.trans = trans;
         this.prec = prec;
-        this.debug = debug ?? false;
     }
 
     // map using both domain (frac) and range (rect)
@@ -772,22 +759,26 @@ class Context {
         if (this.submap != null) coord = rect_remap(coord ?? coord_base, this.submap);
 
         // return new context
-        return new Context(prect, {coord, submap, rrect, trans, prec: this.prec, debug: this.debug});
+        return new Context(prect, {coord, submap, rrect, trans, prec: this.prec});
     }
 }
 
+// layout keys
+const spec_keys = ['rect', 'aspect', 'rotate', 'expand', 'invar', 'align', 'pivot'];
+
 // NOTE: if children gets here, it was ignored by the constructor (so dump it)
 class Element {
-    constructor({ tag, unary, aspect = null, children, ...attr } = {}) {
+    constructor({ tag, unary, children, ...attr } = {}) {
         // core display
         this.tag = tag;
         this.unary = unary;
 
-        // layout params
-        this.aspect = aspect;
+        // store layout params and attributes
+        this.spec = filter_object(attr, (k, v) => v != null &&  spec_keys.includes(k));
+        this.attr = filter_object(attr, (k, v) => v != null && !spec_keys.includes(k));
 
-        // store non-null attributes
-        this.attr = filter_object(attr, v => v != null);
+        // warn if children are passed
+        if (children != null) console.warn(`Got children in ${this.tag}`);
     }
 
     props(ctx) {
@@ -812,93 +803,50 @@ class Element {
         const props = props_repr(pvals, ctx.prec);
         const pre = props.length > 0 ? ' ' : '';
 
-        // optional debug info
-        const debug = ctx.debug ? ` gum-class="${this.constructor.name}"` : '';
-
         // return final svg
         if (this.unary) {
-            return `<${this.tag}${pre}${props}${debug} />`;
+            return `<${this.tag}${pre}${props} />`;
         } else {
-            return `<${this.tag}${pre}${props}${debug}>${this.inner(ctx)}</${this.tag}>`;
+            return `<${this.tag}${pre}${props}>${this.inner(ctx)}</${this.tag}>`;
         }
     }
 }
 
-function parse_bounds(bnd) {
-    if (bnd == null) {
-        return {rect: coord_base};
-    } else if (is_array(bnd)) {
-        return {rect: bnd};
-    } else if (is_object(bnd)) {
-        let {pos, rad, ...bnd1} = bnd;
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? [0.5, 0.5];
-        let rect = rad_rect(pos, rad);
-        return {rect, ...bnd1};
-    } else {
-        throw Error(`Unrecognized bound specification: ${bnd}`);
-    }
+function ensure_array(x) {
+    return is_array(x) ? x : [x];
+}
+
+// detect realized aspect of children
+function detect_aspect(children, coord) {
+    const ctx = new Context(rect_base);
+    const rects = children.map(c => ctx.map({ coord, ...c.spec }).prect)
+    const outer = rects.length > 0 ? merge_rects(...rects) : null;
+    const aspect = outer != null ? rect_aspect(outer) : null;
+    return aspect;
 }
 
 class Group extends Element {
-    constructor({ children, aspect, coord, tag = 'g', clip = true, debug = false, ...attr } = {}) {
-        // handle singleton
-        if (is_element(children) || is_metaelement(children)) {
-            children = [children];
-        }
+    constructor({ children, tag = 'g', coord, aspect, clip = true, ...attr } = {}) {
+        children = ensure_array(children);
 
-        // handle default positioning
-        children = children
-            .map(c => (is_element(c) || is_metaelement(c)) ? [c, null] : c)
-            .map(([c, r]) => [c, parse_bounds(r)]);
-
-        // get data limits
-        let bounds = (children.length > 0) ?
-            merge_rects(...children.map(([c, a]) => a.rect)) : null;
-
-        // infer aspect of clipped contents
-        if (aspect == null && clip) {
-            const ctx = new Context(coord_base);
-            const rects = children
-                .filter(([c, a]) => c.aspect != null)
-                .map(([c, a]) => ctx.map({aspect: c.aspect, ...a}).rrect);
-            if (rects.length > 0) {
-                const total = merge_rects(...rects);
-                aspect = rect_aspect(total);
-            }
-        }
+        // extract specs from children
+        if (clip) aspect = detect_aspect(children, coord);
 
         // pass to Element
         super({ tag, unary: false, aspect, ...attr });
         this.children = children;
         this.coord = coord;
-        this.bounds = bounds;
-        this.debug = debug;
     }
 
     inner(ctx) {
         // empty group
-        if (this.children.length == 0) {
-            return '\n';
-        }
+        if (this.children.length == 0) return '\n';
 
         // map to new contexts and render
-        const cargs = {coord: this.coord};
-        let inside = this.children.map(([c, a]) => c.svg(
-            ctx.map({aspect: c.aspect, ...cargs, ...a})
+        const { coord } = this;
+        let inside = this.children.map(c => c.svg(
+            ctx.map({ coord, ...c.spec })
         )).filter(s => s.length > 0).join('\n');
-
-        // debug rects
-        if (this.debug || ctx.debug) {
-            const dstr = this.children.map(([c, a]) => {
-                const ctx1 = ctx.map({aspect: c.aspect, ...cargs, ...a});
-                const ctx2 = ctx.map({...cargs, ...a});
-                const rect1 = new Rect({stroke: 'red'});
-                const rect2 = new Rect({stroke_dasharray: 4, stroke: 'blue'});
-                return `${rect1.svg(ctx1)}\n${rect2.svg(ctx2)}`;
-            }).join('\n');
-            inside = `${inside}\n${dstr}`;
-        }
 
         // return padded
         return `\n${inside}\n`;
@@ -907,6 +855,8 @@ class Group extends Element {
 
 class SVG extends Group {
     constructor({ children, size = size_base, prec = prec_base, bare = false, filters = null, ...attr } = {}) {
+        children = ensure_array(children);
+
         // handle filters
         if (filters != null) {
             const defs = new Defs(filters);
@@ -914,19 +864,13 @@ class SVG extends Group {
         }
 
         // pass to Group
-        const svg_props = bare ? {} : svg_props_base;
-        super({ tag: 'svg', children, ...svg_props, ...attr });
+        const svg_attr = bare ? {} : svg_attr_base;
+        super({ tag: 'svg', children, ...svg_attr, ...attr });
 
-        if (is_scalar(size)) {
-            if (this.aspect == null) {
-                size = [size, size];
-            } else if (this.aspect >= 1) {
-                size = [size, size/this.aspect];
-            } else {
-                size = [size*this.aspect, size];
-            }
-        }
+        // auto-detect size and aspect
+        size = aspect_invariant(size, this.spec.aspect);
 
+        // store core params
         this.size = size;
         this.prec = prec;
     }
@@ -963,9 +907,9 @@ function check_singleton(children) {
 //       it seems adjust only does this if child aspect is not null
 //       but we also want to do it if own aspect is not null
 class Frame extends Group {
-    constructor({ children: children0, padding = 0, margin = 0, border = 0, aspect, adjust = true, flex = false, rotate, invar, align, shrink, shape, rounded, stroke, fill, ...attr0 } = {}) {
+    constructor({ children, padding = 0, margin = 0, border = 0, aspect, adjust = true, flex = false, rotate, invar, align, shrink, shape, rounded, stroke, fill, ...attr0 } = {}) {
         // validate children
-        const child = check_singleton(children0);
+        const child = check_singleton(children);
 
         // handle border attributes
         const [border_attr, attr] = prefix_split(['border'], attr0);
@@ -1002,7 +946,7 @@ class Frame extends Group {
         const rect = shape(rargs);
 
         // gather children
-        const children = [
+        children = [
             [rect, brect],
             [child, {rect: crect, rotate, invar, align, shrink}],
         ];
@@ -1034,14 +978,15 @@ function distribute_extra(vals, target) {
 // expects list of Element or [Element, height]
 // this is written as vertical, horizonal swaps dimensions and inverts aspects
 class Stack extends Group {
-    constructor({ direc, children: children0, expand = true, align = 'center', spacing = 0, aspect = 'auto', debug = false, ...attr } = {}) {
+    constructor({ children, direc, expand = true, align = 'center', spacing = 0, aspect = 'auto', debug = false, ...attr } = {}) {
+        children = ensure_array(children);
         direc = get_orient(direc);
 
         // short circuit if empty
-        if (children0.length == 0) return super({ children: [], aspect, ...attr });
+        if (children.length == 0) return super({ children: [], aspect, ...attr });
 
         // fill in missing heights with null
-        const [elements, heights] = zip(...children0.map(c => {
+        const [elements, heights] = zip(...children.map(c => {
             if (is_element(c)) { return [c, null]; }
             else if (is_scalar(c)) { return [new Spacer(), c]; }
             else { return c; }
@@ -2815,17 +2760,16 @@ function outer_limits(elems, padding=0) {
 
 class Graph extends Group {
     constructor({ children: children0, coord, aspect, padding = 0, flex = false, flip = true, ...attr } = {}) {
-        // handle singleton line
-        const elems = is_element(children0) ? [children0] : children0;
+        children0 = ensure_array(children0);
 
         // determine coordinate limits and aspect
-        let [xmin, ymin, xmax, ymax] = coord ?? outer_limits(elems, padding);
+        let [xmin, ymin, xmax, ymax] = coord ?? outer_limits(children0, padding);
         if (flip) [ymin, ymax] = [ymax, ymin];
         coord = [xmin, ymin, xmax, ymax];
         if (!flex && aspect == null) aspect = rect_aspect(coord);
 
         // though the coords are inverted, we dont want the children to be flipped visually
-        const children = elems.map(e => [e, {submap: [0, 1, 1, 0]}]);
+        const children = children0.map(e => [e, {submap: [0, 1, 1, 0]}]);
 
         // pass to Group
         super({ children, aspect, coord, ...attr });
@@ -2836,6 +2780,7 @@ class Plot extends Group {
     constructor({
         children: children0, xlim, ylim, xaxis = true, yaxis = true, xticks = num_ticks_base, yticks = num_ticks_base, grid, xgrid, ygrid, xlabel, ylabel, title, tick_size = tick_size_base, label_size, label_offset, label_align, title_size = title_size_base, title_offset = title_offset_base, xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, xlabel_align, ylabel_align, padding, prec, aspect, flex = false, fill, ...attr0
     } = {}) {
+        const elems = ensure_array(children0);
         aspect = flex ? null : (aspect ?? 'auto');
 
         // some advanced piping
@@ -2849,8 +2794,6 @@ class Plot extends Group {
         [xgrid_attr, ygrid_attr] = [{...grid_attr, ...xgrid_attr}, {...grid_attr, ...ygrid_attr}];
         [xlabel_attr, ylabel_attr] = [{...label_attr, ...xlabel_attr}, {...label_attr, ...ylabel_attr}];
 
-        // handle singleton line
-        const elems = is_element(children0) ? [children0] : children0;
 
         // determine coordinate limits
         const bounds = outer_limits(elems, padding);
