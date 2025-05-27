@@ -668,12 +668,13 @@ function rect_remap(rect, frac) {
 }
 
 class Context {
-    constructor(prect, { coord, trans, submap, prec } = {}) {
+    constructor(prect, { coord, trans, submap, prec, debug } = {}) {
         this.prect = prect;
         this.coord = coord;
         this.trans = trans;
         this.submap = submap;
         this.prec = prec;
+        this.debug = debug;
     }
 
     // map using both domain (frac) and range (rect)
@@ -761,7 +762,7 @@ class Context {
         if (this.submap != null) coord = rect_remap(coord ?? coord_base, this.submap);
 
         // return new context
-        return new Context(prect, {coord, trans, submap, prec: this.prec});
+        return new Context(prect, {coord, trans, submap, prec: this.prec, debug: this.debug});
     }
 }
 
@@ -784,6 +785,11 @@ class Element {
     }
 
     props(ctx) {
+        if (ctx.debug) {
+            const { name } = this.constructor;
+            const klass = name.toLowerCase();
+            return {...this.attr, 'gum-class': klass};
+        }
         return this.attr;
     }
 
@@ -850,7 +856,7 @@ class Group extends Element {
 }
 
 class SVG extends Group {
-    constructor({ children, size = size_base, prec = prec_base, bare = false, filters = null, ...attr } = {}) {
+    constructor({ children, size = size_base, prec = prec_base, bare = false, filters = null, debug = false, ...attr } = {}) {
         children = ensure_array(children);
 
         // handle filters
@@ -869,20 +875,22 @@ class SVG extends Group {
         // store core params
         this.size = size;
         this.prec = prec;
+        this.debug = debug;
     }
 
     props(ctx) {
+        const attr = super.props(ctx);
         const [w, h] = this.size;
         const box = `0 0 ${rounder(w, this.prec)} ${rounder(h, this.prec)}`;
         const base = {viewBox: box, xmlns: ns_svg};
-        return {...base, ...this.attr};
+        return {...base, ...attr};
     }
 
     svg(args) {
         args = args ?? {};
         const rect = [0, 0, ...this.size];
         const aspec = rect_aspect(rect);
-        const ctx = new Context(rect, {aspec, prec: this.prec, ...args});
+        const ctx = new Context(rect, {aspec, prec: this.prec, debug: this.debug, ...args});
         return super.svg(ctx);
     }
 }
@@ -1251,9 +1259,10 @@ class Line extends Element {
     }
 
     props(ctx) {
+        const attr = super.props(ctx);
         const [x1, y1] = ctx.coord_to_pixel(this.p1);
         const [x2, y2] = ctx.coord_to_pixel(this.p2);
-        return {x1, y1, x2, y2, ...this.attr};
+        return {x1, y1, x2, y2, ...attr};
     }
 }
 
@@ -1290,6 +1299,7 @@ class Rect extends Element {
     }
 
     props(ctx) {
+        const attr = super.props(ctx);
         const [x1, y1, x2, y2] = ctx.coord_to_pixel_rect(this.rect);
 
         // orient increasing
@@ -1310,7 +1320,7 @@ class Rect extends Element {
         }
 
         // output properties
-        return {x, y, width: w, height: h, rx, ry, ...this.attr};
+        return {x, y, width: w, height: h, rx, ry, ...attr};
     }
 }
 
@@ -1334,10 +1344,11 @@ class Ellipse extends Element {
     }
 
     props(ctx) {
+        const attr = super.props(ctx);
         const [cx, cy] = ctx.coord_to_pixel(this.pos);
         const [rx, ry] = ctx.coord_to_pixel_size(this.rad);
         const base = {cx, cy, rx, ry};
-        return {...base, ...this.attr};
+        return {...base, ...attr};
     }
 }
 
@@ -1384,6 +1395,7 @@ class Ray extends Element {
     }
 
     props(ctx) {
+        const attr = super.props(ctx);
         let p1, p2;
         if (!isFinite(this.direc)) {
             [p1, p2] = [[0.5, 0], [0.5, 1]];
@@ -1396,7 +1408,7 @@ class Ray extends Element {
         }
         const [x1, y1] = ctx.coord_to_pixel(p1);
         const [x2, y2] = ctx.coord_to_pixel(p2);
-        return {x1, y1, x2, y2, ...this.attr};
+        return {x1, y1, x2, y2, ...attr};
     }
 }
 
@@ -1414,11 +1426,12 @@ class Pointstring extends Element {
     }
 
     props(ctx) {
+        const attr = super.props(ctx);
         const pixels = this.points.map(p => ctx.coord_to_pixel(p));
         const points = pixels.map(
             ([x, y]) => `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`
         ).join(' ');
-        return {points, ...this.attr};
+        return {points, ...attr};
     }
 }
 
@@ -1453,8 +1466,9 @@ class Path extends Element {
     }
 
     props(ctx) {
+        const attr = super.props(ctx);
         const d = this.cmds.map(c => c.data(ctx)).join(' ');
-        return {d, ...this.attr};
+        return {d, ...attr};
     }
 }
 
@@ -1767,6 +1781,8 @@ class Text extends Element {
     // we need to find the ordered bounds of the text
     // and then offset it by the given offset
     props(ctx) {
+        const attr = super.props(ctx);
+
         // get ordered bounds
         const [xa, ya] = ctx.coord_to_pixel([0, 0]);
         const [xb, yb] = ctx.coord_to_pixel([1, 1]);
@@ -1788,7 +1804,7 @@ class Text extends Element {
         }
 
         // get adjusted size
-        return { x, y, font_size: `${h}px`, ...this.attr };
+        return { x, y, font_size: `${h}px`, ...attr };
     }
 
     inner(ctx) {
@@ -1865,6 +1881,8 @@ class Latex extends Element {
     }
 
     props(ctx) {
+        const attr = super.props(ctx);
+
         // get ordered bounds
         const [xa, ya] = ctx.coord_to_pixel([0, 0]);
         const [xb, yb] = ctx.coord_to_pixel([1, 1]);
@@ -1877,7 +1895,7 @@ class Latex extends Element {
         const [x, y] = [x0 + xoff, y0 + yoff];
 
         // get adjusted size
-        return { x, y, width: w, height: h, font_size: `${h}px`, ...this.attr };
+        return { x, y, width: w, height: h, font_size: `${h}px`, ...attr };
     }
 
     inner(ctx) {
@@ -2875,9 +2893,10 @@ class Image extends Element {
     }
 
     props(ctx) {
+        const attr = super.props(ctx);
         let [x, y, x1, y1] = ctx.coord_to_pixel_rect(coord_base);
         let [w, h] = [x1 - x, y1 - y];
-        return { x, y, width: w, height: h, ...this.attr };
+        return { x, y, width: w, height: h, ...attr };
     }
 }
 
