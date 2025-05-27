@@ -830,7 +830,7 @@ class Group extends Element {
         children = ensure_array(children);
 
         // extract specs from children
-        if (clip) aspect = detect_aspect(children, coord);
+        if (clip && aspect == null) aspect = detect_aspect(children, coord);
 
         // pass to Element
         super({ tag, unary: false, aspect, ...attr });
@@ -1123,25 +1123,20 @@ class Grid extends Group {
 }
 
 class Place extends Group {
-    constructor({ children: children0, rect, pos = [0.5, 0.5], rad = [0.5, 0.5], rotate, expand, invar, align, pivot, ...attr } = {}) {
+    constructor({ children: children0, pos = [0.5, 0.5], rad = 0.5, ...attr } = {}) {
         const child = check_singleton(children0);
-
-        // find child position
-        rect = rect ?? rad_rect(pos, rad);
-        const children = [[child, {rect, rotate, expand, invar, align, pivot}]];
-
-        // pass to Group
-        super({ children, clip: false, ...attr });
+        rad = ensure_vector(rad, 2);
+        child.spec.rect = rad_rect(pos, rad);
+        super({ children: [child], clip: false, ...attr });
     }
 }
 
 class Flip extends Group {
     constructor({ children: children0, direc, ...attr } = {}) {
-        direc = get_orient(direc);
         const child = check_singleton(children0);
-        const rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1];
-        const children = [[child, rect]];
-        super({ children, clip: true, ...attr });
+        direc = get_orient(direc);
+        child.spec.rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1];
+        super({ children: [child], ...attr });
     }
 }
 
@@ -1166,13 +1161,13 @@ class Anchor extends Group {
     constructor({ children: children0, side, align, ...attr } = {}) {
         const child = check_singleton(children0);
 
-        // get anchor rect
-        const rect = anchor_rect[side];
-        align = align ?? 1 - align_frac(side);
+        // assign spec to child
+        child.spec.rect = anchor_rect[side];
+        child.spec.align = align ?? 1 - align_frac(side);
+        child.spec.expand = true;
 
         // pass to Group
-        const children = [[child, {rect, align, expand: true}]];
-        super({ children, clip: false, ...attr });
+        super({ children: [child], clip: false, ...attr });
     }
 }
 
@@ -1180,28 +1175,34 @@ class Attach extends Group {
     constructor({ children: children0, offset = 0, size = 1, align, side, ...attr } = {}) {
         const child = check_singleton(children0);
 
+        // get extent and map
         const extent = size + offset;
         const rmap = {
             'left': [-extent, 0, -offset, 1], 'right': [1+offset, 0, 1+extent, 1],
             'top': [0, -extent, 1, -offset], 'bottom': [0, 1+offset, 1, 1+extent]
         };
 
-        const children = [[child, {rect: rmap[side], align}]];
-        super({ children, clip: false, ...attr });
+        // assign spec to child
+        child.spec.rect = rmap[side];
+        child.spec.align = align;
+
+        // pass to Group
+        super({ children: [child], clip: false, ...attr });
     }
 }
 
 class Points extends Group {
-    constructor({ points = [], size = 0.01, shape, stroke, fill, stroke_width, ...attr } = {}) {
-        shape = shape ?? new Dot({stroke, fill, stroke_width});
+    constructor({ points, rad = 0.01, shape, ...attr0 } = {}) {
+        shape = shape ?? (a => new Dot(a));
+        const [ point_attr, attr ] = prefix_split(['point'], attr0);
 
-        // handle different forms
-        points = points.map(p => is_scalar(p[0]) ? [p] : p);
-        points = points.map(p => is_element(p[0]) ? p : [shape, ...p]);
-        points = points.map(p => (p.length >= 3) ? p : [...p, size]);
+        // construct children (pos or [pos, rad])
+        const children = points.map(pr => {
+            const [p, r] = is_scalar(pr[0]) ? [pr, rad] : pr;
+            return shape({ rect: rad_rect(p, r), ...point_attr });
+        });
 
         // pass to Group
-        const children = points.map(([s, p, r]) => [s, rad_rect(p, r)]);
         super({ children, clip: false, ...attr });
     }
 }
@@ -2728,10 +2729,10 @@ function expand_limits(lim, fact) {
 }
 
 // find minimal containing limits
-function outer_limits(elems, padding=0) {
+function outer_limits(children, padding=0) {
     const [xpad, ypad] = ensure_vector(padding, 2);
-    const [xmin, ymin, xmax, ymax] = merge_rects(
-        ...elems.map(c => c.bounds).filter(z => z != null)
+    let [xmin, ymin, xmax, ymax] = merge_rects(
+        ...children.map(c => c.bounds).filter(z => z != null)
     );
     [xmin, xmax] = expand_limits([xmin, xmax], xpad);
     [ymin, ymax] = expand_limits([ymin, ymax], ypad);
@@ -2739,17 +2740,17 @@ function outer_limits(elems, padding=0) {
 }
 
 class Graph extends Group {
-    constructor({ children: children0, coord, aspect, padding = 0, flex = false, flip = true, ...attr } = {}) {
-        children0 = ensure_array(children0);
+    constructor({ children, coord, aspect, padding = 0, flex = false, flip = true, ...attr } = {}) {
+        children = ensure_array(children);
 
         // determine coordinate limits and aspect
-        let [xmin, ymin, xmax, ymax] = coord ?? outer_limits(children0, padding);
+        let [xmin, ymin, xmax, ymax] = coord ?? outer_limits(children, padding);
         if (flip) [ymin, ymax] = [ymax, ymin];
         coord = [xmin, ymin, xmax, ymax];
         if (!flex && aspect == null) aspect = rect_aspect(coord);
 
         // though the coords are inverted, we dont want the children to be flipped visually
-        const children = children0.map(e => [e, {submap: [0, 1, 1, 0]}]);
+        children.forEach(e => e.spec.submap = [0, 1, 1, 0]);
 
         // pass to Group
         super({ children, aspect, coord, ...attr });
