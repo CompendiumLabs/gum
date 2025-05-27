@@ -768,7 +768,7 @@ class Context {
 }
 
 // spec keys
-const spec_keys = ['rect', 'aspect', 'rotate', 'expand', 'invar', 'align', 'pivot'];
+const spec_keys = ['rect', 'aspect', 'rotate', 'expand', 'invar', 'align', 'pivot', 'size'];
 
 // NOTE: if children gets here, it was ignored by the constructor (so dump it)
 class Element {
@@ -797,7 +797,7 @@ class Element {
         ctx = ctx ?? new Context(rect_base);
 
         // collect all properties
-        const pvals = this.props(ctx);
+        let pvals = this.props(ctx);
         if (ctx.trans != null) {
             const trans = `${pvals.transform ?? ''} ${ctx.trans}`.trim();
             pvals = {...pvals, transform: trans};
@@ -950,9 +950,9 @@ class Frame extends Group {
 }
 
 function get_orient(direc) {
-    if (direc == 'v' || direc == 'vert' || direc == 'vertical') {
+    if (direc == 'v' || direc == 'vertical') {
         return 'v';
-    } else if (direc == 'h' || direc == 'horiz' || direc == 'horizontal') {
+    } else if (direc == 'h' || direc == 'horizontal') {
         return 'h';
     } else {
         throw new Error(`Unrecognized direction specification: ${direc}`);
@@ -971,7 +971,7 @@ function distribute_extra(vals, target) {
 // expects list of Element or [Element, height]
 // this is written as vertical, horizonal swaps dimensions and inverts aspects
 class Stack extends Group {
-    constructor({ children, direc, expand = true, align = 'center', spacing = 0, aspect = 'auto', debug = false, ...attr } = {}) {
+    constructor({ children, direc, expand = true, align = 'center', spacing = 0, aspect = 'auto', ...attr } = {}) {
         children = ensure_array(children);
         direc = get_orient(direc);
 
@@ -979,20 +979,14 @@ class Stack extends Group {
         if (children.length == 0) return super({ children: [], aspect, ...attr });
 
         // fill in missing heights with null
-        const [elements, heights] = zip(...children.map(c => {
-            if (is_element(c)) { return [c, null]; }
-            else if (is_scalar(c)) { return [new Spacer(), c]; }
-            else { return c; }
-        }));
+        let heights = children.map(c => c.spec.size);
+        let aspects = children.map(c => c.spec.aspect);
 
         // get aspects and adjust for direction
-        let aspects = elements.map(c => c.aspect);
         const hasa = any(zip(heights, aspects).map(
             ([h, a]) => a != null && h != null
         )) || all(aspects.map(a => a != null));
-        if (direc == 'h') {
-            aspects = aspects.map(a => (a != null) ? 1/a : null);
-        }
+        if (direc == 'h') aspects = aspects.map(a => (a != null) ? 1 / a : null);
 
         // expand elements to fit width?
         let aspect_ideal = null, wlims;
@@ -1010,14 +1004,14 @@ class Stack extends Group {
             const atot = sum(has.map(([h, a]) => (a != null) ? h : null));
             const utot = sum(has.map(([h, a]) => (a == null) ? h : null));
             heights = has.map(([h, a]) => (a != null) ? (1-utot)*(h/atot) : h);
-            aspect_ideal = (1-utot)/atot;
+            aspect_ideal = (1 - utot) / atot;
 
             // width is always full with expand
             wlims = heights.map(w => [0, 1]);
         } else {
             // fill in missing heights and find aspect widths
             heights = distribute_extra(heights);
-            let widths = zip(heights, aspects).map(([h, a]) => (a != null) ? h*a : null);
+            let widths = zip(heights, aspects).map(([h, a]) => (a != null) ? h * a : null);
 
             // ideal aspect determined by widest element
             const wmax = max(...widths) ?? 1;
@@ -1026,11 +1020,11 @@ class Stack extends Group {
 
             // set wlims according to alignment
             const afrac = align_frac(align);
-            wlims = widths.map(w => (w != null) ? [afrac*(1-w), afrac+(1-afrac)*w] : [0, 1]);
+            wlims = widths.map(w => (w != null) ? [afrac * (1 - w), afrac + (1 - afrac) * w] : [0, 1]);
         }
 
         // convert heights to cumulative intervals (with spacing)
-        const pos = -spacing;
+        let pos = -spacing;
         let hlims = heights.map(y => [pos += spacing, pos += y]);
         hlims = hlims.map(([h1, h2]) => [h1/pos, h2/pos]);
         aspect_ideal = (aspect_ideal != null) ? aspect_ideal/pos : null;
@@ -1046,20 +1040,13 @@ class Stack extends Group {
         // swap dims if horizontal
         if (direc == 'h') {
             [wlims, hlims] = [hlims, wlims];
-            aspect = (aspect != null) ? 1/aspect : null;
+            aspect = (aspect != null) ? 1 / aspect : null;
         }
 
-        // compute child boxes
-        children = zip(elements, wlims, hlims)
-            .map(([c, [fw0, fw1], [fh0, fh1]]) => [c, [fw0, fh0, fw1, fh1]]);
-
-        // add in debug lines
-        if (debug) {
-            let rect = new Rect({stroke: 'blue', stroke_dasharray: [4, 4]});
-            let boxes = zip(wlims, hlims)
-                .map(([[fw0, fw1], [fh0, fh1]]) => [rect, [fw0, fh0, fw1, fh1]]);
-            children = [...children, ...boxes];
-        }
+        // assign child rects
+        zip(children, wlims, hlims).forEach(([child, [fw0, fw1], [fh0, fh1]]) => {
+            child.spec.rect = [fw0, fh0, fw1, fh1];
+        });
 
         // pass to Group
         super({ children, aspect, ...attr });
