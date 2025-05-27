@@ -2483,14 +2483,28 @@ function ensure_tick(t, prec = 2) {
     }
 }
 
+function invert_align(align) {
+    return align == 'left' ? 'right' :
+           align == 'right' ? 'left' :
+           align == 'bottom' ? 'top' :
+           align == 'top' ? 'bottom' :
+           align;
+}
+
+function invert_direc(direc) {
+    return direc == 'v' ? 'h' :
+           direc == 'h' ? 'v' :
+           direc;
+}
+
 class Scale extends Group {
-    constructor({ direc, locs, ...attr } = {}) {
+    constructor({ direc, locs, lim = limit_base, ...attr } = {}) {
         direc = get_orient(direc);
-        const tick_dir = direc == 'v' ? 'h' : 'v';
-        const tick = new UnitLine({ direc: tick_dir, pos: 0.5 });
-        let [lo, hi] = lim;
-        const rect = t => direc == 'v' ? [lo, t-0.5, hi, t+0.5] : [t-0.5, lo, t+0.5, hi];
-        const children = locs.map(t => [tick, rect(t)]);
+        const tick_dir = invert_direc(direc);
+        const children = locs.map(t => {
+            const rect = direc == 'v' ? [lo, t, hi, t] : [t, lo, t, hi];
+            return new UnitLine({ direc: tick_dir, lim, rect });
+        });
         super({ children, ...attr });
     }
 }
@@ -2505,14 +2519,6 @@ class HScale extends Scale {
     constructor(attr) {
         super({ direc: 'h', ...attr });
     }
-}
-
-function invert_align(align) {
-    return align == 'left' ? 'right' :
-           align == 'right' ? 'left' :
-           align == 'bottom' ? 'top' :
-           align == 'top' ? 'bottom' :
-           align;
 }
 
 // this is used by axis with the main coordinates defined
