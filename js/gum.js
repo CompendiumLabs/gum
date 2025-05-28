@@ -22,9 +22,9 @@ const font_size_base = 12;
 
 // plot defaults
 const num_ticks_base = 5;
-const tick_size_base = 1;
+const tick_size_base = 0.04;
 const tick_label_size_base = 1.5;
-const tick_label_offset_base = 0.5;
+const tick_label_offset_base = 1.5;
 const label_size_base = 0.5;
 const label_offset_base = 0.15;
 const title_size_base = 0.1;
@@ -670,7 +670,7 @@ function rect_remap(rect, frac) {
 class Context {
     constructor(prect, { coord, trans, submap, prec, debug } = {}) {
         this.prect = prect;
-        this.coord = coord;
+        this.coord = coord ?? coord_base;
         this.trans = trans;
         this.submap = submap;
         this.prec = prec;
@@ -680,7 +680,7 @@ class Context {
     // map using both domain (frac) and range (rect)
     coord_to_pixel(coord) {
         const [cx, cy] = coord;
-        const [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
+        const [cx1, cy1, cx2, cy2] = this.coord;
         const [cw, ch] = [cx2 - cx1, cy2 - cy1];
         const [px1, py1, px2, py2] = this.prect;
         const [pw, ph] = [px2 - px1, py2 - py1];
@@ -692,7 +692,7 @@ class Context {
     // used for sizes such as radii or vectors
     coord_to_pixel_size(size) {
         const [sw, sh] = size;
-        const [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
+        const [cx1, cy1, cx2, cy2] = this.coord;
         const [cw, ch] = [cx2 - cx1, cy2 - cy1];
         const [px1, py1, px2, py2] = this.prect;
         const [pw, ph] = [px2 - px1, py2 - py1];
@@ -713,7 +713,10 @@ class Context {
     // NOTE: this is the main mapping function! be very careful when changing it!
     // implement placement logic: map from coordinate rect (rect) to pixel rect (prect)
     // also outputs coordinate system (coord), rotation rect (rrect), and transform string (trans)
-    map({ rect = coord_base, aspect, rotate = 0 , expand = false, invar = true, align = 'center', pivot = 'center', coord, submap } = {}) {
+    map({ rect, aspect, rotate = 0 , expand = false, invar = true, align = 'center', pivot = 'center', coord, submap } = {}) {
+        // set the default rect to coords for this context
+        rect ??= this.coord;
+
         // remap rotation angle
         const degrees = degree_mod(rotate, -90, 90); // map to [-90, 90]
         const theta0 = abs(degrees)*(pi/180); // in radians
@@ -2502,13 +2505,12 @@ function invert_direc(direc) {
 }
 
 class Scale extends Group {
-    constructor({ direc, locs, lim = limit_base, tick_lim = limit_base, ...attr } = {}) {
+    constructor({ direc, locs, pos = 0.5, rad = 0.5, coord, ...attr } = {}) {
         direc = get_orient(direc)
-        const [ lo, hi ] = lim
-        const coord = direc == 'v' ? [0, hi, 1, lo] : [lo, 0, hi, 1]
         const tick_dir = invert_direc(direc)
-        const children = locs.map(t => new UnitLine({ direc: tick_dir, pos: t, lim: tick_lim }))
-        super({ children, coord, clip: false, ...attr })
+        const lim = [ pos - rad, pos + rad ]
+        const children = locs.map(t => new UnitLine({ direc: tick_dir, pos: t, lim, coord }))
+        super({ children, clip: false, ...attr })
     }
 }
 
@@ -2527,7 +2529,7 @@ class HScale extends Scale {
 // this is used by axis with the main coordinates defined
 // label elements must have an aspect to properly size them
 class Labels extends Group {
-    constructor({ children, direc, locs, align = 'center', prec = 2, ...attr } = {}) {
+    constructor({ children, coord, direc, locs, pos = 0.5, rad = 0.5, align = 'center', prec = 2, ...attr } = {}) {
         direc = get_orient(direc)
 
         // make children with tick data (if given)
@@ -2544,13 +2546,13 @@ class Labels extends Group {
 
         // place tick boxes using expanded lines
         children.forEach(c => {
-            const { pos } = c.attr;
-            c.spec.rect = direc == 'v' ? [0, pos, 1, pos] : [pos, 0, pos, 1]
+            const { pos: loc } = c.attr;
+            c.spec.rect = direc == 'v' ? [pos - rad, loc, pos + rad, loc] : [loc, pos - rad, loc, pos + rad]
             c.spec.expand = true
         });
 
         // pass to Group
-        super({ children, clip: false, ...attr })
+        super({ children, coord, clip: false, ...attr })
     }
 }
 
@@ -2581,14 +2583,16 @@ function get_ticklim(lim) {
 }
 
 // this is designed to be plotted directly
+// this takes a nested coord approach, not entirely sure about that
 class Axis extends Group {
-    constructor({ children, direc, ticks, pos = 0.5, lim = limit_base, tick_size = tick_size_base, tick_pos = 'both', tick_label_size = tick_label_size_base, tick_label_offset = tick_label_offset_base, label_pos, prec = 2, ...attr0 } = {}) {
+    constructor({ children, coord = coord_base, direc, ticks, pos, lim, tick_size = tick_size_base, tick_pos = 'both', tick_label_size = tick_label_size_base, tick_label_offset = tick_label_offset_base, label_pos, prec = 2, ...attr0 } = {}) {
         const [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0)
         direc = get_orient(direc)
-        const [ lo, hi ] = lim
+        const [ xlo, ylo, xhi, yhi ] = coord
+        const [ lo, hi ] = direc == 'v' ? [ylo, yhi] : [xlo, xhi]
 
         // get numerical tick limits
-        const tick_lim = get_ticklim(tick_pos)
+        // const tick_lim = get_ticklim(tick_pos)
         const tick_half = 0.5 * tick_size
 
         // sort out label position
@@ -2597,7 +2601,7 @@ class Axis extends Group {
         const lab_size = tick_label_size * tick_size
         const lab_off = tick_label_offset * tick_size
         const lab_outer = label_pos == 'left' || label_pos == 'bottom'
-        const lab_base = lab_outer ? (-tick_half - lab_off - lab_size) : tick_half + lab_off
+        const lab_base = lab_outer ? (tick_half - lab_off - lab_size / 2) : tick_half - lab_off
 
         // extract tick information
         if (ticks != null) {
@@ -2606,32 +2610,19 @@ class Axis extends Group {
         }
         const locs = children.map(c => c.attr.pos)
 
-        // position children (main direction has data coordinates)
-        let lbox, sbox;
-        if (direc == 'v') {
-            sbox = [ pos - tick_half, lo, pos + tick_half, hi ]
-            lbox = [ pos + lab_base, lo, pos + lab_base + lab_size, hi ]
-        } else {
-            sbox = [ lo, pos - tick_half, hi, pos + tick_half ]
-            lbox = [ lo, pos + lab_base, hi, pos + lab_base + lab_size ]
-        }
-
         // accumulate children
-        const cline = new UnitLine({ rect: sbox, direc, pos: 0.5, lim, ...line_attr })
-        const scale = new Scale({ rect: sbox, direc, locs, lim, tick_lim, ...tick_attr })
-        const label = new Labels({ rect: lbox, children, direc, align: label_pos, ...label_attr })
+        const cline = new UnitLine({ direc, pos, lim, coord, ...line_attr })
+        const scale = new Scale({ direc, locs, pos, rad: tick_half, coord, ...tick_attr })
+        const label = new Labels({ children, direc, pos: pos + lab_base, rad: lab_size / 2, align: label_pos, coord, ...label_attr })
 
         // pass to Group
         children = [ cline, scale, label ]
-        const tcoord = direc == 'v' ? [0, lo, 1, hi] : [lo, 1, hi, 0]
-        super({ children, coord: tcoord, clip: false, ...attr })
+        super({ children, clip: false, ...attr })
 
         // set limits
         if (direc == 'v') {
-            const [ ylo, yhi ] = lim
             this.bounds = [ pos, ylo, pos, yhi ]
         } else {
-            const [ xlo, xhi ] = lim
             this.bounds = [ xlo, pos, xhi, pos ]
         }
     }
@@ -2650,19 +2641,19 @@ class VAxis extends Axis {
 }
 
 class XLabel extends Attach {
-    constructor({ children: children0, offset = label_offset_base, size = label_size_base, align = 'bottom', ...attr } = {}) {
+    constructor({ children: children0, offset = label_offset_base, size = label_size_base, side = 'bottom', ...attr } = {}) {
         const text = check_singleton(children0);
         const label = is_element(text) ? text : new Text({ children: text, ...attr });
-        super({ children: label, offset, size, align, ...attr });
+        super({ children: label, offset, size, side, ...attr });
     }
 }
 
 class YLabel extends Attach {
-    constructor({ children: children0, offset = label_offset_base, size = label_size_base, align = 'left', ...attr } = {}) {
+    constructor({ children: children0, offset = label_offset_base, size = label_size_base, side = 'left', ...attr } = {}) {
         const text = check_singleton(children0);
         const label = is_element(text) ? text : new Text({ children: text, ...attr });
-        const rotate = new Place({ children: label, angle: -90, invar: false });
-        super({ children: rotate, offset, size, align, ...attr });
+        const rotate = new Place({ children: label, rotate: -90, invar: false });
+        super({ children: rotate, offset, size, side, ...attr });
     }
 }
 
@@ -2760,14 +2751,14 @@ class Graph extends Group {
         // determine coordinate limits and aspect
         let [xmin, ymin, xmax, ymax] = coord ?? outer_limits(children, padding);
         if (flip) [ymin, ymax] = [ymax, ymin];
-        coord = [xmin, ymin, xmax, ymax];
+        coord = [xmin, ymax, xmax, ymin];
         if (!flex && aspect == null) aspect = rect_aspect(coord);
 
         // though the coords are inverted, we dont want the children to be flipped visually
-        children.forEach(e => e.spec.submap = [0, 1, 1, 0]);
+        children.forEach(e => e.spec.coord = coord);
 
         // pass to Group
-        super({ children, aspect, coord, ...attr });
+        super({ children, aspect, ...attr });
     }
 }
 
@@ -2792,34 +2783,34 @@ class Plot extends Group {
 
         // determine coordinate limits
         const bounds = outer_limits(elems, padding);
-        const [xmin, ymin, xmax, ymax] = bounds;
+        let [xmin, ymin, xmax, ymax] = bounds;
         xlim = xlim ?? [xmin, xmax]; [xmin, xmax] = xlim;
         ylim = ylim ?? [ymin, ymax]; [ymin, ymax] = ylim;
-        const coord = [xmin, ymin, xmax, ymax];
+        const coord = [xmin, ymax, xmax, ymin];
 
         // ensure consistent apparent tick size
         const [xrange, yrange] = [xmax - xmin, ymax - ymin];
         aspect = (aspect == 'auto') ? abs(xrange/yrange) : aspect;
-        const [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
+        let [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
         [xtick_size, ytick_size] = [yrange * xtick_size, xrange * ytick_size];
 
         // default xaxis generation
         if (xaxis === true) {
-            xaxis = new HAxis({ ticks: xticks, pos: ymin, lim: xlim, tick_size: xtick_size, ...xaxis_attr });
+            xaxis = new HAxis({ ticks: xticks, coord, pos: ymin, lim: xlim, tick_size: xtick_size, ...xaxis_attr });
         } else if (xaxis === false) {
             xaxis = null;
         }
 
         // default yaxis generation
         if (yaxis === true) {
-            yaxis = new VAxis({ ticks: yticks, pos: xmin, lim: ylim, tick_size: ytick_size, ...yaxis_attr });
+            yaxis = new VAxis({ ticks: yticks, coord, pos: xmin, lim: ylim, tick_size: ytick_size, ...yaxis_attr });
         } else if (yaxis === false) {
             yaxis = null;
         }
 
         // fill background
         if (fill != null) {
-            fill = new Rect({rect: coord, fill});
+            fill = new Rect({ fill });
         }
 
         // automatic grid path
