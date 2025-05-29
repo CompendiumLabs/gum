@@ -9,7 +9,7 @@ import { emoji_table } from './emoji.js';
 // namespace
 const ns_svg = 'http://www.w3.org/2000/svg';
 
-// sizing
+// defaults
 const outer_base = 500;
 const rect_base = [0, 0, 1, 1];
 const coord_base = [0, 0, 1, 1];
@@ -17,7 +17,7 @@ const point_base = [0.5, 0.5];
 const pos_base = [0.5, 0.5];
 const rad_base = 0.5;
 const lim_base = [0, 1];
-const size_base = [1, 1];
+const size_base = 1;
 const prec_base = 2;
 const N_base = 100;
 
@@ -798,10 +798,8 @@ class Element {
 
 // detect realized aspect of children
 function detect_aspect(children, coord) {
-    console.log(children, coord)
     const ctx = new Context()
     const rects = children.map(c => ctx.map({ coord, ...c.spec }).prect)
-    console.log(rects)
     const outer = rects.length > 0 ? merge_rects(...rects) : null
     const aspect = outer != null ? rect_aspect(outer) : null
     return aspect
@@ -1734,24 +1732,24 @@ function check_string(children) {
 }
 
 class Text extends Element {
-    constructor({ children: children0, font_family, font_weight, font_size, color = 'black', offset = [0, -0.13], ...attr0 } = {}) {
-        const text = check_string(children0);
-        const [calc_args, attr] = prefix_split(['calc'], attr0);
+    constructor({ children: children0, pos = pos_base, size = size_base, font_family, font_weight, font_size, color = 'black', offset = [0, -0.13], ...attr } = {}) {
+        const text = check_string(children0)
 
         // compute text box
-        const fargs = {family: font_family, weight: font_weight, size: font_size, ...calc_args};
-        const [xoff0, yoff0, width0, height0] = text_sizer(text, fargs);
+        const fargs = { family: font_family, weight: font_weight, size: font_size }
+        const [ xoff0, yoff0, width0, height0 ] = text_sizer(text, fargs)
 
         // get position and size
-        const offset1 = add([xoff0/height0, yoff0/height0], offset);
-        const size = [width0, height0];
-        const aspect = width0/height0;
+        const offset0 = div([ xoff0, yoff0 ], height0)
+        const offset1 = add(offset0, offset)
+        const aspect = width0 / height0
 
         // pass to element
-        super({ tag: 'text', unary: false, aspect, font_family, font_weight, font_size, stroke: color, fill: color, ...attr });
-        this.text = escape_xml(text);
-        this.offset = offset1;
-        this.size = size;
+        super({ tag: 'text', unary: false, aspect, font_family, font_weight, font_size, stroke: color, fill: color, ...attr })
+        this.text = escape_xml(text)
+        this.offset = offset1
+        this.size = size
+        this.pos = pos
     }
 
     // because text will always be displayed upright,
@@ -1759,60 +1757,51 @@ class Text extends Element {
     // and then offset it by the given offset
     props(ctx) {
         const attr = super.props(ctx);
-
-        // get ordered bounds
-        const [xa, ya] = ctx.coord_to_pixel([0, 0]);
-        const [xb, yb] = ctx.coord_to_pixel([1, 1]);
-        const [x0, y0] = [Math.min(xa, xb), Math.min(ya, yb)];
-        const [w0, h0] = [Math.abs(xb - xa), Math.abs(yb - ya)];
+        const [ x0, y0 ] = ctx.mapPoint(this.pos)
+        const [ w0, h0 ] = ctx.mapSize([ 1, this.size ])
+        const [ xoff, yoff ] = ctx.mapSize(this.offset)
 
         // get display position
-        const [xoff, yoff] = ctx.coord_to_pixel_size(this.offset);
-        const [x, y] = [x0 + xoff, y0 + yoff + h0];
+        const [ x1, y1 ] = [ x0 - w0 / 2, y0 + h0 / 2 ]
+        const [ x, y ] = [ x1 + xoff, y1 + yoff ]
 
         // get font size
-        const { font_size } = this.attr;
-        const h = font_size ?? h0;
-
-        // handle horizontal centering
-        if (font_size != null) {
-            const frac = font_size / h0;
-            x += w0 * (1 - frac) / 2;
-        }
+        const { font_size } = this.attr
+        const h = font_size ?? h0
 
         // get adjusted size
-        return { x, y, font_size: `${h}px`, ...attr };
+        return { x, y, font_size: `${h}px`, ...attr }
     }
 
     inner(ctx) {
-        return this.text;
+        return this.text
     }
 }
 
 class TextSize extends Absolute {
     constructor({ children: children0, size, ...attr } = {}) {
-        const children = new Text({ children: children0, ...attr });
-        super({ children, size, expand: [true, false], ...attr });
+        const children = new Text({ children: children0, ...attr })
+        super({ children, size, expand: [true, false], ...attr })
     }
 }
 
 class MultiText extends VStack {
     constructor({ children: children0, spacing, align, ...attr }) {
-        const children = children0.map(t => new Text({ t, ...attr}));
-        super({ children, spacing, align });
+        const children = children0.map(t => new Text({ t, ...attr}))
+        super({ children, spacing, align })
     }
 }
 
 class Emoji extends Text {
     constructor({ tag, ...attr } = {}) {
-        let text = emoji_table[tag];
-        let text_attr = {};
+        let text = emoji_table[tag]
+        let text_attr = {}
         if (text == null) {
-            text = `:${tag}:`;
-            text_attr.fill = red;
-            text_attr.stroke = red;
+            text = `:${tag}:`
+            text_attr.fill = red
+            text_attr.stroke = red
         }
-        super({ children: text, ...text_attr, ...attr });
+        super({ children: text, ...text_attr, ...attr })
     }
 }
 
