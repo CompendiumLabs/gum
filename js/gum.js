@@ -660,17 +660,18 @@ function align_frac(align) {
 // map() will create a new sub-context using rect in coord space
 // map*() functions map from coord to pixel space (in prect)
 class Context {
-    constructor({ prect = rect_base, prec = prec_base, debug = false } = {}) {
+    constructor({ prect = rect_base, coord = coord_base, prec = prec_base, debug = false } = {}) {
         this.prect = prect
+        this.coord = coord
         this.prec = prec
         this.debug = debug
     }
 
     // map point from coord to pixel
-    mapPoint(cpoint, coord = coord_base) {
+    mapPoint(cpoint) {
         cpoint ??= point_base
         const [ cx, cy ] = cpoint
-        const [ cx1, cy1, cx2, cy2 ] = coord
+        const [ cx1, cy1, cx2, cy2 ] = this.coord
         const [ px1, py1, px2, py2 ] = this.prect
         const [ cw, ch ] = [ cx2 - cx1, cy2 - cy1 ]
         const [ pw, ph ] = [ px2 - px1, py2 - py1 ]
@@ -680,21 +681,21 @@ class Context {
     }
 
     // map rect from coord to pixel
-    mapRect(crect, coord = coord_base) {
+    mapRect(crect) {
         crect ??= rect_base
         const [ x1, y1, x2, y2 ] = crect
         const [ c1, c2 ] = [ [ x1, y1 ], [ x2, y2 ] ]
-        const p1 = this.mapPoint(c1, coord)
-        const p2 = this.mapPoint(c2, coord)
+        const p1 = this.mapPoint(c1)
+        const p2 = this.mapPoint(c2)
         return [ ...p1, ...p2 ]
     }
 
     // map from range to pixel
-    mapRange(direc, climit, coord = coord_base) {
+    mapRange(direc, climit) {
         direc = get_orient(direc)
         climit ??= lim_base
         const [ clo, chi ] = climit
-        const [ cx1, cy1, cx2, cy2 ] = coord
+        const [ cx1, cy1, cx2, cy2 ] = this.coord
         const [ px1, py1, px2, py2 ] = this.prect
         const [ zlo, zhi, plo, phi ] = (direc == 'v') ?
             [ cy1, cy2, py1, py2 ] :
@@ -706,10 +707,10 @@ class Context {
     }
 
     // map size from coord to pixel
-    mapSize(csize, coord = coord_base) {
+    mapSize(csize) {
         csize ??= size_base
         const [ sw, sh ] = csize
-        const [ cx1, cy1, cx2, cy2 ] = coord
+        const [ cx1, cy1, cx2, cy2 ] = this.coord
         const [ px1, py1, px2, py2 ] = this.prect
         const [ cw, ch ] = [ cx2 - cx1, cy2 - cy1 ]
         const [ pw, ph ] = [ px2 - px1, py2 - py1 ]
@@ -718,12 +719,12 @@ class Context {
     }
 
     // NOTE: this is the main mapping function! be very careful when changing it!
-    map({ rect = null, aspect = null, expand = false, coord = coord_base } = {}) {
-        // use default rect if not provided
-        rect ??= coord
+    map({ rect, aspect = null, expand = false, coord = coord_base } = {}) {
+        // use parent coord as default rect
+        rect ??= this.coord
 
         // get true pixel rect
-        const prect = this.mapRect(rect, coord)
+        const prect = this.mapRect(rect)
         let [ cx, cy, rw, rh ] = rect_radius(prect)
 
         // shrink/expand if aspect mismatch
@@ -739,7 +740,7 @@ class Context {
         const prect1 = radius_rect([ cx, cy ], [ rw, rh ])
 
         // return new context
-        return new Context({ prect: prect1, prec: this.prec, debug: this.debug })
+        return new Context({ prect: prect1, coord, prec: this.prec, debug: this.debug })
     }
 }
 
@@ -795,7 +796,7 @@ class Element {
 // detect realized aspect of children
 function detect_aspect(children, coord) {
     const ctx = new Context()
-    const rects = children.map(c => ctx.map({ coord, ...c.spec }).prect)
+    const rects = children.map(c => ctx.map(c.spec).prect)
     const outer = rects.length > 0 ? merge_rects(...rects) : null
     const aspect = outer != null ? rect_aspect(outer) : null
     return aspect
@@ -819,9 +820,7 @@ class Group extends Element {
 
         // map to new contexts and render
         let inside = this.children
-            .map(c => c.svg(
-                ctx.map({ coord: this.coord, ...c.spec })
-            ))
+            .map(c => c.svg(ctx.map(c.spec)))
             .filter(s => s.length > 0)
             .join('\n')
 
@@ -911,6 +910,7 @@ class Frame extends Group {
         }
 
         // get box sizes
+        // TODO: this is not coord aware yet
         const iasp = aspect ?? child_aspect
         const [crect, brect, basp, tasp] = map_padmar(padding, margin, iasp)
         aspect = flex ? null : (aspect ?? tasp)
@@ -1930,65 +1930,69 @@ class TitleFrame extends Frame {
 
 // determines actual values given combinations of limits, values, and functions
 function sympath({fx, fy, xlim, ylim, tlim = lim_base, xvals, yvals, tvals, clip = true, N} = {}) {
-    fx = func_or_scalar(fx);
-    fy = func_or_scalar(fy);
+    fx = func_or_scalar(fx)
+    fy = func_or_scalar(fy)
 
     // determine data size
-    const Ns = new Set([tvals, xvals, yvals].filter(v => v != null).map(v => v.length));
+    const Ns = new Set(
+        [ tvals, xvals, yvals ]
+        .filter(v => v != null)
+        .map(v => v.length)
+    )
     if (Ns.size > 1) {
-        throw new Error(`Error: data sizes must be in aggreement but got ${Ns}`);
+        throw new Error(`Error: data sizes must be in aggreement but got ${Ns}`)
     } else if (Ns.size == 1) {
-        [N,] = Ns;
+        [ N ] = Ns
     } else {
-        N = N ?? N_base;
+        N = N ?? N_base
     }
 
     // compute data values
-    tvals = tvals ?? linspace(...tlim, N);
+    tvals = tvals ?? linspace(...tlim, N)
     if (fx != null && fy != null) {
-        xvals = tvals.map(fx);
-        yvals = tvals.map(fy);
+        xvals = tvals.map(fx)
+        yvals = tvals.map(fy)
     } else if (fy != null) {
-        xvals = xvals ?? linspace(...xlim, N);
-        yvals = xvals.map(fy);
+        xvals = xvals ?? linspace(...xlim, N)
+        yvals = xvals.map(fy)
     } else if (fx != null) {
-        yvals = yvals ?? linspace(...ylim, N);
-        xvals = yvals.map(fx);
+        yvals = yvals ?? linspace(...ylim, N)
+        xvals = yvals.map(fx)
     }
 
     // clip values
     if (clip) {
         if (xlim != null) {
-            const [xmin, xmax] = xlim;
+            const [ xmin, xmax ] = xlim
             xvals = xvals.map(x =>
                 (xmin <= x && x <= xmax) ? x : null
-            );
+            )
         }
         if (ylim != null) {
-            const [ymin, ymax] = ylim;
+            const [ ymin, ymax ] = ylim
             yvals = yvals.map(y =>
                 (ymin <= y && y <= ymax) ? y : null
-            );
+            )
         }
     }
 
-    return [tvals, xvals, yvals];
+    return [ tvals, xvals, yvals ]
 }
 
 class SymPath extends Polyline {
     constructor({ fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N, ...attr } = {}) {
         // compute path values
-        [tvals, xvals, yvals] = sympath({
+        [ tvals, xvals, yvals ] = sympath({
             fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N
-        });
+        })
 
         // get valid point pairs
         const points = zip(xvals, yvals).filter(
-            ([x, y]) => (x != null) && (y != null)
-        );
+            ([ x, y ]) => (x != null) && (y != null)
+        )
 
         // pass to element
-        super({ points, ...attr });
+        super({ points, ...attr })
     }
 }
 
