@@ -1,40 +1,40 @@
 // gum.js
 
-import { emoji_table } from './emoji.js';
+import { emoji_table } from './emoji.js'
 
 //
 // defaults
 //
 
 // namespace
-const ns_svg = 'http://www.w3.org/2000/svg';
+const ns_svg = 'http://www.w3.org/2000/svg'
 
 // defaults
-const outer_base = 500;
-const rect_base = [0, 0, 1, 1];
-const coord_base = [0, 0, 1, 1];
-const point_base = [0.5, 0.5];
-const pos_base = [0.5, 0.5];
-const rad_base = 0.5;
-const lim_base = [0, 1];
-const size_base = 1;
-const prec_base = 2;
-const N_base = 100;
+const outer_base = 500
+const rect_base = [ 0, 0, 1, 1 ]
+const coord_base = [ 0, 0, 1, 1 ]
+const point_base = [ 0.5, 0.5 ]
+const pos_base = [ 0.5, 0.5 ]
+const rad_base = 0.5
+const lim_base = [ 0, 1 ]
+const size_base = 1
+const prec_base = 2
+const N_base = 100
 
 // fonts
-const font_family_base = 'IBMPlexSans';
-const font_weight_base = 100;
-const font_size_base = 12;
+const font_family_base = 'IBMPlexSans'
+const font_weight_base = 100
+const font_size_base = 12
 
 // plot defaults
-const num_ticks_base = 5;
-const tick_size_base = 0.04;
-const tick_label_size_base = 1.5;
-const tick_label_offset_base = 1.5;
-const label_size_base = 0.5;
-const label_offset_base = 0.15;
-const title_size_base = 0.1;
-const title_offset_base = 0.1;
+const num_ticks_base = 5
+const tick_size_base = 0.04
+const tick_label_size_base = 1.5
+const tick_label_offset_base = 1.5
+const label_size_base = 0.5
+const label_offset_base = 0.15
+const title_size_base = 0.1
+const title_offset_base = 0.1
 
 // default styling
 const svg_attr_base = {
@@ -42,14 +42,14 @@ const svg_attr_base = {
     fill: 'none',
     font_family: font_family_base,
     font_weight: font_weight_base,
-};
+}
 
 // canvas text sizer
 function canvas_text_sizer(ctx, text, {
     family = font_family_base, weight = font_weight_base, size = font_size_base, actual = false
 } = {}) {
-    ctx.font = `${weight} ${size}px ${family}`;
-    const met = ctx.measureText(text);
+    ctx.font = `${weight} ${size}px ${family}`
+    const met = ctx.measureText(text)
     return actual ? [
         -met.actualBoundingBoxLeft,
         -met.actualBoundingBoxDescent,
@@ -57,19 +57,19 @@ function canvas_text_sizer(ctx, text, {
         met.actualBoundingBoxAscent
     ] : [
         0, 0, met.width, size
-    ];
+    ]
 }
 
 // try for browser environment
-let text_sizer = null;
+let text_sizer = null
 try {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
     text_sizer = function(text, args) {
-        return canvas_text_sizer(ctx, text, args);
+        return canvas_text_sizer(ctx, text, args)
     }
 } catch (error) {
-    // console.log(error);
+    // console.log(error)
 }
 
 //
@@ -78,39 +78,39 @@ try {
 
 function* gzip(...iterables) {
     if (iterables.length == 0) {
-        return;
+        return
     }
-    const iterators = iterables.map(i => i[Symbol.iterator]());
+    const iterators = iterables.map(i => i[Symbol.iterator]())
     while (true) {
-        const results = iterators.map(iter => iter.next());
+        const results = iterators.map(iter => iter.next())
         if (results.some(res => res.done)) {
-            return;
+            return
         } else {
-            yield results.map(res => res.value);
+            yield results.map(res => res.value)
         }
     }
 }
 
 function zip(...iterables) {
-    return [...gzip(...iterables)];
+    return [...gzip(...iterables)]
 }
 
 function reshape(arr, shape) {
-    const [n, m] = shape;
-    const ret = [];
+    const [n, m] = shape
+    const ret = []
     for (let i = 0; i < n; i++) {
-        ret.push(arr.slice(i*m, (i+1)*m));
+        ret.push(arr.slice(i*m, (i+1)*m))
     }
-    return ret;
+    return ret
 }
 
 function split(arr, len) {
-    const n = Math.ceil(arr.length / len);
-    return reshape(arr, [n, len]);
+    const n = Math.ceil(arr.length / len)
+    return reshape(arr, [n, len])
 }
 
 function concat(arrs) {
-    return arrs.flat();
+    return arrs.flat()
 }
 
 //
@@ -118,25 +118,25 @@ function concat(arrs) {
 //
 
 function sum(arr) {
-    arr = arr.filter(v => v != null);
-    return arr.reduce((a, b) => a + b, 0);
+    arr = arr.filter(v => v != null)
+    return arr.reduce((a, b) => a + b, 0)
 }
 
 function prod(arr) {
-    arr = arr.filter(v => v != null);
-    return arr.reduce((a, b) => a * b, 1);
+    arr = arr.filter(v => v != null)
+    return arr.reduce((a, b) => a * b, 1)
 }
 
 function mean(arr) {
-    return sum(arr)/arr.length;
+    return sum(arr)/arr.length
 }
 
 function all(arr) {
-    return arr.reduce((a, b) => a && b);
+    return arr.reduce((a, b) => a && b)
 }
 
 function any(arr) {
-    return arr.reduce((a, b) => a || b);
+    return arr.reduce((a, b) => a || b)
 }
 
 // vector ops
@@ -176,20 +176,20 @@ function div(x, y) {
 //
 
 function cumsum(arr, first) {
-    const sum = 0;
-    const ret = arr.map(x => sum += x);
-    return (first ?? true) ? [0, ...ret.slice(0, -1)] : ret;
+    const sum = 0
+    const ret = arr.map(x => sum += x)
+    return (first ?? true) ? [ 0, ...ret.slice(0, -1) ] : ret
 }
 
 function norm(vals, degree) {
-    degree = degree ?? 1;
-    return sum(vals.map(v => v**degree))**(1/degree);
+    degree = degree ?? 1
+    return sum(vals.map(v => v**degree))**(1 / degree)
 }
 
 function normalize(vals, degree) {
-    degree = degree ?? 1;
-    const mag = norm(vals, degree);
-    return (mag == 0) ? vals.map(v => 0) : vals.map(v => v/mag);
+    degree = degree ?? 1
+    const mag = norm(vals, degree)
+    return (mag == 0) ? vals.map(v => 0) : vals.map(v => v / mag)
 }
 
 //
@@ -198,31 +198,31 @@ function normalize(vals, degree) {
 
 function range(i0, i1, step) {
     step = step ?? 1;
-    [i0, i1] = (i1 === undefined) ? [0, i0] : [i0, i1];
-    const n = floor((i1-i0)/step);
-    return [...Array(n).keys()].map(i => i0 + step*i);
+    [ i0, i1 ] = (i1 == null) ? [ 0, i0 ] : [ i0, i1 ]
+    const n = floor((i1 - i0) / step)
+    return [...Array(n).keys()].map(i => i0 + step * i)
 }
 
 function linspace(x0, x1, n) {
-    if (n == 1) { return [0.5*(x0+x1)]; };
-    const step = (x1-x0)/(n-1);
-    return [...Array(n).keys()].map(i => x0 + step*i);
+    if (n == 1) { return [ 0.5 * (x0 + x1) ] }
+    const step = (x1 - x0) / (n - 1)
+    return [...Array(n).keys()].map(i => x0 + step * i)
 }
 
 function enumerate(x) {
-    const n = x.length;
-    const idx = range(n);
-    return zip(idx, x);
+    const n = x.length
+    const idx = range(n)
+    return zip(idx, x)
 }
 
 function repeat(x, n) {
-    return Array(n).fill(x);
+    return Array(n).fill(x)
 }
 
 function padvec(vec, len, val) {
-    if (vec.length >= len) return vec;
-    const m = len - vec.length;
-    return [...vec, ...repeat(val, m)];
+    if (vec.length >= len) return vec
+    const m = len - vec.length
+    return [...vec, ...repeat(val, m)]
 }
 
 //
@@ -230,15 +230,15 @@ function padvec(vec, len, val) {
 //
 
 function meshgrid(x, y) {
-    return x.flatMap(xi => y.map(yi => [xi, yi]));
+    return x.flatMap(xi => y.map(yi => [ xi, yi ]))
 }
 
 function lingrid(xlim, ylim, N) {
-    if (N >= 100) throw new Error('N is restricted to be less than 100');
-    const [Nx, Ny] = ensure_vector(N, 2);
-    const xgrid = linspace(...xlim, Nx);
-    const ygrid = linspace(...ylim, Ny);
-    return meshgrid(xgrid, ygrid);
+    if (N >= 100) throw new Error('N is restricted to be less than 100')
+    const [Nx, Ny] = ensure_vector(N, 2)
+    const xgrid = linspace(...xlim, Nx)
+    const ygrid = linspace(...ylim, Ny)
+    return meshgrid(xgrid, ygrid)
 }
 
 //
@@ -247,14 +247,14 @@ function lingrid(xlim, ylim, N) {
 
 function map_object(obj, fn) {
     return Object.fromEntries(
-        Object.entries(obj).map(([k, v]) => [k, fn(k, v)])
-    );
+        Object.entries(obj).map(([ k, v ]) => [ k, fn(k, v) ])
+    )
 }
 
 function filter_object(obj, fn) {
     return Object.fromEntries(
-        Object.entries(obj).filter(([k, v]) => fn(k, v))
-    );
+        Object.entries(obj).filter(([ k, v ]) => fn(k, v))
+    )
 }
 
 //
@@ -262,27 +262,27 @@ function filter_object(obj, fn) {
 //
 
 function ensure_array(x) {
-    return is_array(x) ? x : [x];
+    return is_array(x) ? x : [ x ]
 }
 
 function ensure_vector(x, n) {
     if (!is_array(x)) {
-        return range(n).map(i => x);
+        return range(n).map(i => x)
     } else {
-        return x;
+        return x
     }
 }
 
 function ensure_function(f) {
     if (typeof(f) == 'function') {
-        return f;
+        return f
     } else {
-        return () => f;
+        return () => f
     }
 }
 
 function string_to_int(s) {
-    return (s != null) ? parseInt(s) : null;
+    return (s != null) ? parseInt(s) : null
 }
 
 function is_scalar(x) {
@@ -292,31 +292,31 @@ function is_scalar(x) {
             (x.constructor.name == 'Number') ||
             (x.constructor.name == 'NamedNumber')
         ))
-    );
+    )
 }
 
 function is_string(x) {
-    return typeof(x) == 'string';
+    return typeof(x) == 'string'
 }
 
 function is_number(x) {
-    return typeof(x) == 'number';
+    return typeof(x) == 'number'
 }
 
 function is_object(x) {
-    return typeof(x) == 'object';
+    return typeof(x) == 'object'
 }
 
 function is_array(x) {
-    return Array.isArray(x);
+    return Array.isArray(x)
 }
 
 function is_element(x) {
-    return x instanceof Element;
+    return x instanceof Element
 }
 
 function is_metaelement(x) {
-    return x instanceof MetaElement;
+    return x instanceof MetaElement
 }
 
 //
@@ -326,102 +326,102 @@ function is_metaelement(x) {
 // to be used in functions
 class NamedNumber extends Number {
     constructor(name, value) {
-        super(value);
-        this.name = name;
+        super(value)
+        this.name = name
     }
 }
 
 class NamedString extends String {
     constructor(name, value) {
-        super(value);
-        this.name = name;
+        super(value)
+        this.name = name
     }
 }
 
 // functions
-const exp = Math.exp;
-const log = Math.log;
-const sin = Math.sin;
-const cos = Math.cos;
-const tan = Math.tan;
-const abs = Math.abs;
-const pow = Math.pow;
-const sqrt = Math.sqrt;
-const sign = Math.sign;
-const floor = Math.floor;
-const ceil = Math.ceil;
-const round = Math.round;
-const atan = Math.atan;
-const isNan = Number.isNaN;
-const isInf = x => !Number.isFinite(x);
+const exp = Math.exp
+const log = Math.log
+const sin = Math.sin
+const cos = Math.cos
+const tan = Math.tan
+const abs = Math.abs
+const pow = Math.pow
+const sqrt = Math.sqrt
+const sign = Math.sign
+const floor = Math.floor
+const ceil = Math.ceil
+const round = Math.round
+const atan = Math.atan
+const isNan = Number.isNaN
+const isInf = x => !Number.isFinite(x)
 
 // null on empty
 function min(...vals) {
-    vals = vals.filter(v => v != null);
-    return (vals.length > 0) ? Math.min(...vals) : null;
+    vals = vals.filter(v => v != null)
+    return (vals.length > 0) ? Math.min(...vals) : null
 }
 function max(...vals) {
-    vals = vals.filter(v => v != null);
-    return (vals.length > 0) ? Math.max(...vals) : null;
+    vals = vals.filter(v => v != null)
+    return (vals.length > 0) ? Math.max(...vals) : null
 }
 
 function clamp(x, lim) {
-    const [lo, hi] = lim;
-    return max(lo, min(x, hi));
+    const [ lo, hi ] = lim
+    return max(lo, min(x, hi))
 }
 
 function mask(x, lim) {
-    const [lo, hi] = lim;
-    return (x >= lo && x <= hi) ? x : null;
+    const [ lo, hi ] = lim
+    return (x >= lo && x <= hi) ? x : null
 }
 
 function rescale(x, lim) {
-    const [lo, hi] = lim;
-    return (x-lo)/(hi-lo);
+    const [ lo, hi ] = lim
+    return (x - lo) / (hi - lo)
 }
 
 function sigmoid(x) {
-    return 1/(1+exp(-x));
+    return 1 / (1 + exp(-x))
 }
 
 function logit(p) {
-    return log(p/(1-p));
+    return log(p / (1 - p))
 }
 
 function smoothstep(x, lim) {
-    const [lo, hi] = lim ?? [0, 1];
-    const t = clamp((x-lo)/(hi-lo), [0, 1]);
-    return t*t*(3 - 2*t);
+    const [ lo, hi ] = lim ?? [ 0, 1 ]
+    const t = clamp((x - lo) / (hi - lo), [ 0, 1 ])
+    return t * t * (3 - 2 * t)
 }
 
 // constants
-const e = new NamedNumber('e', Math.E);
-const pi = new NamedNumber('pi', Math.PI);
-const phi = new NamedNumber('phi', (1+sqrt(5))/2);
-const r2d = new NamedNumber('r2d', 180/Math.PI);
-const d2r = new NamedNumber('d2r', Math.PI/180);
-const blue = new NamedString('blue', '#1e88e5');
-const red = new NamedString('red', '#ff0d57');
-const green = new NamedString('green', '#4caf50');
+const e = new NamedNumber('e', Math.E)
+const pi = new NamedNumber('pi', Math.PI)
+const phi = new NamedNumber('phi', (1 + sqrt(5)) / 2)
+const r2d = new NamedNumber('r2d', 180 / Math.PI)
+const d2r = new NamedNumber('d2r', Math.PI / 180)
+const blue = new NamedString('blue', '#1e88e5')
+const red = new NamedString('red', '#ff0d57')
+const green = new NamedString('green', '#4caf50')
 
 //
 // random number generation
 //
 
-const random = Math.random;
+const random = Math.random
 
 function uniform(lo, hi) {
-    return lo + (hi-lo)*random();
+    return lo + (hi - lo)*random()
 }
 
 // Standard Normal variate using Box-Muller transform.
 function normal(mean, stdv) {
-    mean = mean ?? 0;
-    stdv = stdv ?? 1;
-    const [u, v] = [1 - random(), random()];
-    const [r, t] = [sqrt(-2*log(u)), 2*pi*v];
-    const [a, b] = [r*cos(t), r*sin(t)];
-    return [a, b].map(x => mean + stdv*x);
+    mean = mean ?? 0
+    stdv = stdv ?? 1
+    const [ u, v ] = [ 1 - random(), random() ]
+    const [ r, t ] = [ sqrt(-2 * log(u)), 2 * pi * v ]
+    const [ a, b ] = [ r * cos(t), r * sin(t) ]
+    return [ a, b ].map(x => mean + stdv * x)
 }
 
 //
@@ -431,41 +431,41 @@ function normal(mean, stdv) {
 // convenience mapper for rectangle positions
 function pos_rect(r) {
     if (r == null) {
-        return coord_base;
+        return coord_base
     } else if (is_scalar(r)) {
-        return [0, 0, r, r];
+        return [ 0, 0, r, r ]
     } else if (r.length == 2) {
-        const [rx, ry] = r;
-        return [0, 0, rx, ry];
+        const [ rx, ry ] = r
+        return [ 0, 0, rx, ry ]
     } else {
-        return r;
+        return r
     }
 }
 
 function pad_rect(p) {
     if (p == null) {
-        return coord_base;
+        return coord_base
     } else if (is_scalar(p)) {
-        return [p, p, p, p];
+        return [ p, p, p, p ]
     } else if (p.length == 2) {
-        const [px, py] = p;
-        return [px, py, px, py];
+        const [ px, py ] = p
+        return [ px, py, px, py ]
     } else {
-        return p;
+        return p
     }
 }
 
 // map padding/margin into internal boxes
 function map_padmar(p, m, a) {
-    const [pl, pt, pr, pb] = p;
-    const [ml, mt, mr, mb] = m;
-    const [pw, ph] = [pl+1+pr, pt+1+pb];
-    const [tw, th] = [ml+pw+mr, mt+ph+mb];
-    const crect = [(ml+pl)/tw, (mt+pt)/th, 1-(mr+pr)/tw, 1-(mb+pb)/th];
-    const brect = [ml/tw, mt/th, 1-mr/tw, 1-mb/th];
-    const basp = (a != null) ? a*(pw/ph) : null;
-    const tasp = (a != null) ? a*(tw/th) : null;
-    return [crect, brect, basp, tasp];
+    const [ pl, pt, pr, pb ] = p
+    const [ ml, mt, mr, mb ] = m
+    const [ pw, ph ] = [ pl + 1 + pr, pt + 1 + pb ]
+    const [ tw, th ] = [ ml + pw + mr, mt + ph + mb ]
+    const crect = [ (ml + pl) / tw, (mt + pt) / th, 1 - (mr + pr) / tw, 1 - (mb + pb) / th ]
+    const brect = [ ml / tw, mt / th, 1 - mr / tw, 1 - mb / th ]
+    const basp = (a != null) ? a * (pw / ph) : null
+    const tasp = (a != null) ? a * (tw / th) : null
+    return [ crect, brect, basp, tasp ]
 }
 
 //
@@ -516,36 +516,32 @@ function box_rect(box) {
 }
 
 function merge_rects(...rects) {
-    const [xa, ya, xb, yb] = zip(...rects);
-    const [xs, ys] = [[...xa, ...xb], [...ya, ...yb]];
-    return [
-        min(...xs), min(...ys), max(...xs), max(...ys)
-    ];
+    const [ xa, ya, xb, yb ] = zip(...rects)
+    const [ xs, ys ] = [ [ ...xa, ...xb ], [ ...ya, ...yb ] ]
+    return [ min(...xs), min(...ys), max(...xs), max(...ys) ]
 }
 
 function merge_points(...points) {
-    const [xs, ys] = zip(...points);
-    return [
-        min(...xs), min(...ys), max(...xs), max(...ys)
-    ];
+    const [ xs, ys ] = zip(...points)
+    return [ min(...xs), min(...ys), max(...xs), max(...ys) ]
 }
 
 function aspect_invariant(value, aspect, alpha = 0.5) {
-    aspect = aspect ?? 1;
+    aspect = aspect ?? 1
 
-    const wfact = aspect**alpha;
-    const hfact = aspect**(1-alpha);
+    const wfact = aspect**alpha
+    const hfact = aspect**(1 - alpha)
 
     if (is_scalar(value)) {
-        value = [value, value];
+        value = [ value, value ]
     }
 
     if (value.length == 2) {
-        const [ vw, vh ] = value;
-        return [ vw * wfact, vh / hfact ];
+        const [ vw, vh ] = value
+        return [ vw * wfact, vh / hfact ]
     } else if (value.length == 4) {
-        const [ vl, vt, vr, vb ] = value;
-        return [ vl * wfact, vt / hfact, vr * wfact, vb / hfact ];
+        const [ vl, vt, vr, vb ] = value
+        return [ vl * wfact, vt / hfact, vr * wfact, vb / hfact ]
     }
 }
 
@@ -554,25 +550,25 @@ function aspect_invariant(value, aspect, alpha = 0.5) {
 //
 
 function prefix_split(pres, attr) {
-    const attr1 = {...attr};
-    const pres1 = pres.map(p => `${p}_`);
-    const out = pres.map(p => Object());
+    const attr1 = { ...attr }
+    const pres1 = pres.map(p => `${p}_`)
+    const out = pres.map(p => Object())
     Object.keys(attr).map(k => {
         pres.forEach((p, i) => {
             if (k.startsWith(pres1[i])) {
-                const k1 = k.slice(p.length+1);
-                out[i][k1] = attr1[k];
-                delete attr1[k];
+                const k1 = k.slice(p.length + 1)
+                out[i][k1] = attr1[k]
+                delete attr1[k]
             }
-        });
-    });
-    return [...out, attr1];
+        })
+    })
+    return [ ...out, attr1 ]
 }
 
 function prefix_add(pre, attr) {
     return Object.fromEntries(
-        Object.entries(attr).map(([k, v]) => [`${pre}_${k}`, v])
-    );
+        Object.entries(attr).map(([ k, v ]) => [ `${pre}_${k}`, v ])
+    )
 }
 
 //
@@ -580,36 +576,36 @@ function prefix_add(pre, attr) {
 //
 
 function demangle(k) {
-    return k.replace('_', '-');
+    return k.replace('_', '-')
 }
 
 function rounder(x, prec) {
-    prec = prec ?? prec_base;
+    prec = prec ?? prec_base
 
-    let suf;
+    let suf
     if (is_string(x) && x.endsWith('px')) {
-        x = Number(x.slice(0, -2));
-        suf = 'px';
+        x = Number(x.slice(0, -2))
+        suf = 'px'
     } else {
-        suf = '';
+        suf = ''
     }
 
-    let ret;
+    let ret
     if (is_scalar(x)) {
-        ret = x.toFixed(prec);
-        ret = ret.replace(/(\.[0-9]*?)0+$/, '$1').replace(/\.$/, '');
+        ret = x.toFixed(prec)
+        ret = ret.replace(/(\.[0-9]*?)0+$/, '$1').replace(/\.$/, '')
     } else {
-        ret = x;
+        ret = x
     }
 
-    return ret + suf;
+    return ret + suf
 }
 
 function props_repr(d, prec) {
     return Object.entries(d)
         .filter(([k, v]) => v != null)
         .map(([k, v]) => `${demangle(k)}="${rounder(v, prec)}"`)
-        .join(' ');
+        .join(' ')
 }
 
 //
@@ -807,16 +803,14 @@ function detect_aspect(children, coord) {
 
 class Group extends Element {
     constructor({ children, coord, aspect, tag = 'g', clip = true, ...attr } = {}) {
-        children = ensure_array(children);
+        children = ensure_array(children)
 
         // extract specs from children
-        if (clip && aspect == null) aspect = detect_aspect(children, coord);
+        if (clip && aspect == null) aspect = detect_aspect(children, coord)
 
         // pass to Element
-        super({ tag, unary: false, coord, aspect, ...attr });
-        this.children = children;
-
-        // console.log(this.constructor.name, aspect, detect_aspect(children, coord))
+        super({ tag, unary: false, coord, aspect, ...attr })
+        this.children = children
     }
 
     inner(ctx) {
@@ -879,11 +873,11 @@ class SVG extends Group {
 //
 
 function check_singleton(children) {
-    const is_array = Array.isArray(children);
+    const is_array = Array.isArray(children)
     if (children == null || (is_array && children.length != 1)) {
-        throw Error('Must have exactly one child');
+        throw Error('Must have exactly one child')
     }
-    return is_array ? children[0] : children;
+    return is_array ? children[0] : children
 }
 
 // TODO: auto-adjust padding/margin for aspect
@@ -891,64 +885,64 @@ function check_singleton(children) {
 //       but we also want to do it if own aspect is not null
 class Frame extends Group {
     constructor({ children, padding = 0, margin = 0, border = 0, aspect, adjust = true, flex = false, shape, rounded, stroke, fill, ...attr0 } = {}) {
-        const child = check_singleton(children);
-        const [border_attr, attr] = prefix_split(['border'], attr0);
+        const child = check_singleton(children)
+        const [border_attr, attr] = prefix_split(['border'], attr0)
 
         // ensure shape is a function
         if (shape == null) {
             if (rounded == null) {
-                shape = (a => new Rect(a));
+                shape = (a => new Rect(a))
             } else {
-                shape = (a => new RoundedRect({ rounded, ...a }));
+                shape = (a => new RoundedRect({ rounded, ...a }))
             }
         } else {
-            shape = ensure_function(shape);
+            shape = ensure_function(shape)
         }
 
         // convenience boxing
-        padding = pad_rect(padding);
-        margin = pad_rect(margin);
+        padding = pad_rect(padding)
+        margin = pad_rect(margin)
 
         // aspect adjusted padding/margin
-        const { aspect: child_aspect } = child.spec;
+        const { aspect: child_aspect } = child.spec
         if (adjust && child_aspect != null) {
-            padding = aspect_invariant(padding, 1 / child_aspect);
-            margin = aspect_invariant(margin, 1 / child_aspect);
+            padding = aspect_invariant(padding, 1 / child_aspect)
+            margin = aspect_invariant(margin, 1 / child_aspect)
         }
 
         // get box sizes
-        const iasp = aspect ?? child_aspect;
-        const [crect, brect, basp, tasp] = map_padmar(padding, margin, iasp);
-        aspect = flex ? null : (aspect ?? tasp);
+        const iasp = aspect ?? child_aspect
+        const [crect, brect, basp, tasp] = map_padmar(padding, margin, iasp)
+        aspect = flex ? null : (aspect ?? tasp)
 
         // make border box
-        const rect = shape({ rect: brect, stroke_width: border, stroke, fill, ...border_attr });
+        const rect = shape({ rect: brect, stroke_width: border, stroke, fill, ...border_attr })
 
         // assign rect to child
-        child.spec.rect = crect;
+        child.spec.rect = crect
 
         // pass to Group
-        super({ children: [rect, child], aspect, clip: false, ...attr });
+        super({ children: [rect, child], aspect, clip: false, ...attr })
     }
 }
 
 function get_orient(direc) {
     if (direc == 'v' || direc == 'vertical') {
-        return 'v';
+        return 'v'
     } else if (direc == 'h' || direc == 'horizontal') {
-        return 'h';
+        return 'h'
     } else {
-        throw new Error(`Unrecognized direction specification: ${direc}`);
+        throw new Error(`Unrecognized direction specification: ${direc}`)
     }
 }
 
 // fill in missing values to ensure: sum(vals) == target
 function distribute_extra(vals, target) {
-    target = target ?? 1;
-    const nmiss = vals.filter(v => v == null).length;
-    const total = sum(vals);
-    const fill = (nmiss > 0) ? (target-total)/nmiss : 0;
-    return vals.map(v => v ?? fill);
+    target = target ?? 1
+    const nmiss = vals.filter(v => v == null).length
+    const total = sum(vals)
+    const fill = (nmiss > 0) ? (target - total) / nmiss : 0
+    return vals.map(v => v ?? fill)
 }
 
 // expects list of Element or [Element, height]
@@ -1038,13 +1032,13 @@ class Stack extends Group {
 
 class VStack extends Stack {
     constructor(attr) {
-        super({ direc: 'v', ...attr });
+        super({ direc: 'v', ...attr })
     }
 }
 
 class HStack extends Stack {
     constructor(attr) {
-        super({ direc: 'h', ...attr });
+        super({ direc: 'h', ...attr })
     }
 }
 
@@ -1619,7 +1613,7 @@ class RoundedRect extends Path {
 
 // random 6-digit hex
 function random_hex() {
-    return Math.floor(Math.random()*0x1000000).toString(16);
+    return Math.floor(Math.random()*0x1000000).toString(16)
 }
 
 class MetaElement {
