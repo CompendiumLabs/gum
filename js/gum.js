@@ -696,7 +696,7 @@ class Context {
     // map from range to pixel
     mapRange(direc, climit, coord = coord_base) {
         direc = get_orient(direc)
-        climit ??= limit_base
+        climit ??= lim_base
         const [ clo, chi ] = climit
         const [ cx1, cy1, cx2, cy2 ] = coord
         const [ px1, py1, px2, py2 ] = this.prect
@@ -1248,7 +1248,7 @@ class Line extends Element {
 
 // plottable and coord adaptive
 class UnitLine extends Line {
-    constructor({ direc, pos = pos_base, lim = limit_base, coord, ...attr } = {}) {
+    constructor({ direc, pos = pos_base, lim = lim_base, coord, ...attr } = {}) {
         direc = get_orient(direc)
 
         // get default position in off dimension
@@ -1732,7 +1732,7 @@ function check_string(children) {
 }
 
 class Text extends Element {
-    constructor({ children: children0, pos = pos_base, size = size_base, font_family, font_weight, font_size, color = 'black', offset = [0, -0.13], ...attr } = {}) {
+    constructor({ children: children0, pos = pos_base, rad = rad_base, font_family, font_weight, font_size, color = 'black', offset = [ 0, -0.13 ], ...attr } = {}) {
         const text = check_string(children0)
 
         // compute text box
@@ -1748,8 +1748,8 @@ class Text extends Element {
         super({ tag: 'text', unary: false, aspect, font_family, font_weight, font_size, stroke: color, fill: color, ...attr })
         this.text = escape_xml(text)
         this.offset = offset1
-        this.size = size
         this.pos = pos
+        this.rad = rad
     }
 
     // because text will always be displayed upright,
@@ -1758,12 +1758,16 @@ class Text extends Element {
     props(ctx) {
         const attr = super.props(ctx);
         const [ x0, y0 ] = ctx.mapPoint(this.pos)
-        const [ w0, h0 ] = ctx.mapSize([ 1, this.size ])
+        const [ rx, ry ] = ctx.mapSize([ this.rad, this.rad ])
         const [ xoff, yoff ] = ctx.mapSize(this.offset)
 
+        // get true centering offset
+        const coff = yoff * (2 * this.rad - 1)
+
         // get display position
-        const [ x1, y1 ] = [ x0 - w0 / 2, y0 + h0 / 2 ]
-        const [ x, y ] = [ x1 + xoff, y1 + yoff ]
+        const [ x1, y1 ] = [ x0 - rx, y0 + ry ]
+        const [ x, y ] = [ x1 + xoff, y1 + yoff + coff ]
+        const h0 = 2 * ry
 
         // get font size
         const { font_size } = this.attr
@@ -1932,7 +1936,7 @@ class TitleFrame extends Frame {
 }
 
 // determines actual values given combinations of limits, values, and functions
-function sympath({fx, fy, xlim, ylim, tlim = limit_base, xvals, yvals, tvals, clip = true, N} = {}) {
+function sympath({fx, fy, xlim, ylim, tlim = lim_base, xvals, yvals, tvals, clip = true, N} = {}) {
     fx = func_or_scalar(fx);
     fy = func_or_scalar(fy);
 
@@ -2181,7 +2185,7 @@ class Field extends Points {
 }
 
 class SymField extends Field {
-    constructor({ func, xlim = limit_base, ylim = limit_base, N = 10, ...attr } = {}) {
+    constructor({ func, xlim = lim_base, ylim = lim_base, N = 10, ...attr } = {}) {
         const points = lingrid(xlim, ylim, N);
         const direcs = points.map(func);
         super({ points, direcs, ...attr });
@@ -2629,7 +2633,7 @@ class Title extends Frame {
 }
 
 class Mesh extends Scale {
-    constructor({ direc, locs, lim = limit_base, opacity = 0.2, ...attr } = {}) {
+    constructor({ direc, locs, lim = lim_base, opacity = 0.2, ...attr } = {}) {
         super({ direc, locs, lim, opacity, ...attr });
     }
 }
