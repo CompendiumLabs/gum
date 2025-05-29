@@ -1998,22 +1998,21 @@ class SymPath extends Polyline {
 
 class SymFill extends Polygon {
     constructor({ fx1, fy1, fx2, fy2, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr } = {}) {
-
         // compute point values
         const [tvals1, xvals1, yvals1] = sympath({
             fx: fx1, fy: fy1, xlim, ylim, tlim, xvals, yvals, tvals, N
-        });
+        })
         const [tvals2, xvals2, yvals2] = sympath({
             fx: fx2, fy: fy2, xlim, ylim, tlim, xvals, yvals, tvals, N
-        });
+        })
 
         // get valid point pairs
         const points = [...zip(xvals1, yvals1), ...zip(xvals2, yvals2).reverse()].filter(
             ([x, y]) => (x != null) && (y != null)
-        );
+        )
 
         // pass to element
-        super({ points, ...attr });
+        super({ points, ...attr })
     }
 }
 
@@ -2035,70 +2034,68 @@ class SymPoly extends Polygon {
 
 class SymPoints extends Group {
     constructor({ fx, fy, fs, fr, size = 0.01, shape, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr } = {}) {
-        shape = shape ?? new Dot();
-        fr = fr ?? (() => size);
-        fs = fs ?? (() => shape);
+        shape = shape ?? (a => new Dot(a));
+        const fsize = is_number(size) ? (() => size) : size;
 
         // compute point values
         [tvals, xvals, yvals] = sympath({
             fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N
-        });
+        })
 
         // make points
-        const points = zip(tvals, xvals, yvals);
+        const points = zip(tvals, xvals, yvals)
         const children = enumerate(points).map(([i, [t, x, y]]) =>
-            [fs(x, y, t, i), radius_rect([x, y], fr(x, y, t, i))]
-        );
+            shape({ rect: radius_rect([x, y], fsize(x, y, t, i)) })
+        )
 
         // pass  to element
-        super({ children, clip: false, ...attr });
+        super({ children, clip: false, ...attr })
     }
 }
 
 function datapoints({ xvals, yvals, xlim, ylim, N } = {}) {
     if (xvals == null) {
-        N = N ?? yvals.length;
-        xlim = xlim ?? [0, N-1];
-        xvals = linspace(...xlim, N);
+        N = N ?? yvals.length
+        xlim = xlim ?? [ 0, N - 1 ]
+        xvals = linspace(...xlim, N)
     }
     if (yvals == null) {
-        N = N ?? xvals.length;
-        ylim = ylim ?? [0, N-1];
-        yvals = linspace(...ylim, N);
+        N = N ?? xvals.length
+        ylim = ylim ?? [0, N - 1]
+        yvals = linspace(...ylim, N)
     }
-    return zip(xvals, yvals);
+    return zip(xvals, yvals)
 }
 
 class DataPath extends Polyline {
     constructor({ xvals, yvals, xlim, ylim, ...attr } = {}) {
-        const points = datapoints({ xvals, yvals, xlim, ylim });
-        super({ points, ...attr });
+        const points = datapoints({ xvals, yvals, xlim, ylim })
+        super({ points, ...attr })
     }
 }
 
 class DataPoints extends Points {
     constructor({ xvals, yvals, xlim, ylim, ...attr } = {}) {
-        const points = datapoints({ xvals, yvals, xlim, ylim });
-        super({ points, ...attr });
+        const points = datapoints({ xvals, yvals, xlim, ylim })
+        super({ points, ...attr })
     }
 }
 
 class DataFill extends Polygon {
     constructor({ xvals1, yvals1, xvals2, yvals2, xlim, ylim, ...attr } = {}) {
-
         // repeat constants
-        const N = max(...[xvals1, yvals1, xvals2, yvals2].map(v => v?.length));
+        const N = max(...[ xvals1, yvals1, xvals2, yvals2 ].map(v => v?.length))
         [xvals1, yvals1, xvals2, yvals2] = [xvals1, yvals1, xvals2, yvals2].map(
             v => (v != null) ? ensure_vector(v, N) : null
-        );
+        )
 
         // make forward-backard shape
-        const points1 = datapoints({xvals: xvals1, yvals: yvals1, xlim, ylim, N});
-        const points2 = datapoints({xvals: xvals2, yvals: yvals2, xlim, ylim, N});
-        const points = [...points1, ...points2.reverse()];
+        const points1 = datapoints({ xvals: xvals1, yvals: yvals1, xlim, ylim, N })
+        const points2 = datapoints({ xvals: xvals2, yvals: yvals2, xlim, ylim, N })
+        const points = [ ...points1, ...points2.reverse() ]
 
         // pass to pointstring
-        super({ points, ...attr });
+        super({ points, ...attr })
     }
 }
 
