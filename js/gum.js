@@ -10,10 +10,16 @@ import { emoji_table } from './emoji.js';
 const ns_svg = 'http://www.w3.org/2000/svg';
 
 // sizing
-const size_base = 500;
-const rect_base = [0, 0, size_base, size_base];
+const outer_base = 500;
+const rect_base = [0, 0, 1, 1];
 const coord_base = [0, 0, 1, 1];
+const point_base = [0.5, 0.5];
+const pos_base = [0.5, 0.5];
+const rad_base = 0.5;
+const lim_base = [0, 1];
+const size_base = [1, 1];
 const prec_base = 2;
+const N_base = 100;
 
 // fonts
 const font_family_base = 'IBMPlexSans';
@@ -29,8 +35,6 @@ const label_size_base = 0.5;
 const label_offset_base = 0.15;
 const title_size_base = 0.1;
 const title_offset_base = 0.1;
-const limit_base = [0, 1];
-const N_base = 100;
 
 // default styling
 const svg_attr_base = {
@@ -110,7 +114,7 @@ function concat(arrs) {
 }
 
 //
-// vector utils
+// array reducers
 //
 
 function sum(arr) {
@@ -135,37 +139,41 @@ function any(arr) {
     return arr.reduce((a, b) => a || b);
 }
 
-function add(arr1, arr2) {
-    return zip(arr1, arr2).map(([a, b]) => a + b);
+// vector ops
+
+function broadcast2d(x, y) {
+    const xa = is_array(x)
+    const ya = is_array(y)
+    if (xa == ya) return [ x, y ]
+    if (!xa) x = [ x, x, x, x ]
+    if (!ya) y = [ y, y, y, y ]
+    return [ x, y ]
 }
 
-function sub(arr1, arr2) {
-    return zip(arr1, arr2).map(([a, b]) => a - b);
+function broadcastFunc(f) {
+    return (x, y) => {
+        [ x, y]  = broadcast2d(x, y)
+        if (is_scalar(x) && is_scalar(y)) return f(x, y)
+        else return zip(x, y).map(([ a, b ]) => f(a, b))
+    }
 }
 
-function mul(arr1, arr2) {
-    return zip(arr1, arr2).map(([a, b]) => a * b);
+function add(x, y) {
+    return broadcastFunc((a, b) => a + b)(x, y)
+}
+function sub(x, y) {
+    return broadcastFunc((a, b) => a - b)(x, y)
+}
+function mul(x, y) {
+    return broadcastFunc((a, b) => a * b)(x, y)
+}
+function div(x, y) {
+    return broadcastFunc((a, b) => a / b)(x, y)
 }
 
-function div(arr1, arr2) {
-    return zip(arr1, arr2).map(([a, b]) => a / b);
-}
-
-function multiply(arr, scalar) {
-    return arr.map(x => x*scalar);
-}
-
-function divide(arr, scalar) {
-    return arr.map(x => x/scalar);
-}
-
-function addition(arr, scalar) {
-    return arr.map(x => x + scalar);
-}
-
-function subtract(arr, scalar) {
-    return arr.map(x => x - scalar);
-}
+//
+// array ops
+//
 
 function cumsum(arr, first) {
     const sum = 0;
@@ -183,6 +191,10 @@ function normalize(vals, degree) {
     const mag = norm(vals, degree);
     return (mag == 0) ? vals.map(v => 0) : vals.map(v => v/mag);
 }
+
+//
+// array generators
+//
 
 function range(i0, i1, step) {
     step = step ?? 1;
@@ -213,6 +225,10 @@ function padvec(vec, len, val) {
     return [...vec, ...repeat(val, m)];
 }
 
+//
+// array combinators
+//
+
 function meshgrid(x, y) {
     return x.flatMap(xi => y.map(yi => [xi, yi]));
 }
@@ -242,7 +258,7 @@ function filter_object(obj, fn) {
 }
 
 //
-// type utils
+// type checks
 //
 
 function ensure_array(x) {
@@ -409,7 +425,7 @@ function normal(mean, stdv) {
 }
 
 //
-// coordinate utils
+// padding utils
 //
 
 // convenience mapper for rectangle positions
@@ -452,22 +468,50 @@ function map_padmar(p, m, a) {
     return [crect, brect, basp, tasp];
 }
 
-function rad_rect(p, r0) {
-    let x, y, r, rx, ry;
-    if (p.length == 1) {
-        [r, ] = p;
-        [x, y] = [0.5, 0.5];
-        [rx, ry] = [r, r];
-    } else if (p.length == 2) {
-        [x, y] = p;
-        [rx, ry] = ensure_vector(r0, 2);
-    } else if (p.length == 3) {
-        [x, y, r] = p;
-        [rx, ry] = [r, r];
-    } else if (p.length == 4) {
-        [x, y, rx, ry] = p;
-    }
-    return [x-rx, y-ry, x+rx, y+ry];
+//
+// rect utils
+//
+
+function rect_size(rect) {
+    const [ x1, y1, x2, y2 ] = rect
+    return [ x2 - x1, y2 - y1 ]
+}
+
+function rect_dims(rect) {
+    const [ w, h ] = rect_size(rect)
+    return [ abs(w), abs(h) ]
+}
+
+function rect_center(rect) {
+    const [ x1, y1, x2, y2 ] = rect
+    return [ (x1 + x2) / 2, (y1 + y2) / 2 ]
+}
+
+function rect_radius(rect) {
+    const [ w, h ] = rect_size(rect)
+    return [ w / 2, h / 2 ]
+}
+
+function rect_aspect(rect) {
+    const [ w, h ] = rect_dims(rect)
+    return w / h
+}
+
+function radius_rect(p, r) {
+    const [ x, y ] = p
+    const [ rx, ry ] = is_scalar(r) ? [ r, r ] : r
+    return [ x - rx, y - ry, x + rx, y + ry ]
+}
+
+function rect_box(rect) {
+    const [ x1, y1, x2, y2 ] = rect
+    const [ w, h ] = [ x2 - x1, y2 - y1 ]
+    return [ x1, y1, w, h ]
+}
+
+function box_rect(box) {
+    const [ x, y, w, h ] = box
+    return [ x, y, x + w, y + h ]
 }
 
 function merge_rects(...rects) {
@@ -483,22 +527,6 @@ function merge_points(...points) {
     return [
         min(...xs), min(...ys), max(...xs), max(...ys)
     ];
-}
-
-function rect_dims(rect) {
-    const [xa, ya, xb, yb] = rect;
-    const [w, h] = [xb - xa, yb - ya];
-    return [abs(w), abs(h)];
-}
-
-function rect_center(rect) {
-    const [xa, ya, xb, yb] = rect;
-    return [(xa + xb)/2, (ya + yb)/2];
-}
-
-function rect_aspect(rect) {
-    const [w, h] = rect_dims(rect);
-    return abs(w/h);
 }
 
 function aspect_invariant(value, aspect, alpha = 0.5) {
@@ -587,249 +615,194 @@ function props_repr(d, prec) {
 // color handling
 //
 
-// Converts a #ffffff hex string into an [r,g,b] array
-function hex2rgb(hex) {
-    const result1 = /^#?([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})$/i.exec(hex);
-    if (result1) return result1.slice(1).map(c => parseInt(c, 16));
-    const result2 = /^#?([a-fA-F\d])([a-fA-F\d])([a-fA-F\d])$/i.exec(hex);
-    if (result2) return result2.slice(1).map(c => parseInt(`${c}${c}`, 16));
-    return null;
-}
+function hexToRgba(hex) {
+    hex = hex.replace('#', '')
+    if (hex.length == 3) {
+        hex = hex.split('').map(c => c + c).join('')
+    } else if (hex.length == 4) {
+        hex = hex.split('').map(c => c + c).join('')
+    }
+    const r = parseInt(hex.slice(0, 2), 16)
+    const g = parseInt(hex.slice(2, 4), 16)
+    const b = parseInt(hex.slice(4, 6), 16)
+    const a = hex.length == 8 ? parseInt(hex.slice(6, 8), 16) : 255
+    return [ r, g, b, a / 255 ]
+  }
 
-function rgb2hex(rgb) {
-    const [r, g, b] = rgb.map(c => round(c).toString(16).padStart(2, '0'));
-    return `#${r}${g}${b}`;
-}
-
-function interpolate_vectors(c1, c2, alpha) {
-    const len = min(c1.length, c2.length);
-    return range(len).map(i => {
-        const x = c1[i] + alpha*(c2[i]-c1[i]);
-        return rounder(x, 3);
-    });
-}
-
-function interpolate_hex(c1, c2, alpha) {
-    const v1 = hex2rgb(c1);
-    const v2 = hex2rgb(c2);
-    const v = interpolate_vectors(v1, v2, alpha);
-    return rgb2hex(v);
-}
-
-function interpolate_palette(c1, c2, n) {
-    return linspace(0, 1, n)
-        .map(alpha => interpolate_vectors(c1, c2, alpha));
+function palette(start, stop, clims = DEFAULT_LIM) {
+    const start1 = hexToRgba(start)
+    const stop1 = hexToRgba(stop)
+    const m = sub(stop1, start1)
+    function gradient(x) {
+        const x1 = rangeMap(DEFAULT_LIM, x, { clims })
+        const [ r, g, b, a ] = add(start1, mul(m, x1))
+        return `rgba(${r}, ${g}, ${b}, ${a})`
+    }
+    return gradient
 }
 
 //
 // core classes
 //
 
-function degree_mod(degree, lower, upper) {
-    return ((degree + lower) % (upper-lower)) - lower;
-}
-
-// public usage
-function rotate_aspect(aspect, degree) {
-    if (degree == null) { return aspect; }
-    if (aspect == null) { return null; }
-    const rotate = degree_mod(degree, -90, 90);
-    const theta = (pi/180)*abs(rotate);
-    return rotate_aspect_radians(aspect, theta);
-}
-
-// mostly private
-function rotate_aspect_radians(aspect, theta) {
-    return (aspect*cos(theta)+sin(theta))/(aspect*sin(theta)+cos(theta));
-}
-
 function align_frac(align) {
     if (is_scalar(align)) {
-        return align;
+        return align
     } else if (align == 'left' || align == 'top') {
-        return 0;
+        return 0
     } else if (align == 'center' || align == 'middle') {
-        return 0.5;
+        return 0.5
     } else if (align == 'right' || align == 'bottom') {
-        return 1;
+        return 1
     } else{
-        throw new Error(`Unrecognized alignment specification: ${align}`);
+        throw new Error(`Unrecognized alignment specification: ${align}`)
     }
-}
-
-function rect_remap(rect, frac) {
-    const [x1, y1, x2, y2] = rect;
-    const [w, h] = [x2 - x1, y2 - y1];
-    const [fx1, fy1, fx2, fy2] = frac;
-    return [
-        x1 + fx1*w, y1 + fy1*h,
-        x1 + fx2*w, y1 + fy2*h
-    ];
 }
 
 class Context {
-    constructor(prect, { coord, trans, submap, prec, debug } = {}) {
-        this.prect = prect;
-        this.coord = coord ?? coord_base;
-        this.trans = trans;
-        this.submap = submap;
-        this.prec = prec;
-        this.debug = debug;
+    constructor({ prect = rect_base, prec = prec_base, debug = false } = {}) {
+        this.prect = prect
+        this.prec = prec
+        this.debug = debug
     }
 
-    // map using both domain (frac) and range (rect)
-    coord_to_pixel(coord) {
-        const [cx, cy] = coord;
-        const [cx1, cy1, cx2, cy2] = this.coord;
-        const [cw, ch] = [cx2 - cx1, cy2 - cy1];
-        const [px1, py1, px2, py2] = this.prect;
-        const [pw, ph] = [px2 - px1, py2 - py1];
-        const [fx, fy] = [(cx-cx1)/cw, (cy-cy1)/ch];
-        const [px, py] = [px1 + fx*pw, py1 + fy*ph];
-        return [px, py];
+    // map point from coord to pixel
+    mapPoint(cpoint, coord = coord_base) {
+        cpoint ??= point_base
+        const [ cx, cy ] = cpoint
+        const [ cx1, cy1, cx2, cy2 ] = coord
+        const [ px1, py1, px2, py2 ] = this.prect
+        const [ cw, ch ] = [ cx2 - cx1, cy2 - cy1 ]
+        const [ pw, ph ] = [ px2 - px1, py2 - py1 ]
+        const [ fx, fy ] = [ (cx - cx1) / cw, (cy - cy1) / ch ]
+        const [ px, py ]  = [ px1 + fx * pw, py1 + fy * ph ]
+        return [ px, py ]
     }
 
-    // used for sizes such as radii or vectors
-    coord_to_pixel_size(size) {
-        const [sw, sh] = size;
-        const [cx1, cy1, cx2, cy2] = this.coord;
-        const [cw, ch] = [cx2 - cx1, cy2 - cy1];
-        const [px1, py1, px2, py2] = this.prect;
-        const [pw, ph] = [px2 - px1, py2 - py1];
-        const [px, py] = [sw*abs(pw)/abs(cw), sh*abs(ph)/abs(ch)];
-        return [px, py];
+    // map rect from coord to pixel
+    mapRect(crect, coord = coord_base) {
+        crect ??= rect_base
+        const [ x1, y1, x2, y2 ] = crect
+        const [ c1, c2 ] = [ [ x1, y1 ], [ x2, y2 ] ]
+        const p1 = this.mapPoint(c1, coord)
+        const p2 = this.mapPoint(c2, coord)
+        return [ ...p1, ...p2 ]
     }
 
-    // used for whole rectangles
-    coord_to_pixel_rect(crect) {
-        const [x1, y1, x2, y2] = crect;
-        const [c1, c2] = [[x1, y1], [x2, y2]];
-        const p1 = this.coord_to_pixel(c1);
-        const p2 = this.coord_to_pixel(c2);
-        const prect = [...p1, ...p2];
-        return prect;
+    // map from range to pixel
+    mapRange(direc, climit, coord = coord_base) {
+        direc = get_orient(direc)
+        climit ??= limit_base
+        const [ clo, chi ] = climit
+        const [ cx1, cy1, cx2, cy2 ] = coord
+        const [ px1, py1, px2, py2 ] = this.prect
+        const [ zlo, zhi, plo, phi ] = (direc == 'v') ?
+            [ cy1, cy2, py1, py2 ] :
+            [ cx1, cx2, px1, px2 ]
+        const [ zlen, plen ] = [ zhi - zlo, phi - plo ]
+        const [ flo, fhi ] = [ (clo - zlo) / zlen, (chi - zlo) / zlen ]
+        const [ plo1, phi1 ] = [ plo + flo * plen, plo + fhi * plen ]
+        return [ plo1, phi1 ]
+    }
+
+    // map size from coord to pixel
+    mapSize(csize, coord = coord_base) {
+        csize ??= size_base
+        const [ sw, sh ] = csize
+        const [ cx1, cy1, cx2, cy2 ] = coord
+        const [ px1, py1, px2, py2 ] = this.prect
+        const [ cw, ch ] = [ cx2 - cx1, cy2 - cy1 ]
+        const [ pw, ph ] = [ px2 - px1, py2 - py1 ]
+        const [ px, py ] = [ sw * abs(pw) / abs(cw), sh * abs(ph) / abs(ch) ]
+        return [ px, py ]
     }
 
     // NOTE: this is the main mapping function! be very careful when changing it!
-    // implement placement logic: map from coordinate rect (rect) to pixel rect (prect)
-    // also outputs coordinate system (coord), rotation rect (rrect), and transform string (trans)
-    map({ rect, aspect, rotate = 0 , expand = false, invar = true, align = 'center', pivot = 'center', coord, submap } = {}) {
-        // set the default rect to coords for this context
-        rect ??= this.coord;
-
-        // remap rotation angle
-        const degrees = degree_mod(rotate, -90, 90); // map to [-90, 90]
-        const theta0 = abs(degrees)*(pi/180); // in radians
-        const theta = invar ? 0 : theta0; // account for rotate?
-
-        // sort out alignment
-        let [halign, valign] = ensure_vector(align, 2);
-        halign = align_frac(halign);
-        valign = align_frac(valign);
-
-        // sort out pivot point
-        let [hpivot, vpivot] = ensure_vector(pivot, 2);
-        hpivot = align_frac(hpivot);
-        vpivot = align_frac(vpivot);
+    map({ rect = null, aspect = null, expand = false, coord = coord_base } = {}) {
+        // use default rect if not provided
+        rect ??= coord
 
         // get true pixel rect
-        const [px1, py1, px2, py2] = this.coord_to_pixel_rect(rect);
-        const [pw0, ph0] = [px2 - px1, py2 - py1];
-
-        // embedded rectangle aspect
-        const asp0 = pw0/ph0 ?? 1; // pixel rect (zero size is 1)
-        const asgn = asp0 == 0 ? (ph0 >= 0 ? 1 : -1) : sign(asp0)
-        const rasp = (aspect != null) ? asgn * aspect : asp0; // mimic outer if inner is null, but always match outer sign
-        const asp1 = rotate_aspect_radians(rasp, theta);
+        const [ px1, py1, px2, py2 ] = this.mapRect(rect, coord)
+        const [ cx, cy ] = [ 0.5 * (px1 + px2), 0.5 * (py1 + py2) ]
+        const [ pw, ph ] = [ px2 - px1, py2 - py1 ]
 
         // shrink down if aspect mismatch
-        const wide = abs(asp1) > abs(asp0);
-        const [hexpand, vexpand] = ensure_vector(expand, 2);
-        const [tw, th] = [cos(theta)+sin(theta)/rasp, rasp*sin(theta)+cos(theta)];
-        const [rw0, rh0] = [pw0/tw, ph0/th];
-        const [pw1, ph1] = ((wide & hexpand) || (!wide & !vexpand)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
-        const [rw1, rh1] = [pw1*tw, ph1*th];
+        let [ pw1, ph1 ] = [ pw, ph ]
+        if (aspect != null) {
+            if (!expand == pw > aspect * ph) {
+                pw1 = aspect * ph1
+            } else if (!expand == pw < aspect * ph) {
+                ph1 = pw1 / aspect
+            }
+        }
 
-        // get rotated/unrotated pixel rect
-        const cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
-        const cy = (1-valign)*py1 + valign*py2 + (0.5-valign)*rh1;
-        const prect = [cx-0.5*pw1, cy-0.5*ph1, cx+0.5*pw1, cy+0.5*ph1];
-
-        // get transform string
-        const vx = (1-hpivot)*px1 + hpivot*px2;
-        const vy = (1-vpivot)*py1 + vpivot*py2;
-        const [sx, sy] = [vx, vy].map(z => rounder(z, this.prec));
-        const trans = (rotate != 0) ? `rotate(${rounder(rotate, this.prec)} ${rounder(sx, this.prec)} ${rounder(sy, this.prec)})` : null;
-
-        // remap subcoords
-        if (this.submap != null) coord = rect_remap(coord ?? coord_base, this.submap);
+        // get embedded pixel rect
+        const prect = [ cx - 0.5 * pw1, cy - 0.5 * ph1, cx + 0.5 * pw1, cy + 0.5 * ph1 ]
 
         // return new context
-        return new Context(prect, {coord, trans, submap, prec: this.prec, debug: this.debug});
+        return new Context({ prect, prec: this.prec, debug: this.debug })
     }
 }
 
 // spec keys
-const spec_keys = ['rect', 'aspect', 'expand', 'coord', 'rotate', 'invar', 'align', 'pivot'];
+const spec_keys = [ 'rect', 'aspect', 'expand', 'coord' ]
 
 // NOTE: if children gets here, it was ignored by the constructor (so dump it)
 class Element {
     constructor({ tag, unary, children, ...attr } = {}) {
         // core display
-        this.tag = tag;
-        this.unary = unary;
+        this.tag = tag
+        this.unary = unary
 
         // store layout params and attributes
-        this.spec = filter_object(attr, (k, v) => v != null &&  spec_keys.includes(k));
-        this.attr = filter_object(attr, (k, v) => v != null && !spec_keys.includes(k));
+        this.spec = filter_object(attr, (k, v) => v != null &&  spec_keys.includes(k))
+        this.attr = filter_object(attr, (k, v) => v != null && !spec_keys.includes(k))
 
         // warn if children are passed
-        if (children != null) console.warn(`Got children in ${this.tag}`);
+        if (children != null) console.warn(`Got children in ${this.tag}`)
     }
 
     props(ctx) {
         if (ctx.debug) {
-            const { name } = this.constructor;
-            const klass = name.toLowerCase();
-            return {...this.attr, 'gum-class': klass};
+            const { name } = this.constructor
+            const klass = name.toLowerCase()
+            return {...this.attr, 'gum-class': klass}
         }
-        return this.attr;
+        return this.attr
     }
 
     inner(ctx) {
-        return '';
+        return ''
     }
 
     svg(ctx) {
-        ctx = ctx ?? new Context(rect_base);
+        // default context
+        ctx ??= new Context()
 
         // collect all properties
-        let pvals = this.props(ctx);
-        if (ctx.trans != null) {
-            const trans = `${pvals.transform ?? ''} ${ctx.trans}`.trim();
-            pvals = {...pvals, transform: trans};
-        }
-
-        // convert to strings
-        const props = props_repr(pvals, ctx.prec);
-        const pre = props.length > 0 ? ' ' : '';
+        const pvals = this.props(ctx)
+        const props = props_repr(pvals, ctx.prec)
+        const pre = props.length > 0 ? ' ' : ''
 
         // return final svg
         if (this.unary) {
-            return `<${this.tag}${pre}${props} />`;
+            return `<${this.tag}${pre}${props} />`
         } else {
-            return `<${this.tag}${pre}${props}>${this.inner(ctx)}</${this.tag}>`;
+            return `<${this.tag}${pre}${props}>${this.inner(ctx)}</${this.tag}>`
         }
     }
 }
 
 // detect realized aspect of children
 function detect_aspect(children, coord) {
-    const ctx = new Context(rect_base);
+    console.log(children, coord)
+    const ctx = new Context()
     const rects = children.map(c => ctx.map({ coord, ...c.spec }).prect)
-    const outer = rects.length > 0 ? merge_rects(...rects) : null;
-    const aspect = outer != null ? rect_aspect(outer) : null;
-    return aspect;
+    console.log(rects)
+    const outer = rects.length > 0 ? merge_rects(...rects) : null
+    const aspect = outer != null ? rect_aspect(outer) : null
+    return aspect
 }
 
 class Group extends Element {
@@ -842,59 +815,62 @@ class Group extends Element {
         // pass to Element
         super({ tag, unary: false, coord, aspect, ...attr });
         this.children = children;
+
+        // console.log(this.constructor.name, aspect, detect_aspect(children, coord))
     }
 
     inner(ctx) {
         // empty group
-        if (this.children.length == 0) return '\n';
+        if (this.children.length == 0) return '\n'
 
         // map to new contexts and render
         let inside = this.children
-            .map(c => c.svg(ctx.map(c.spec)))
-            .filter(s => s.length > 0).join('\n');
+            .map(c => c.svg(
+                ctx.map({ coord: this.coord, ...c.spec })
+            ))
+            .filter(s => s.length > 0)
+            .join('\n')
 
         // return padded
-        return `\n${inside}\n`;
+        return `\n${inside}\n`
     }
 }
 
 class SVG extends Group {
-    constructor({ children, size = size_base, prec = prec_base, bare = false, filters = null, debug = false, ...attr } = {}) {
-        children = ensure_array(children);
+    constructor({ children, size = outer_base, prec = prec_base, bare = false, filters = null, debug = false, ...attr } = {}) {
+        children = ensure_array(children)
 
         // handle filters
         if (filters != null) {
-            const defs = new Defs(filters);
-            children = [defs, ...children];
+            const defs = new Defs(filters)
+            children = [defs, ...children]
         }
 
         // pass to Group
-        const svg_attr = bare ? {} : svg_attr_base;
-        super({ tag: 'svg', children, ...svg_attr, ...attr });
+        const svg_attr = bare ? {} : svg_attr_base
+        super({ tag: 'svg', children, ...svg_attr, ...attr })
 
         // auto-detect size and aspect
-        size = aspect_invariant(size, this.spec.aspect);
+        size = aspect_invariant(size, this.spec.aspect)
 
         // store core params
-        this.size = size;
-        this.prec = prec;
-        this.debug = debug;
+        this.size = size
+        this.prec = prec
+        this.debug = debug
     }
 
     props(ctx) {
-        const attr = super.props(ctx);
-        const [w, h] = this.size;
-        const box = `0 0 ${rounder(w, this.prec)} ${rounder(h, this.prec)}`;
-        const base = {viewBox: box, xmlns: ns_svg};
-        return {...base, ...attr};
+        const attr = super.props(ctx)
+        const [ w, h ] = this.size
+        const box = `0 0 ${rounder(w, this.prec)} ${rounder(h, this.prec)}`
+        const base = {viewBox: box, xmlns: ns_svg}
+        return {...base, ...attr}
     }
 
     svg(args) {
-        args = args ?? {};
-        const rect = [0, 0, ...this.size];
-        const aspec = rect_aspect(rect);
-        const ctx = new Context(rect, {aspec, prec: this.prec, debug: this.debug, ...args});
-        return super.svg(ctx);
+        const prect = [ 0, 0, ...this.size ]
+        const ctx = new Context({ prect, prec: this.prec, debug: this.debug, ...args })
+        return super.svg(ctx)
     }
 }
 
@@ -979,84 +955,84 @@ function distribute_extra(vals, target) {
 // this is written as vertical, horizonal swaps dimensions and inverts aspects
 class Stack extends Group {
     constructor({ children, direc, expand = true, align = 'center', spacing = 0, aspect = 'auto', ...attr } = {}) {
-        children = ensure_array(children);
-        direc = get_orient(direc);
+        children = ensure_array(children)
+        direc = get_orient(direc)
 
         // short circuit if empty
-        if (children.length == 0) return super({ children: [], aspect, ...attr });
+        if (children.length == 0) return super({ children: [], aspect, ...attr })
 
         // fill in missing heights with null
-        let heights = children.map(c => c.spec.size);
-        let aspects = children.map(c => c.spec.aspect);
+        let heights = children.map(c => c.attr.size)
+        let aspects = children.map(c => c.spec.aspect)
 
         // get aspects and adjust for direction
         const hasa = any(zip(heights, aspects).map(
             ([h, a]) => a != null && h != null
-        )) || all(aspects.map(a => a != null));
-        if (direc == 'h') aspects = aspects.map(a => (a != null) ? 1 / a : null);
+        )) || all(aspects.map(a => a != null))
+        if (direc == 'h') aspects = aspects.map(a => (a != null) ? 1 / a : null)
 
         // expand elements to fit width?
-        let aspect_ideal = null, wlims;
+        let aspect_ideal = null, wlims
         if (expand && !hasa) {
             // aspectless and full width
-            heights = distribute_extra(heights);
-            wlims = heights.map(w => [0, 1]);
+            heights = distribute_extra(heights)
+            wlims = heights.map(w => [ 0, 1 ])
         } else if (expand && hasa) {
             // if aspect, heights are adjusted so that all elements have full width
             // if no aspect, they can be stretched to full width anyway
-            heights = zip(heights, aspects).map(([h, a]) => (a != null) ? 1/a : h);
+            heights = zip(heights, aspects).map(([h, a]) => (a != null) ? 1/a : h)
 
             // renormalize heights and find ideal aspect
-            const has = zip(heights, aspects);
-            const atot = sum(has.map(([h, a]) => (a != null) ? h : null));
-            const utot = sum(has.map(([h, a]) => (a == null) ? h : null));
-            heights = has.map(([h, a]) => (a != null) ? (1-utot)*(h/atot) : h);
-            aspect_ideal = (1 - utot) / atot;
+            const has = zip(heights, aspects)
+            const atot = sum(has.map(([h, a]) => (a != null) ? h : null))
+            const utot = sum(has.map(([h, a]) => (a == null) ? h : null))
+            heights = has.map(([h, a]) => (a != null) ? (1-utot)*(h/atot) : h)
+            aspect_ideal = (1 - utot) / atot
 
             // width is always full with expand
-            wlims = heights.map(w => [0, 1]);
+            wlims = heights.map(w => [ 0, 1 ])
         } else {
             // fill in missing heights and find aspect widths
-            heights = distribute_extra(heights);
-            let widths = zip(heights, aspects).map(([h, a]) => (a != null) ? h * a : null);
+            heights = distribute_extra(heights)
+            let widths = zip(heights, aspects).map(([h, a]) => (a != null) ? h * a : null)
 
             // ideal aspect determined by widest element
-            const wmax = max(...widths) ?? 1;
-            widths = widths.map(w => (w != null) ? w/wmax : 1);
-            aspect_ideal = wmax;
+            const wmax = max(...widths) ?? 1
+            widths = widths.map(w => (w != null) ? w/wmax : 1)
+            aspect_ideal = wmax
 
             // set wlims according to alignment
-            const afrac = align_frac(align);
-            wlims = widths.map(w => (w != null) ? [afrac * (1 - w), afrac + (1 - afrac) * w] : [0, 1]);
+            const afrac = align_frac(align)
+            wlims = widths.map(w => (w != null) ? [ afrac * (1 - w), afrac + (1 - afrac) * w ] : [ 0, 1 ])
         }
 
         // convert heights to cumulative intervals (with spacing)
-        let pos = -spacing;
-        let hlims = heights.map(y => [pos += spacing, pos += y]);
-        hlims = hlims.map(([h1, h2]) => [h1/pos, h2/pos]);
-        aspect_ideal = (aspect_ideal != null) ? aspect_ideal/pos : null;
+        let pos = -spacing
+        let hlims = heights.map(y => [ pos += spacing, pos += y ])
+        hlims = hlims.map(([ h1, h2 ]) => [ h1/pos, h2/pos ])
+        aspect_ideal = (aspect_ideal != null) ? aspect_ideal / pos : null
 
         // if any element has an aspect, use ideal aspect
         // otherwise, just go with null aspect unless specified
         if (aspect == 'auto') {
-            aspect = aspect_ideal;
+            aspect = aspect_ideal
         } else if (aspect == 'none') {
-            aspect = null;
+            aspect = null
         }
 
         // swap dims if horizontal
         if (direc == 'h') {
-            [wlims, hlims] = [hlims, wlims];
-            aspect = (aspect != null) ? 1 / aspect : null;
+            [ wlims, hlims ] = [ hlims, wlims ]
+            aspect = (aspect != null) ? 1 / aspect : null
         }
 
         // assign child rects
         zip(children, wlims, hlims).forEach(([child, [fw0, fw1], [fh0, fh1]]) => {
-            child.spec.rect = [fw0, fh0, fw1, fh1];
-        });
+            child.spec.rect = [ fw0, fh0, fw1, fh1 ]
+        })
 
         // pass to Group
-        super({ children, aspect, ...attr });
+        super({ children, aspect, ...attr })
     }
 }
 
@@ -1131,89 +1107,90 @@ class Grid extends Group {
 
 class Place extends Group {
     constructor({ children: children0, pos = [0.5, 0.5], rad = 0.5, ...attr } = {}) {
-        const child = check_singleton(children0);
-        rad = ensure_vector(rad, 2);
-        child.spec.rect = rad_rect(pos, rad);
-        super({ children: [child], clip: false, ...attr });
+        const child = check_singleton(children0)
+        rad = ensure_vector(rad, 2)
+        child.spec.rect = radius_rect(pos, rad)
+        super({ children: child, clip: false, ...attr })
     }
 }
 
 class Flip extends Group {
     constructor({ children: children0, direc, ...attr } = {}) {
-        const child = check_singleton(children0);
-        direc = get_orient(direc);
-        child.spec.rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1];
-        super({ children: [child], ...attr });
+        const child = check_singleton(children0)
+        direc = get_orient(direc)
+        child.spec.rect = direc == 'v' ? [0, 1, 1, 0] : [1, 0, 0, 1]
+        super({ children: child, ...attr })
     }
 }
 
 class VFlip extends Flip {
     constructor(attr) {
-        super({ direction: 'v', ...attr });
+        super({ direction: 'v', ...attr })
     }
 }
 
 class HFlip extends Flip {
     constructor(attr) {
-        super({ direction: 'h', ...attr });
+        super({ direction: 'h', ...attr })
     }
 }
 
 let anchor_rect = {
-    'left': [0, 0, 0, 1], 'right': [1, 0, 1, 1],
-    'top': [0, 0, 1, 0], 'bottom': [0, 1, 1, 1]
-};
+    'left': [ 0, 0, 0, 1 ], 'right' : [ 1, 0, 1, 1 ],
+    'top' : [ 0, 0, 1, 0 ], 'bottom': [ 0, 1, 1, 1 ],
+}
 
 class Anchor extends Group {
     constructor({ children: children0, side, align, ...attr } = {}) {
-        const child = check_singleton(children0);
+        const child = check_singleton(children0)
 
         // assign spec to child
-        child.spec.rect = anchor_rect[side];
-        child.spec.align = align ?? 1 - align_frac(side);
-        child.spec.expand = true;
+        child.spec.rect = anchor_rect[side]
+        child.spec.align = align ?? 1 - align_frac(side)
+        child.spec.expand = true
 
         // pass to Group
-        super({ children: child, clip: false, ...attr });
+        super({ children: child, clip: false, ...attr })
     }
 }
 
 class Attach extends Group {
     constructor({ children: children0, offset = 0, size = 1, align, side, ...attr } = {}) {
-        const child = check_singleton(children0);
+        const child = check_singleton(children0)
 
         // get extent and map
-        const extent = size + offset;
+        const extent = size + offset
         const rmap = {
-            'left': [-extent, 0, -offset, 1], 'right': [1+offset, 0, 1+extent, 1],
-            'top': [0, -extent, 1, -offset], 'bottom': [0, 1+offset, 1, 1+extent]
-        };
+            'left': [ -extent, 0, -offset, 1 ], 'right' : [ 1+offset, 0, 1+extent, 1 ],
+            'top' : [ 0, -extent, 1, -offset ], 'bottom': [ 0, 1+offset, 1, 1+extent ],
+        }
 
         // assign spec to child
-        child.spec.rect = rmap[side];
-        child.spec.align = align;
+        child.spec.rect = rmap[side]
+        child.spec.align = align
 
         // pass to Group
-        super({ children: [child], clip: false, ...attr });
+        super({ children: child, clip: false, ...attr })
     }
 }
 
 class Points extends Group {
     constructor({ points, rad = 0.01, shape, ...attr0 } = {}) {
-        shape = shape ?? (a => new Dot(a));
-        const [ point_attr, attr ] = prefix_split(['point'], attr0);
+        shape = shape ?? (a => new Dot(a))
+        const [ point_attr, attr ] = prefix_split([ 'point' ], attr0)
 
         // construct children (pos or [pos, rad])
         const children = points.map(pr => {
-            const [p, r] = is_scalar(pr[0]) ? [pr, rad] : pr;
-            return shape({ rect: rad_rect(p, r), ...point_attr });
-        });
+            const [ p, r ] = is_scalar(pr[0]) ? [pr, rad] : pr
+            return shape({ rect: radius_rect(p, r), ...point_attr })
+        })
 
         // pass to Group
-        super({ children, clip: false, ...attr });
+        super({ children, clip: false, ...attr })
     }
 }
 
+// BORKEN
 class Absolute extends Element {
     constructor({ children, size, ...attr } = {}) {
         super({ tag: 'g', unary: false, ...attr });
@@ -1230,7 +1207,7 @@ class Absolute extends Element {
         // get relative size from absolute size
         const bsize = rect_dims(prect);
         const psize = ensure_vector(this.size, 2);
-        const rad = divide(div(psize, bsize), 2);
+        const rad = div(div(psize, bsize), 2);
 
         // render child element
         const args = parse_bounds({rad, aspect, ...place});
@@ -1250,121 +1227,124 @@ class Spacer extends Element {
     }
 
     svg(ctx) {
-        return '';
+        return ''
     }
 }
 
 class Line extends Element {
-    constructor({ p1, p2, ...attr } = {}) {
-        super({ tag: 'line', unary: true, ...attr });
-        [this.p1, this.p2] = [p1, p2];
-        this.bounds = merge_points(p1, p2);
+    constructor({ pos1, pos2, ...attr } = {}) {
+        super({ tag: 'line', unary: true, ...attr })
+        this.pos1 = pos1
+        this.pos2 = pos2
     }
 
     props(ctx) {
-        const attr = super.props(ctx);
-        const [x1, y1] = ctx.coord_to_pixel(this.p1);
-        const [x2, y2] = ctx.coord_to_pixel(this.p2);
-        return {x1, y1, x2, y2, ...attr};
+        const attr = super.props(ctx)
+        const [ x1, y1 ] = ctx.mapPoint(this.pos1)
+        const [ x2, y2 ] = ctx.mapPoint(this.pos2)
+        return { x1, y1, x2, y2, ...attr }
     }
 }
 
+// plottable and coord adaptive
 class UnitLine extends Line {
-    constructor({ direc, pos = 0.5, lim = limit_base, ...attr } = {}) {
-        direc = get_orient(direc);
-        const [lo, hi] = lim;
-        const [p1, p2] = (direc == 'v') ?
-            [[pos, lo], [pos, hi]] :
-            [[lo, pos], [hi, pos]];
-        super({ p1, p2, ...attr });
+    constructor({ direc, pos = pos_base, lim = limit_base, coord, ...attr } = {}) {
+        direc = get_orient(direc)
+
+        // get default position in off dimension
+        lim ??= get_limit(direc, coord)
+        const ilim = invert_direc(direc)
+        const [ ilo, ihi ] = ilim
+        pos ??= 0.5 * (ilo + ihi)
+
+        // construct line positions
+        const [ lo, hi ] = lim
+        const [ pos1, pos2 ] = (direc == 'v') ?
+            [ [ pos, lo ], [ pos, hi ] ] :
+            [ [ lo, pos ], [ hi, pos ] ]
+        super({ pos1, pos2, coord, ...attr })
     }
 }
 
 class VLine extends UnitLine {
     constructor(attr) {
-        super({ direc: 'v', ...attr });
+        super({ direc: 'v', ...attr })
     }
 }
 
 class HLine extends UnitLine {
     constructor(attr) {
-        super({ direc: 'h', ...attr });
+        super({ direc: 'h', ...attr })
     }
 }
 
 class Rect extends Element {
-    constructor({ pos = [0.5, 0.5], rad = [0.5, 0.5], rect, rounded, ...attr } = {}) {
-        rect = rect ?? rad_rect(pos, rad);
-        super({ tag: 'rect', unary: true, ...attr });
-        this.rect = rect;
-        this.rounded = rounded;
-        this.bounds = merge_rects(this.rect);
+    constructor({ pos = point_base, rad = rad_base, rounded, ...attr } = {}) {
+        super({ tag: 'rect', unary: true, ...attr })
+        this.pos = pos
+        this.rad = ensure_vector(rad, 2)
+        this.rounded = rounded
     }
 
     props(ctx) {
-        const attr = super.props(ctx);
-        const [x1, y1, x2, y2] = ctx.coord_to_pixel_rect(this.rect);
+        // get core attributes
+        const attr = super.props(ctx)
+
+        // get true pixel rect
+        const rect = radius_rect(this.pos, this.rad)
+        const prect = ctx.mapRect(rect)
+        let [ x, y, w, h ] = rect_box(prect)
 
         // orient increasing
-        let [x, y] = [x1, y1];
-        let [w, h] = [x2 - x1, y2 - y1];
-        if (w < 0) { x += w; w *= -1; }
-        if (h < 0) { y += h; h *= -1; }
+        if (w < 0) { x += w; w *= -1 }
+        if (h < 0) { y += h; h *= -1 }
 
         // scale border rounded
-        let rx, ry;
+        let rx, ry
         if (this.rounded != null) {
-            let s = 0.5*(w+h);
+            let s = 0.5 * (w + h)
             if (is_scalar(this.rounded)) {
-                rx = s*this.rounded;
+                rx = s * this.rounded
             } else {
-                [rx, ry] = multiply(this.rounded, s);
+                [ rx, ry ] = mul(this.rounded, s)
             }
         }
 
         // output properties
-        return {x, y, width: w, height: h, rx, ry, ...attr};
+        return { x, y, width: w, height: h, rx, ry, ...attr }
     }
 }
 
 class Square extends Rect {
-    constructor({ pos = [0.5, 0.5], rad = 0.5, ...attr } = {}) {
-        const [x, y] = pos;
-        const rect = [x - rad, y - rad, x + rad, y + rad];
-        super({ rect, aspect: 1, ...attr });
+    constructor(attr) {
+        super({ aspect: 1, ...attr });
     }
 }
 
 class Ellipse extends Element {
-    constructor({ pos = [0.5, 0.5], rad = [0.5, 0.5], ...attr } = {}) {
-        super({ 'tag': 'ellipse', 'unary': true, ...attr });
-        this.pos = pos;
-        this.rad = rad;
-
-        let [px, py] = pos;
-        let [rx, ry] = rad;
-        this.bounds = [px - rx, py - ry, px + rx, py + ry];
+    constructor({ pos = pos_base, rad = rad_base, ...attr } = {}) {
+        super({ 'tag': 'ellipse', 'unary': true, ...attr })
+        this.pos = pos
+        this.rad = ensure_vector(rad, 2)
     }
 
     props(ctx) {
         const attr = super.props(ctx);
-        const [cx, cy] = ctx.coord_to_pixel(this.pos);
-        const [rx, ry] = ctx.coord_to_pixel_size(this.rad);
-        const base = {cx, cy, rx, ry};
-        return {...base, ...attr};
+        const [ cx, cy ] = ctx.mapPoint(this.pos)
+        const [ rx, ry ] = ctx.mapSize(this.rad)
+        return { cx, cy, rx, ry, ...attr }
     }
 }
 
 class Circle extends Ellipse {
-    constructor({ pos = [0.5, 0.5], rad = 0.5, ...attr } = {}) {
-        const rad2 = [rad, rad];
-        super({ pos, rad: rad2, aspect: 1, ...attr });
+    constructor(attr) {
+        super({ aspect: 1, ...attr })
     }
 }
 
 class Dot extends Circle {
-    constructor({ stroke = 'black', fill = 'black', rad = 0.5, ...attr }) {
-        super({ stroke, fill, rad, ...attr });
+    constructor({ stroke = 'black', fill = 'black', rad = rad_base, ...attr } = {}) {
+        super({ stroke, fill, rad, ...attr })
     }
 }
 
@@ -1421,111 +1401,108 @@ class Ray extends Element {
 
 class Pointstring extends Element {
     constructor({ tag, points, ...attr } = {}) {
-        super({ tag, unary: true, ...attr });
-        this.points = points;
-        if (points.length > 0) {
-            this.bounds = merge_points(...points);
-        }
+        super({ tag, unary: true, ...attr })
+        this.points = points
     }
 
     props(ctx) {
-        const attr = super.props(ctx);
-        const pixels = this.points.map(p => ctx.coord_to_pixel(p));
-        const points = pixels.map(
-            ([x, y]) => `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`
-        ).join(' ');
-        return {points, ...attr};
+        const attr = super.props(ctx)
+        const pixels = this.points.map(p => ctx.mapPoint(p))
+        const points = pixels.map(([ x, y ]) =>
+            `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`
+        ).join(' ')
+        return { points, ...attr }
     }
 }
 
 class Polyline extends Pointstring {
     constructor({ points, ...attr } = {}) {
-        super({ tag: 'polyline', points, fill: 'none', ...attr });
+        super({ tag: 'polyline', points, fill: 'none', ...attr })
     }
 }
 
 class Polygon extends Pointstring {
     constructor({ points, ...attr } = {}) {
-        super({ tag: 'polygon', points, ...attr });
+        super({ tag: 'polygon', points, ...attr })
     }
 }
 
 class Triangle extends Polygon {
-    constructor({ pos = [0.5, 0.5], rad = 0.5, ...attr } = {}) {
+    constructor({ pos = pos_base, rad = rad_base, ...attr } = {}) {
         // get vertices
-        const [px, py] = pos;
-        const [rx, ry] = ensure_vector(rad, 2);
-        const points = [[px - rx, py + ry], [px + rx, py + ry], [px, py - ry]];
+        const [ px, py ] = pos
+        const [ rx, ry ] = ensure_vector(rad, 2)
+        const points = [[px - rx, py + ry], [px + rx, py + ry], [px, py - ry]]
 
         // pass to Polygon
-        super({ points, ...attr });
+        super({ points, ...attr })
     }
 }
 
 class Path extends Element {
     constructor({ cmds, ...attr } = {}) {
-        super({ tag: 'path', unary: true, ...attr });
-        this.cmds = cmds;
+        super({ tag: 'path', unary: true, ...attr })
+        this.cmds = cmds
     }
 
     props(ctx) {
-        const attr = super.props(ctx);
-        const d = this.cmds.map(c => c.data(ctx)).join(' ');
-        return {d, ...attr};
+        const attr = super.props(ctx)
+        const d = this.cmds.map(c => c.data(ctx)).join(' ')
+        return { d, ...attr }
     }
 }
 
 class Command {
     constructor(cmd) {
-        this.cmd = cmd;
+        this.cmd = cmd
     }
 
     args(ctx) {
-        return '';
+        return ''
     }
 
     data(ctx) {
-        return `${this.cmd} ${this.args(ctx)}`;
+        return `${this.cmd} ${this.args(ctx)}`
     }
 }
 
 class MoveCmd extends Command {
     constructor(pos) {
-        super('M');
-        this.pos = pos;
+        super('M')
+        this.pos = pos
     }
 
     args(ctx) {
-        const [x, y] = ctx.coord_to_pixel(this.pos);
-        return `${rounder(x, ctx.prec)} ${rounder(y, ctx.prec)}`;
+        const [ x, y ] = ctx.mapPoint(this.pos)
+        return `${rounder(x, ctx.prec)} ${rounder(y, ctx.prec)}`
     }
 }
 
 class LineCmd extends Command {
     constructor(pos) {
-        super('L');
-        this.pos = pos;
+        super('L')
+        this.pos = pos
     }
 
     args(ctx) {
-        const [x, y] = ctx.coord_to_pixel(this.pos);
-        return `${rounder(x, ctx.prec)} ${rounder(y, ctx.prec)}`;
+        const [ x, y ] = ctx.mapPoint(this.pos)
+        return `${rounder(x, ctx.prec)} ${rounder(y, ctx.prec)}`
     }
 }
 
 class ArcCmd extends Command {
     constructor(pos, rad, large, sweep) {
-        super('A');
-        this.pos = pos;
-        this.rad = rad;
-        this.large = large;
-        this.sweep = sweep;
+        super('A')
+        this.pos = pos
+        this.rad = rad
+        this.large = large
+        this.sweep = sweep
     }
 
     args(ctx) {
-        const [x1, y1] = ctx.coord_to_pixel(this.pos);
-        const [rx, ry] = ctx.coord_to_pixel_size(this.rad);
-        return `${rounder(rx, ctx.prec)} ${rounder(ry, ctx.prec)} 0 ${this.large} ${this.sweep} ${rounder(x1, ctx.prec)} ${rounder(y1, ctx.prec)}`;
+        const [ x1, y1 ] = ctx.mapPoint(this.pos)
+        const [ rx, ry ] = ctx.mapSize(this.rad)
+        return `${rounder(rx, ctx.prec)} ${rounder(ry, ctx.prec)} 0 ${this.large} ${this.sweep} ${rounder(x1, ctx.prec)} ${rounder(y1, ctx.prec)}`
     }
 }
 
@@ -1534,82 +1511,84 @@ class ArcCmd extends Command {
 // this assumes the cursor is at pos0
 class CornerCmd {
     constructor(pos0, pos1) {
-        this.pos0 = pos0;
-        this.pos1 = pos1;
+        this.pos0 = pos0
+        this.pos1 = pos1
     }
 
     data(ctx) {
-        const [x0, y0] = ctx.coord_to_pixel(this.pos0);
-        const [x1, y1] = ctx.coord_to_pixel(this.pos1);
+        const [ x0, y0 ] = ctx.mapPoint(this.pos0)
+        const [ x1, y1 ] = ctx.mapPoint(this.pos1)
 
         // compute aspect ratio
-        const [dx, dy] = [Math.abs(x1 - x0), Math.abs(y1 - y0)];
-        const aspect = dx / dy;
+        const [ dx, dy ] = [ Math.abs(x1 - x0), Math.abs(y1 - y0) ]
+        const aspect = dx / dy
 
         // are we in quadrants 1/3 or 2/4?
-        const [top, right] = [x1 < x0, y1 < y0];
-        const [diag, wide] = [top == right, aspect > 1];
+        const [ top, right ] = [ x1 < x0, y1 < y0 ]
+        const [ diag, wide ] = [ top == right, aspect > 1 ]
 
         // get corner point and fitted radius
-        const [cx, cy] = diag ? [x0, y1] : [x1, y0];
-        const rad = Math.min(dx, dy);
+        const [ cx, cy ] = diag ? [ x0, y1 ] : [ x1, y0 ]
+        const rad = Math.min(dx, dy)
 
         // get the intra-radial points
-        const sigx = right ? -1 : 1; const sigy = top ? 1 : -1;
-        const [x0p, y0p] = diag ? [cx, cy + sigy*rad] : [cx + sigx*rad, cy];
-        const [x1p, y1p] = diag ? [cx + sigx*rad, cy] : [cx, cy + sigy*rad];
+        const sigx = right ? -1 :  1
+        const sigy = top   ?  1 : -1
+        const [ x0p, y0p ] = diag ? [ cx, cy + sigy * rad ] : [ cx + sigx * rad, cy ]
+        const [ x1p, y1p ] = diag ? [ cx + sigx * rad, cy ] : [ cx, cy + sigy * rad ]
 
         // full command
         return (
             ((diag != wide) ? `L ${rounder(x0p, ctx.prec)} ${rounder(y0p, ctx.prec)} ` : '')
             + `A ${rounder(rad, ctx.prec)} ${rounder(rad, ctx.prec)} 0 0 0 ${rounder(x1p, ctx.prec)} ${rounder(y1p, ctx.prec)} `
             + ((diag == wide) ? `L ${rounder(x1, ctx.prec)} ${rounder(y1, ctx.prec)} ` : '')
-        );
+        )
     }
 }
 
 function norm_angle(deg) {
-    if (deg == 360) return 359.99;
-    deg = deg % 360;
-    return deg < 0 ? deg + 360 : deg;
+    if (deg == 360) return 359.99
+    deg = deg % 360
+    return deg < 0 ? deg + 360 : deg
 }
 
 class Arc extends Path {
-    constructor({ deg0, deg1, pos = [0.5, 0.5], rad = [0.5, 0.5], ...attr } = {}) {
-        deg0 = norm_angle(deg0);
-        deg1 = norm_angle(deg1);
+    constructor({ deg0, deg1, pos = pos_base, rad = rad_base, ...attr } = {}) {
+        deg0 = norm_angle(deg0)
+        deg1 = norm_angle(deg1)
 
         // get radian angles
-        const th0 = d2r * deg0;
-        const th1 = d2r * deg1;
+        const th0 = d2r * deg0
+        const th1 = d2r * deg1
 
         // get start/stop points
-        const [x0, y0] = pos; const [rx, ry] = rad;
-        const pos0 = [x0 + rx * cos(th0), y0 - ry * sin(th0)];
-        const pos1 = [x0 + rx * cos(th1), y0 - ry * sin(th1)];
+        const [ x0, y0 ] = pos
+        const [ rx, ry ] = rad
+        const pos0 = [ x0 + rx * cos(th0), y0 - ry * sin(th0) ]
+        const pos1 = [ x0 + rx * cos(th1), y0 - ry * sin(th1) ]
 
         // get large/sweep flags
-        const delta = norm_angle(deg1 - deg0);
-        const large = delta > 180 ? 1 : 0;
-        const sweep = delta < 0 ? 1 : 0;
+        const delta = norm_angle(deg1 - deg0)
+        const large = delta > 180 ? 1 : 0
+        const sweep = delta < 0 ? 1 : 0
 
         // send commands to path
         const cmds = [
             new MoveCmd(pos0),
             new ArcCmd(pos1, rad, large, sweep),
-        ];
-        super({ cmds, ...attr });
+        ]
+        super({ cmds, ...attr })
     }
 }
 
 function parse_rounded(rounded) {
     if (is_scalar(rounded)) {
-        rounded = [rounded, rounded, rounded, rounded];
+        rounded = [rounded, rounded, rounded, rounded]
     } else if (is_array(rounded) && rounded.length == 2) {
-        const [rx, ry] = rounded;
-        rounded = [[rx, ry], [rx, ry], [rx, ry], [rx, ry]];
+        const [ rx, ry ] = rounded
+        rounded = [[rx, ry], [rx, ry], [rx, ry], [rx, ry]]
     }
-    return rounded.map(r => ensure_vector(r, 2));
+    return rounded.map(r => ensure_vector(r, 2))
 }
 
 // supports different rounded for each corner
@@ -1617,9 +1596,9 @@ class RoundedRect extends Path {
     constructor({ rounded = 0, border = 1, ...attr } = {}) {
 
         // convert to array of arrays
-        const [rtl, rtr, rbr, rbl] = parse_rounded(rounded);
-        const [rtlx, rtly] = rtl; const [rtrx, rtry] = rtr;
-        const [rbrx, rbry] = rbr; const [rblx, rbly] = rbl;
+        const [rtl, rtr, rbr, rbl] = parse_rounded(rounded)
+        const [ [rtlx, rtly], [rtrx, rtry] ] = [ rtl, rtr ]
+        const [ [rbrx, rbry], [rblx, rbly] ] = [ rbr, rbl ]
 
         // make command list
         const cmds = [
@@ -1632,10 +1611,10 @@ class RoundedRect extends Path {
             new CornerCmd([rbrx, 1], [1, 1 - rbry]),
             new LineCmd([1, rtry]),
             new CornerCmd([1, rtry], [1 - rtrx, 0]),
-        ];
+        ]
 
         // pass to Path
-        super({ cmds, stroke_width: border, ...attr });
+        super({ cmds, stroke_width: border, ...attr })
     }
 }
 
@@ -1748,15 +1727,15 @@ function escape_xml(text) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
+        .replace(/'/g, '&apos;')
 }
 
 function check_string(children) {
-    const child = check_singleton(children);
+    const child = check_singleton(children)
     if (typeof child !== 'string') {
-        throw Error('Must be a string');
+        throw Error('Must be a string')
     }
-    return child;
+    return child
 }
 
 class Text extends Element {
@@ -2083,7 +2062,7 @@ class SymPoints extends Group {
         // make points
         const points = zip(tvals, xvals, yvals);
         const children = enumerate(points).map(([i, [t, x, y]]) =>
-            [fs(x, y, t, i), rad_rect([x, y], fr(x, y, t, i))]
+            [fs(x, y, t, i), radius_rect([x, y], fr(x, y, t, i))]
         );
 
         // pass  to element
@@ -2385,7 +2364,7 @@ class Node extends Place {
         if (is_scalar(size) && frame.aspect != null) {
             size = aspect_invariant(size, frame.aspect);
         }
-        const rect = rad_rect(pos, size);
+        const rect = radius_rect(pos, size);
 
         // pass to place
         super({ children: frame, rect });
@@ -2896,7 +2875,7 @@ class Image extends Element {
 //
 
 let Gum = [
-    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, interpolate_vectors, interpolate_hex, interpolate_palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3021,5 +3000,5 @@ function injectImages(elem) {
 //
 
 export {
-    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, interpolate_vectors, interpolate_hex, interpolate_palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
+    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 };
