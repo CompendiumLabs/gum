@@ -1907,8 +1907,9 @@ class TitleFrame extends Frame {
         const title_box = new TextFrame({ children: title, rect: title_rect, expand: true, ...title_attr })
 
         // make outer frame
+        const frame_aspect = aspect ?? child.spec.aspect
         const frame = new Frame({ children: child, padding })
-        const group = new Group({ children: [ frame, title_box ], clip: false, aspect: aspect ?? frame.aspect })
+        const group = new Group({ children: [ frame, title_box ], clip: false, aspect: frame_aspect })
 
         // apply margin only frame
         super({ children: group, ...frame_attr })
@@ -2857,16 +2858,6 @@ class Image extends Element {
 let Gum = [
     Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
-
-// detect object types
-function detect(g) {
-    if ('prototype' in g) {
-        let [t, ...x] = g.toString().split(' ');
-        return t;
-    } else {
-        return 'value';
-    }
-}
 
 // main parser entry
 let gums0 = Gum.map(g => g.name);
