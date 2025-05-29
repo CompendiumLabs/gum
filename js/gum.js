@@ -15,6 +15,7 @@ const rect_base = [ 0, 0, 1, 1 ]
 const coord_base = [ 0, 0, 1, 1 ]
 const point_base = [ 0.5, 0.5 ]
 const pos_base = [ 0.5, 0.5 ]
+const loc_base = 0.5
 const rad_base = 0.5
 const lim_base = [ 0, 1 ]
 const size_base = 1
@@ -659,6 +660,7 @@ function align_frac(align) {
 // context holds the current pixel rect and other global settings
 // map() will create a new sub-context using rect in coord space
 // map*() functions map from coord to pixel space (in prect)
+// TODO: bring back align, rotate, etc
 class Context {
     constructor({ prect = rect_base, coord = coord_base, prec = prec_base, debug = false } = {}) {
         this.prect = prect
@@ -726,12 +728,13 @@ class Context {
         // get true pixel rect
         const prect = this.mapRect(rect)
         let [ cx, cy, rw, rh ] = rect_radius(prect)
+        const [ aw, ah ] = [ abs(rw), abs(rh) ]
 
         // shrink/expand if aspect mismatch
         if (aspect != null) {
-            if (!expand == rw > aspect * rh) {
+            if (!expand == aw > aspect * ah) {
                 rw = aspect * rh
-            } else if (!expand == rw < aspect * rh) {
+            } else if (!expand == aw < aspect * ah) {
                 rh = rw / aspect
             }
         }
@@ -2447,8 +2450,8 @@ class Bars extends Group {
 //
 
 function ensure_tick(tick, prec = 2) {
-    const [str, pos] = is_scalar(tick) ? [tick, tick] : tick
-    return new Text({ children: rounder(str, prec), pos })
+    const [ str, pos ] = is_scalar(tick) ? [tick, tick] : tick
+    return new Text({ children: rounder(str, prec), tick: pos })
 }
 
 function invert_align(align) {
@@ -2500,17 +2503,17 @@ class Labels extends Group {
         if (direc == 'v') {
             const talign = invert_align(align)
             children = children.map(c => {
-                const { pos } = c.attr
-                return new Anchor({ children: c, aspect: 1, side: talign, align: talign, pos })
+                const { tick } = c.attr
+                return new Anchor({ children: c, aspect: 1, side: talign, align: talign, tick: tick })
             })
         }
 
         // place tick boxes using expanded lines
         children.forEach(c => {
-            const { pos: loc } = c.attr;
+            const { tick: loc } = c.attr
             c.spec.rect = direc == 'v' ? [pos - rad, loc, pos + rad, loc] : [loc, pos - rad, loc, pos + rad]
             c.spec.expand = true
-        });
+        })
 
         // pass to Group
         super({ children, coord, clip: false, ...attr })
@@ -2546,7 +2549,7 @@ function get_ticklim(lim) {
 // this is designed to be plotted directly
 // this takes a nested coord approach, not entirely sure about that
 class Axis extends Group {
-    constructor({ children, coord = coord_base, direc, ticks, pos, lim, tick_size = tick_size_base, tick_pos = 'both', tick_label_size = tick_label_size_base, tick_label_offset = tick_label_offset_base, label_pos, prec = 2, ...attr0 } = {}) {
+    constructor({ children, coord = coord_base, direc, ticks, pos = loc_base, lim = lim_base, tick_size = tick_size_base, tick_pos = 'both', tick_label_size = tick_label_size_base, tick_label_offset = tick_label_offset_base, label_pos, prec = 2, ...attr0 } = {}) {
         const [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0)
         direc = get_orient(direc)
         const [ xlo, ylo, xhi, yhi ] = coord
@@ -2569,7 +2572,7 @@ class Axis extends Group {
             ticks = is_scalar(ticks) ? linspace(lo, hi, ticks) : ticks
             children = ticks.map(t => ensure_tick(t, prec))
         }
-        const locs = children.map(c => c.attr.pos)
+        const locs = children.map(c => c.attr.tick)
 
         // accumulate children
         const cline = new UnitLine({ direc, pos, lim, coord, ...line_attr })
