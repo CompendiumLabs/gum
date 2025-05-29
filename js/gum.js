@@ -488,8 +488,9 @@ function rect_center(rect) {
 }
 
 function rect_radius(rect) {
+    const [ x, y ] = rect_center(rect)
     const [ w, h ] = rect_size(rect)
-    return [ w / 2, h / 2 ]
+    return [ x, y, w / 2, h / 2 ]
 }
 
 function rect_aspect(rect) {
@@ -659,6 +660,9 @@ function align_frac(align) {
     }
 }
 
+// context holds the current pixel rect and other global settings
+// map() will create a new sub-context using rect in coord space
+// map*() functions map from coord to pixel space (in prect)
 class Context {
     constructor({ prect = rect_base, prec = prec_base, debug = false } = {}) {
         this.prect = prect
@@ -723,25 +727,23 @@ class Context {
         rect ??= coord
 
         // get true pixel rect
-        const [ px1, py1, px2, py2 ] = this.mapRect(rect, coord)
-        const [ cx, cy ] = [ 0.5 * (px1 + px2), 0.5 * (py1 + py2) ]
-        const [ pw, ph ] = [ px2 - px1, py2 - py1 ]
+        const prect = this.mapRect(rect, coord)
+        let [ cx, cy, rw, rh ] = rect_radius(prect)
 
-        // shrink down if aspect mismatch
-        let [ pw1, ph1 ] = [ pw, ph ]
+        // shrink/expand if aspect mismatch
         if (aspect != null) {
-            if (!expand == pw > aspect * ph) {
-                pw1 = aspect * ph1
-            } else if (!expand == pw < aspect * ph) {
-                ph1 = pw1 / aspect
+            if (!expand == rw > aspect * rh) {
+                rw = aspect * rh
+            } else if (!expand == rw < aspect * rh) {
+                rh = rw / aspect
             }
         }
 
         // get embedded pixel rect
-        const prect = [ cx - 0.5 * pw1, cy - 0.5 * ph1, cx + 0.5 * pw1, cy + 0.5 * ph1 ]
+        const prect1 = radius_rect([ cx, cy ], [ rw, rh ])
 
         // return new context
-        return new Context({ prect, prec: this.prec, debug: this.debug })
+        return new Context({ prect: prect1, prec: this.prec, debug: this.debug })
     }
 }
 
@@ -1193,26 +1195,26 @@ class Points extends Group {
 // BORKEN
 class Absolute extends Element {
     constructor({ children, size, ...attr } = {}) {
-        super({ tag: 'g', unary: false, ...attr });
-        this.child = check_singleton(children);
-        this.size = size;
-        this.place = attr;
+        const child = check_singleton(children)
+        super({ tag: 'g', unary: false, ...attr })
+        this.child = child
+        this.size = size
+        this.place = attr
     }
 
     inner(ctx) {
-        const { prect } = ctx;
-        const { child, place } = this;
-        const { aspect } = child;
+        const { prect } = ctx
+        const { aspect } = this.child.spec
 
         // get relative size from absolute size
-        const bsize = rect_dims(prect);
-        const psize = ensure_vector(this.size, 2);
-        const rad = div(div(psize, bsize), 2);
+        const pcent = rect_center(prect)
+        const pradi = rect_radius(prect)
+        const psize = ensure_vector(this.size, 2)
+        const rect = radius_rect(pcent, div(psize, pradi))
 
         // render child element
-        const args = parse_bounds({rad, aspect, ...place});
-        const ctx1 = ctx.map(args);
-        return this.child.svg(ctx1);
+        const ctx1 = ctx.map({ rect, aspect })
+        return this.child.svg(ctx1)
     }
 }
 
@@ -1223,7 +1225,7 @@ class Absolute extends Element {
 // this can have an aspect, which is utilized by layouts
 class Spacer extends Element {
     constructor(attr) {
-        super({ tag: 'g', unary: true, ...attr });
+        super({ tag: 'g', unary: true, ...attr })
     }
 
     svg(ctx) {
@@ -1317,7 +1319,7 @@ class Rect extends Element {
 
 class Square extends Rect {
     constructor(attr) {
-        super({ aspect: 1, ...attr });
+        super({ aspect: 1, ...attr })
     }
 }
 
@@ -1329,7 +1331,7 @@ class Ellipse extends Element {
     }
 
     props(ctx) {
-        const attr = super.props(ctx);
+        const attr = super.props(ctx)
         const [ cx, cy ] = ctx.mapPoint(this.pos)
         const [ rx, ry ] = ctx.mapSize(this.rad)
         return { cx, cy, rx, ry, ...attr }
@@ -1348,50 +1350,43 @@ class Dot extends Circle {
     }
 }
 
-class Ray extends Element {
-    constructor({ theta = 45, aspect, ...attr } = {}) {
-        // map into (-90, 90];
-        if (theta < -90 || theta > 90) {
-            theta = ((theta + 90) % 180) - 90;
+class Ray extends Line {
+    constructor({ angle = 45, ...attr } = {}) {
+        // map into (-90, 90]
+        if (angle < -90 || angle > 90) {
+            angle = ((angle + 90) % 180) - 90
         }
-        if (theta == -90) {
-            theta = 90;
+        if (angle == -90) {
+            angle = 90
         }
 
         // map theta into direction and aspect
-        let direc;
-        if (theta == 90) {
-            direc = Infinity;
-            aspect = 1;
-        } else if (theta == 0) {
-            direc = 0;
-            aspect = 1;
+        let direc, aspect
+        if (angle == 90) {
+            direc = Infinity
+            aspect = 1
+        } else if (angle == 0) {
+            direc = 0
+            aspect = 1
         } else {
-            const direc0 = tan(theta*(pi/180));
-            direc = direc0;
-            aspect = 1/abs(direc0);
+            direc = tan(angle * (pi / 180))
+            aspect = 1 / abs(direc)
         }
 
-        // pass to Element
-        super({ tag: 'line', unary: true, aspect, ...attr });
-        this.direc = direc;
-    }
-
-    props(ctx) {
-        const attr = super.props(ctx);
-        let p1, p2;
-        if (!isFinite(this.direc)) {
-            [p1, p2] = [[0.5, 0], [0.5, 1]];
-        } else if (this.direc == 0) {
-            [p1, p2] = [[0, 0.5], [1, 0.5]];
-        } else if (this.direc > 0) {
-            [p1, p2] = [[0, 0], [1, 1]];
+        // calculate correct line direction
+        let pos1, pos2
+        if (!isFinite(direc)) {
+            [ pos1, pos2 ] = [[0.5, 0], [0.5, 1]]
+        } else if (direc == 0) {
+            [ pos1, pos2 ] = [[0, 0.5], [1, 0.5]]
+        } else if (direc > 0) {
+            [ pos1, pos2 ] = [[0, 0], [1, 1]]
         } else {
-            [p1, p2] = [[0, 1], [1, 0]];
+            [ pos1, pos2 ] = [[0, 1], [1, 0]]
         }
-        const [x1, y1] = ctx.coord_to_pixel(p1);
-        const [x2, y2] = ctx.coord_to_pixel(p2);
-        return {x1, y1, x2, y2, ...attr};
+
+        // pass to Line
+        super({ pos1: p1, pos2: p2, aspect, ...attr })
     }
 }
 
@@ -1629,91 +1624,91 @@ function random_hex() {
 
 class MetaElement {
     constructor({ tag, ...attr } = {}) {
-        this.tag = tag;
-        this.attr = attr;
+        this.tag = tag
+        this.attr = attr
     }
 
     inside(ctx) {
-        return null;
+        return null
     }
 
     svg(ctx) {
-        const inside = this.inside();
+        const inside = this.inside(ctx)
         const props = Object.entries(this.attr).map(([k, v]) =>
             `${k.replace('_', '-')}="${v}"`
-        ).join(' ');
+        ).join(' ')
         if (inside == null) {
-            return `<${this.tag} ${props} />`;
+            return `<${this.tag} ${props} />`
         } else {
-            return `<${this.tag} ${props}>\n${inside}\n</${this.tag}>`;
+            return `<${this.tag} ${props}>\n${inside}\n</${this.tag}>`
         }
     }
 }
 
 class MetaGroup extends MetaElement {
     constructor({ tag, children, ...attr } = {}) {
-        super({ tag, ...attr });
-        this.children = children;
+        super({ tag, ...attr })
+        this.children = children
     }
 
     inside(ctx) {
-        return this.children.map(c => c.svg(ctx)).join('\n');
+        return this.children.map(c => c.svg(ctx)).join('\n')
     }
 }
 
 class Defs extends MetaGroup {
     constructor({ children, ...attr } = {}) {
-        super({ tag: 'defs', children, ...attr });
+        super({ tag: 'defs', children, ...attr })
     }
 }
 
 class Style extends MetaElement {
     constructor({ text, ...attr } = {}) {
-        super({ tag: 'style', type: 'text/css', ...attr });
-        this.text = text;
+        super({ tag: 'style', type: 'text/css', ...attr })
+        this.text = text
     }
 
     inside(ctx) {
-        return this.text;
+        return this.text
     }
 }
 
 class Effect extends MetaElement {
     constructor({ name, ...attr } = {}) {
-        super({ tag: `fe${name}`, ...attr });
-        const klass = this.constructor.name.toLowerCase();
-        this.result = attr.result ?? `${klass}_${random_hex()}`;
+        super({ tag: `fe${name}`, ...attr })
+        const klass = this.constructor.name.toLowerCase()
+        this.result = attr.result ?? `${klass}_${random_hex()}`
     }
 }
 
 class Filter extends MetaGroup {
     constructor({ name, effects, ...attr } = {}) {
-        super({ tag: 'filter', effects, id: name, ...attr });
+        super({ tag: 'filter', effects, id: name, ...attr })
     }
 }
 
 class DropShadow extends Effect {
     constructor({ dx = 0, dy = 0, blur = 0, color = 'black', ...attr } = {}) {
-        super({ dx, dy, stdDeviation: blur, flood_color: color, ...attr });
+        super({ dx, dy, stdDeviation: blur, flood_color: color, ...attr })
     }
 }
 
 class GaussianBlur extends Effect {
     constructor({ blur = 0, ...attr } = {}) {
-        super({ tag: 'GaussianBlur', stdDeviation: blur, ...attr });
+        super({ tag: 'GaussianBlur', stdDeviation: blur, ...attr })
     }
 }
 
 class MergeNode extends MetaElement {
     constructor({ input, ...attr } = {}) {
-        super({ tag: 'feMergeNode', in: input, ...attr });
+        super({ tag: 'feMergeNode', in: input, ...attr })
     }
 }
 
 class Merge extends MetaGroup {
     constructor({ effects, ...attr } = {}) {
-        const nodes = effects.map(e => new MergeNode({ input: e.result }));
-        super({ tag: 'feMerge', nodes, ...attr });
+        const nodes = effects.map(e => new MergeNode({ input: e.result }))
+        super({ tag: 'feMerge', nodes, ...attr })
     }
 }
 
