@@ -1110,6 +1110,8 @@ class Place extends Group {
         const child = check_singleton(children0)
         rad = ensure_vector(rad, 2)
         child.spec.rect = radius_rect(pos, rad)
+        child.spec.expand = true
+        console.log(child.spec.rect)
         super({ children: child, clip: false, ...attr })
     }
 }
@@ -1756,7 +1758,7 @@ class Text extends Element {
     // we need to find the ordered bounds of the text
     // and then offset it by the given offset
     props(ctx) {
-        const attr = super.props(ctx);
+        const attr = super.props(ctx)
         const [ x0, y0 ] = ctx.mapPoint(this.pos)
         const [ rx, ry ] = ctx.mapSize([ this.rad, this.rad ])
         const [ xoff, yoff ] = ctx.mapSize(this.offset)
@@ -1782,24 +1784,19 @@ class Text extends Element {
     }
 }
 
-class TextSize extends Absolute {
-    constructor({ children: children0, size, ...attr } = {}) {
-        const children = new Text({ children: children0, ...attr })
-        super({ children, size, expand: [true, false], ...attr })
-    }
-}
-
 class MultiText extends VStack {
     constructor({ children: children0, spacing, align, ...attr }) {
-        const children = children0.map(t => new Text({ t, ...attr}))
+        children0 = ensure_array(children0)
+        const children = children0.map(t => new Text({ children: t, ...attr}))
         super({ children, spacing, align })
     }
 }
 
 class Emoji extends Text {
-    constructor({ tag, ...attr } = {}) {
+    constructor({ children, ...attr } = {}) {
+        const tag = check_string(children)
         let text = emoji_table[tag]
-        let text_attr = {}
+        const text_attr = {}
         if (text == null) {
             text = `:${tag}:`
             text_attr.fill = red
@@ -1816,110 +1813,111 @@ function get_attributes(elem) {
 }
 
 class Latex extends Element {
-    constructor({ children, offset = [0, 0], scale = 1, ...attr } = {}) {
-        const text = check_string(children);
+    constructor({ children, pos = pos_base, rad = rad_base, ...attr } = {}) {
+        const text = check_string(children)
 
         // render with mathjax (or do nothing if mathjax is not available)
-        let svg_attr, math, width, height, aspect;
+        let svg_attr, math, aspect
         if (typeof MathJax !== 'undefined') {
             // render with mathjax
-            let output = MathJax.tex2svg(text);
-            let svg = output.children[0];
+            const output = MathJax.tex2svg(text)
+            const svg = output.children[0]
 
             // strip outer size attributes
-            svg.removeAttribute('width');
-            svg.removeAttribute('height');
+            svg.removeAttribute('width')
+            svg.removeAttribute('height')
 
-            // get width and height
-            let viewBox = svg.getAttribute('viewBox');
-            let viewNum = viewBox.split(' ').map(Number);
-            [width, height] = viewNum.slice(2);
-            aspect = width/height;
+            // get aspect ratio
+            const viewBox = svg.getAttribute('viewBox')
+            const viewNum = viewBox.split(' ').map(Number)
+            const [ width, height ] = viewNum.slice(2)
+            aspect = width / height
 
             // get tag info and inner svg
-            svg_attr = get_attributes(svg);
-            math = svg.innerHTML;
+            svg_attr = get_attributes(svg)
+            math = svg.innerHTML
         } else {
-            math = text;
+            math = text
         }
 
         // pass to element
-        super({ tag: 'svg', unary: false, aspect, ...svg_attr, ...attr });
-        this.math = math;
-        this.offset = offset;
-        this.scale = scale;
+        super({ tag: 'svg', unary: false, aspect, ...svg_attr, ...attr })
+        this.math = math
+        this.pos = pos
+        this.rad = rad
     }
 
     props(ctx) {
-        const attr = super.props(ctx);
-
-        // get ordered bounds
-        const [xa, ya] = ctx.coord_to_pixel([0, 0]);
-        const [xb, yb] = ctx.coord_to_pixel([1, 1]);
-        const [x0, y0] = [Math.min(xa, xb), Math.min(ya, yb)];
+        const attr = super.props(ctx)
+        const [ x0, y0 ] = ctx.mapPoint(this.pos)
+        const [ rx, ry ] = ctx.mapSize([ this.rad, this.rad ])
 
         // get display position
-        const [xoff, yoff] = ctx.coord_to_pixel_size(this.offset);
-        const [w0, h0] = ctx.coord_to_pixel_size([1, 1]);
-        const [w, h] = [w0 * this.scale, h0 * this.scale];
-        const [x, y] = [x0 + xoff, y0 + yoff];
+        const [ x, y ] = [ x0 - rx, y0 - ry ]
+        const h0 = 2 * ry
+
+        // get font size
+        const { font_size } = this.attr
+        const h = font_size ?? h0
+        const w = h * this.spec.aspect
 
         // get adjusted size
-        return { x, y, width: w, height: h, font_size: `${h}px`, ...attr };
+        return { x, y, width: w, height: h, font_size: `${h}px`, ...attr }
     }
 
     inner(ctx) {
-        return `\n${this.math}\n`;
+        return `\n${this.math}\n`
     }
 }
 
 class TextFrame extends Frame {
     constructor({ children: children0, padding = 0.1, border = 1, spacing = 0.02, align, latex = false, emoji = false, ...attr0 } = {}) {
-        const [text_attr, attr] = prefix_split(['text'], attr0);
+        children0 = ensure_array(children0)
+        const [text_attr, attr] = prefix_split(['text'], attr0)
 
         // generate core elements
-        const TextElement = latex ? Latex : emoji ? Emoji : Text;
+        const TextElement = latex ? Latex : emoji ? Emoji : Text
         const maker = s => is_string(s) || is_number(s) ?
-            new TextElement({ children: s, ...text_attr }) : s;
+            new TextElement({ children: s, ...text_attr }) : s
         const children = children0.length > 1 ?
             new VStack({ children: children0.map(maker), expand: false, align, spacing }) :
-            maker(children0[0] ?? '');
+            maker(children0[0] ?? '')
 
         // pass to Group
-        super({ children, padding, border, align, ...attr });
+        super({ children, padding, border, align, ...attr })
     }
 }
 
 class TitleFrame extends Frame {
     constructor({ children: children0, title, title_size = 0.075, title_fill = 'white', title_offset = 0, title_rounded = 0.1, title_border = 1, adjust = false, padding = 0, margin = 0, border = 1, aspect, ...attr0 } = {}) {
-        const child = check_singleton(children0);
-        const [title_attr0, frame_attr0] = prefix_split(['title'], attr0);
+        const child = check_singleton(children0)
+        const [title_attr0, frame_attr0] = prefix_split(['title'], attr0)
 
         // adjust padding for title
         if (adjust) {
-            margin = pad_rect(margin);
-            padding = pad_rect(padding);
-            const [pl, pt, pr, pb] = padding;
-            const [ml, mt, mr, mb] = margin;
-            padding = [pl, pt + title_size, pr, pb];
-            margin = [ml, mt + title_size, mr, mb];
+            margin = pad_rect(margin)
+            padding = pad_rect(padding)
+            const [ pl, pt, pr, pb ] = padding
+            const [ ml, mt, mr, mb ] = margin
+            padding = [ pl, pt + title_size, pr, pb ]
+            margin = [ ml, mt + title_size, mr, mb ]
         }
 
         // fill in default attributes
-        const frame_attr = {margin, border, ...frame_attr0};
-        const title_attr = {fill: title_fill, border: title_border, rounded: title_rounded, ...title_attr0};
+        const frame_attr = { margin, border, ...frame_attr0 }
+        const title_attr = { fill: title_fill, border: title_border, rounded: title_rounded, ...title_attr0 }
 
         // make title box
-        const base = title_offset * title_size;
-        const text = new TextFrame({ children: title, ...title_attr });
-        const place = new Place({ children: text, pos: [0.5, base], rad: [null, title_size], expand: true });
+        const base = title_offset * title_size
+        const title_rect = radius_rect([ 0.5, base ], [ 0.0, title_size ])
+        const title_box = new TextFrame({ children: title, rect: title_rect, expand: true, ...title_attr })
 
         // make outer frame
-        const frame = new Frame({ children: child, padding });
-        const group = new Group({ children: [frame, place], clip: false, aspect: aspect ?? frame.aspect });
+        const frame = new Frame({ children: child, padding })
+        const group = new Group({ children: [ frame, title_box ], clip: false, aspect: aspect ?? frame.aspect })
 
         // apply margin only frame
-        super({ children: group, ...frame_attr });
+        super({ children: group, ...frame_attr })
     }
 }
 
@@ -2863,7 +2861,7 @@ class Image extends Element {
 //
 
 let Gum = [
-    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -2988,5 +2986,5 @@ function injectImages(elem) {
 //
 
 export {
-    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
+    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 };
