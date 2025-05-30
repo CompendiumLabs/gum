@@ -1,17 +1,19 @@
 import { rollup } from 'rollup'
-import { minify } from 'rollup-plugin-esbuild-minify';
+import { minify } from 'rollup-plugin-esbuild-minify'
 import resolve from '@rollup/plugin-node-resolve'
+import commonjs from '@rollup/plugin-commonjs'
+import json from '@rollup/plugin-json'
 import rename from 'gulp-rename'
 import gulp from 'gulp'
 
 // javascript
 function minify_file(file, name, args) {
-    let {
+    const {
         do_minify = true,
         output_dir = './libs',
     } = args ?? {};
 
-    let plugins = [resolve()];
+    const plugins = [ json(), resolve(), commonjs() ];
     if (do_minify) {
         plugins.push(minify());
     }
@@ -28,6 +30,9 @@ function minify_file(file, name, args) {
     });
 }
 
+// minify babel
+gulp.task('minify-babel', () => minify_file('js/babel.js', 'babel'));
+
 // minify marked
 gulp.task('minify-marked', () => minify_file('js/marked.js', 'marked'));
 
@@ -41,7 +46,7 @@ gulp.task('minify-mathjax', () => gulp.src(['node_modules/mathjax/es5/tex-svg.js
 );
 
 // minify all
-gulp.task('minify', gulp.parallel('minify-marked', 'minify-codemirror', 'minify-mathjax'));
+gulp.task('minify', gulp.parallel('minify-babel', 'minify-marked', 'minify-codemirror', 'minify-mathjax'));
 
 // build all
 gulp.task('build', gulp.parallel('minify'));

@@ -10,7 +10,7 @@ function getText(state) {
 // for javascript editing
 function createEditState(text='', update=null) {
     const extensions = [
-        cm.javascript(),
+        cm.xml(),
         cm.history(),
         cm.drawSelection(),
         cm.lineNumbers(),
@@ -216,11 +216,11 @@ function enableResize(left, right, mid) {
         left.style.width = `${lw}px`;
         right.style.width = `${rw}px`;
     }
-    
+
     mid.addEventListener('mousedown', evt => {
         document.addEventListener('mousemove', resizePane, false);
     }, false);
-    
+
     document.addEventListener('mouseup', evt => {
         document.removeEventListener('mousemove', resizePane, false);
     }, false);

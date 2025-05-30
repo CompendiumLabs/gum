@@ -1,5 +1,6 @@
 import { GumEditor, enableResize } from './editor.js'
-import { renderGumSafe, range, zip, split } from './gum.js'
+import { range, zip, split } from './gum.js'
+import { evaluateJSX } from './eval.js'
 
 /*
  * ui elements
@@ -263,8 +264,14 @@ let example = source ?? cook ?? example0;
 // resize panels
 enableResize(left, right, mid);
 
+// temp eval
+function execute(code) {
+    const elem = evaluateJSX(code)
+    return elem.svg()
+}
+
 // make the actual editor
-let gum_editor = new GumEditor(code, conv, disp, renderGumSafe, {stat, store: setCookieLong});
+let gum_editor = new GumEditor(code, conv, disp, execute, {stat, store: setCookieLong});
 
 // set initial code input
 gum_editor.setCode(example);
