@@ -29,9 +29,9 @@ const font_size_base = 12
 
 // plot defaults
 const num_ticks_base = 5
-const tick_size_base = 0.04
-const tick_label_size_base = 1.5
-const tick_label_offset_base = 1.5
+const tick_size_base = 0.02
+const tick_label_size_base = 2.5
+const tick_label_offset_base = 2.0
 const label_size_base = 0.5
 const label_offset_base = 0.15
 const title_size_base = 0.1
@@ -2471,10 +2471,9 @@ function invert_direc(direc) {
 }
 
 class Scale extends Group {
-    constructor({ direc, locs, pos = 0.5, rad = 0.5, coord, ...attr } = {}) {
+    constructor({ direc, locs, lim = lim_base, coord, ...attr } = {}) {
         direc = get_orient(direc)
         const tick_dir = invert_direc(direc)
-        const lim = [ pos - rad, pos + rad ]
         const children = locs.map(t => new UnitLine({ direc: tick_dir, pos: t, lim, coord }))
         super({ children, clip: false, ...attr })
     }
@@ -2495,8 +2494,9 @@ class HScale extends Scale {
 // this is used by axis with the main coordinates defined
 // label elements must have an aspect to properly size them
 class Labels extends Group {
-    constructor({ children, coord, direc, locs, pos = 0.5, rad = 0.5, align = 'center', prec = 2, ...attr } = {}) {
+    constructor({ children, direc, locs, lim = lim_base, align = 'center', prec = 2, ...attr } = {}) {
         direc = get_orient(direc)
+        const [ lo, hi ] = lim
 
         // make children with tick data (if given)
         if (locs != null) children = locs.map(x => ensure_tick(x, prec))
@@ -2513,12 +2513,12 @@ class Labels extends Group {
         // place tick boxes using expanded lines
         children.forEach(c => {
             const { tick: loc } = c.attr
-            c.spec.rect = direc == 'v' ? [pos - rad, loc, pos + rad, loc] : [loc, pos - rad, loc, pos + rad]
+            c.spec.rect = direc == 'v' ? [lo, loc, hi, loc] : [loc, lo, loc, hi]
             c.spec.expand = true
         })
 
         // pass to Group
-        super({ children, coord, clip: false, ...attr })
+        super({ children, clip: false, ...attr })
     }
 }
 
@@ -2534,15 +2534,15 @@ class VLabels extends Labels {
     }
 }
 
-function get_ticklim(lim) {
+function get_tick_lim(lim) {
     if (lim == null || lim == 'up' || lim == 'right') {
-        return [0.5, 1]
-    } else if (lim == 'down' || lim == 'left') {
-        return [0, 0.5]
-    } else if (lim == 'both') {
         return [0, 1]
+    } else if (lim == 'down' || lim == 'left') {
+        return [-1, 0]
+    } else if (lim == 'both') {
+        return [-1, 1]
     } else if (lim == 'none') {
-        return [0.5, 0.5]
+        return [0, 0]
     } else {
         return lim
     }
@@ -2553,24 +2553,29 @@ function get_ticklim(lim) {
 class Axis extends Group {
     constructor({ children, coord = coord_base, direc, ticks, pos = loc_base, lim = lim_base, tick_size = tick_size_base, tick_pos = 'both', tick_label_size = tick_label_size_base, tick_label_offset = tick_label_offset_base, label_pos, prec = 2, ...attr0 } = {}) {
         const [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0)
-        direc = get_orient(direc)
         const [ xlo, ylo, xhi, yhi ] = coord
-        const [ lo, hi ] = direc == 'v' ? [ylo, yhi] : [xlo, xhi]
+        direc = get_orient(direc)
 
         // get numerical tick limits
-        // const tick_lim = get_ticklim(tick_pos)
-        const tick_half = 0.5 * tick_size
+        const tick_lim0 = mul(get_tick_lim(tick_pos), tick_size)
+        const tick_lim = add(tick_lim0, pos)
 
         // sort out label position
         const label_pos0 = direc == 'v' ? 'left' : 'bottom'
         label_pos = label_pos ?? label_pos0
+
+        // get adjusted label size and offset
         const lab_size = tick_label_size * tick_size
         const lab_off = tick_label_offset * tick_size
+
+        // get label limits
         const lab_outer = label_pos == 'left' || label_pos == 'bottom'
-        const lab_base = lab_outer ? (tick_half - lab_off - lab_size / 2) : tick_half - lab_off
+        const lab_base = lab_outer ? -lab_off - lab_size : lab_off
+        const lab_lim = [ pos + lab_base, pos + lab_base + lab_size ]
 
         // extract tick information
         if (ticks != null) {
+            const [ lo, hi ] = direc == 'v' ? [ylo, yhi] : [xlo, xhi]
             ticks = is_scalar(ticks) ? linspace(lo, hi, ticks) : ticks
             children = ticks.map(t => ensure_tick(t, prec))
         }
@@ -2578,8 +2583,8 @@ class Axis extends Group {
 
         // accumulate children
         const cline = new UnitLine({ direc, pos, lim, coord, ...line_attr })
-        const scale = new Scale({ direc, locs, pos, rad: tick_half, coord, ...tick_attr })
-        const label = new Labels({ children, direc, pos: pos + lab_base, rad: lab_size / 2, align: label_pos, coord, ...label_attr })
+        const scale = new Scale({ direc, locs, lim: tick_lim, coord, ...tick_attr })
+        const label = new Labels({ children, direc, lim: lab_lim, align: label_pos, coord, ...label_attr })
 
         // pass to Group
         children = [ cline, scale, label ]
@@ -2591,6 +2596,9 @@ class Axis extends Group {
         } else {
             this.bounds = [ xlo, pos, xhi, pos ]
         }
+
+        // store tick locations
+        this.locs = locs
     }
 }
 
@@ -2735,7 +2743,7 @@ class Plot extends Group {
         children: children0, xlim, ylim, xaxis = true, yaxis = true, xticks = num_ticks_base, yticks = num_ticks_base, grid, xgrid, ygrid, xlabel, ylabel, title, tick_size = tick_size_base, label_size, label_offset, label_align, title_size = title_size_base, title_offset = title_offset_base, xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, xlabel_align, ylabel_align, padding, prec, aspect, flex = false, fill, ...attr0
     } = {}) {
         const elems = ensure_array(children0)
-        aspect = flex ? null : (aspect ?? 'auto')
+        aspect = flex ? null : (aspect ?? 'auto');
 
         // some advanced piping
         let [
@@ -2744,9 +2752,12 @@ class Plot extends Group {
         ] = prefix_split([
             'xaxis', 'yaxis', 'axis', 'xgrid', 'ygrid', 'grid', 'xlabel', 'ylabel', 'label', 'title'
         ], attr0);
-        [ xaxis_attr, yaxis_attr ] = [ { ...axis_attr, ...xaxis_attr }, { ...axis_attr, ...yaxis_attr } ]
-        [ xgrid_attr, ygrid_attr ] = [ { ...grid_attr, ...xgrid_attr }, { ...grid_attr, ...ygrid_attr } ]
-        [ xlabel_attr, ylabel_attr ] = [ { ...label_attr, ...xlabel_attr }, { ...label_attr, ...ylabel_attr } ]
+        xaxis_attr = { ...axis_attr, ...xaxis_attr }
+        yaxis_attr = { ...axis_attr, ...yaxis_attr }
+        xgrid_attr = { ...grid_attr, ...xgrid_attr }
+        ygrid_attr = { ...grid_attr, ...ygrid_attr }
+        xlabel_attr = { ...label_attr, ...xlabel_attr }
+        ylabel_attr = { ...label_attr, ...ylabel_attr }
 
         // determine coordinate limits
         const bounds = outer_limits(elems, padding) ?? coord_base
@@ -2764,14 +2775,14 @@ class Plot extends Group {
 
         // default xaxis generation
         if (xaxis === true) {
-            xaxis = new HAxis({ ticks: xticks, coord, pos: ymin, lim: xlim, tick_size: xtick_size, ...xaxis_attr })
+            xaxis = new HAxis({ ticks: xticks, pos: ymin, lim: xlim, coord, tick_size: xtick_size, ...xaxis_attr })
         } else if (xaxis === false) {
             xaxis = null
         }
 
         // default yaxis generation
         if (yaxis === true) {
-            yaxis = new VAxis({ ticks: yticks, coord, pos: xmin, lim: ylim, tick_size: ytick_size, ...yaxis_attr })
+            yaxis = new VAxis({ ticks: yticks, pos: xmin, lim: ylim, coord, tick_size: ytick_size, ...yaxis_attr })
         } else if (yaxis === false) {
             yaxis = null
         }
@@ -2783,14 +2794,14 @@ class Plot extends Group {
 
         // automatic grid path
         if (grid === true || xgrid === true) {
-            const xgridvals = (xaxis != null) ? xaxis.ticks.map(([ x, t ]) => x) : null
-            xgrid = new HMesh({ locs: xgridvals, lim: ylim, ...xgrid_attr })
+            const locs = (xaxis != null) ? xaxis.locs : null
+            xgrid = new HMesh({ locs, lim: ylim, coord, ...xgrid_attr })
         } else {
             xgrid = null
         }
         if (grid === true || ygrid === true) {
-            const ygridvals = (yaxis != null) ? yaxis.ticks.map(([ y, t ]) => y) : null
-            ygrid = new VMesh({ locs: ygridvals, lim: xlim, ...ygrid_attr })
+            const locs = (yaxis != null) ? yaxis.locs : null
+            ygrid = new VMesh({ locs, lim: xlim, coord, ...ygrid_attr })
         } else {
             ygrid = null
         }
