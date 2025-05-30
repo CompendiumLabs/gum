@@ -1927,9 +1927,9 @@ class TitleFrame extends Frame {
 
  function func_or_scalar(x) {
     if (is_scalar(x)) {
-        return () => x;
+        return () => x
     } else {
-        return x;
+        return x
     }
 }
 
@@ -2027,20 +2027,20 @@ class SymPoly extends Polygon {
         // compute point values
         const [tvals1, xvals1, yvals1] = sympath({
             fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N
-        });
+        })
 
         // get valid point pairs
-        const points = zip(xvals1, yvals1);
+        const points = zip(xvals1, yvals1)
 
         // pass to element
-        super({ points, ...attr });
+        super({ points, ...attr })
     }
 }
 
 class SymPoints extends Group {
     constructor({ fx, fy, fs, fr, size = 0.01, shape, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr } = {}) {
-        shape = shape ?? (a => new Dot(a));
-        const fsize = is_number(size) ? (() => size) : size;
+        shape = shape ?? (a => new Dot(a))
+        const fsize = is_number(size) ? (() => size) : size
 
         // compute point values
         [tvals, xvals, yvals] = sympath({
@@ -2734,8 +2734,8 @@ class Plot extends Group {
     constructor({
         children: children0, xlim, ylim, xaxis = true, yaxis = true, xticks = num_ticks_base, yticks = num_ticks_base, grid, xgrid, ygrid, xlabel, ylabel, title, tick_size = tick_size_base, label_size, label_offset, label_align, title_size = title_size_base, title_offset = title_offset_base, xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, xlabel_align, ylabel_align, padding, prec, aspect, flex = false, fill, ...attr0
     } = {}) {
-        const elems = ensure_array(children0);
-        aspect = flex ? null : (aspect ?? 'auto');
+        const elems = ensure_array(children0)
+        aspect = flex ? null : (aspect ?? 'auto')
 
         // some advanced piping
         let [
@@ -2744,9 +2744,9 @@ class Plot extends Group {
         ] = prefix_split([
             'xaxis', 'yaxis', 'axis', 'xgrid', 'ygrid', 'grid', 'xlabel', 'ylabel', 'label', 'title'
         ], attr0);
-        [xaxis_attr, yaxis_attr] = [{...axis_attr, ...xaxis_attr}, {...axis_attr, ...yaxis_attr}];
-        [xgrid_attr, ygrid_attr] = [{...grid_attr, ...xgrid_attr}, {...grid_attr, ...ygrid_attr}];
-        [xlabel_attr, ylabel_attr] = [{...label_attr, ...xlabel_attr}, {...label_attr, ...ylabel_attr}];
+        [ xaxis_attr, yaxis_attr ] = [ { ...axis_attr, ...xaxis_attr }, { ...axis_attr, ...yaxis_attr } ]
+        [ xgrid_attr, ygrid_attr ] = [ { ...grid_attr, ...xgrid_attr }, { ...grid_attr, ...ygrid_attr } ]
+        [ xlabel_attr, ylabel_attr ] = [ { ...label_attr, ...xlabel_attr }, { ...label_attr, ...ylabel_attr } ]
 
         // determine coordinate limits
         const bounds = outer_limits(elems, padding) ?? coord_base
@@ -2836,7 +2836,7 @@ class Plot extends Group {
         }
 
         // pass to Group
-        super({ children, aspect, clip: false, ...attr });
+        super({ children, aspect, clip: false, ...attr })
     }
 }
 
@@ -2846,16 +2846,16 @@ class Plot extends Group {
 
 class Image extends Element {
     constructor(href, args) {
-        let attr = args ?? {};
-        let attr1 = {href, ...attr};
-        super('image', true, attr1);
+        const attr = args ?? {}
+        const attr1 = { href, ...attr }
+        super('image', true, attr1)
     }
 
     props(ctx) {
-        const attr = super.props(ctx);
-        let [x, y, x1, y1] = ctx.coord_to_pixel_rect(coord_base);
-        let [w, h] = [x1 - x, y1 - y];
-        return { x, y, width: w, height: h, ...attr };
+        const attr = super.props(ctx)
+        const prect = ctx.mapRect()
+        const [ x, y, w, h ] = rect_radius(prect)
+        return { x, y, width: w, height: h, ...attr }
     }
 }
 
@@ -2865,113 +2865,113 @@ class Image extends Element {
 
 let Gum = [
     Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
-];
+]
 
 // main parser entry
-let gums0 = Gum.map(g => g.name);
+const gums0 = Gum.map(g => g.name)
 function parseGum(src, extra) {
-    extra = extra ?? [];
-    let gums1 = extra.map(g => g.name);
-    let gums = [...gums0, ...gums1];
-    let mako = [...Gum, ...extra];
-    let expr = new Function(gums, src);
-    return expr(...mako);
+    extra = extra ?? []
+    const gums1 = extra.map(g => g.name)
+    const gums = [ ...gums0, ...gums1 ]
+    const mako = [ ...Gum, ...extra ]
+    const expr = new Function(gums, src)
+    return expr(...mako)
 }
 
 function renderElem(elem, args) {
     if (is_element(elem)) {
-        elem = (elem instanceof SVG) ? elem : new SVG({ children: [elem], ...args });
-        return elem.svg();
+        elem = (elem instanceof SVG) ? elem : new SVG({ children: [ elem ], ...args })
+        return elem.svg()
     } else {
-        return String(elem);
+        return String(elem)
     }
 }
 
 function renderGum(src, args) {
-    let elem = parseGum(src);
-    return renderElem(elem, args);
+    const elem = parseGum(src)
+    return renderElem(elem, args)
 }
 
 function renderGumSafe(src, args) {
     // parse gum into element
-    let elem;
+    let elem
     try {
-        elem = parseGum(src);
+        elem = parseGum(src)
     } catch (err) {
-        throw new Error(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
+        throw new Error(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`)
     }
 
     // check for null
     if (elem == null) {
-        throw new Error('no data. does your code return an element?');
+        throw new Error('no data. does your code return an element?')
     }
 
     // render element to svg
-    let svg;
+    let svg
     try {
-        svg = renderElem(elem, args);
+        svg = renderElem(elem, args)
     } catch (err) {
-        throw new Error(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
+        throw new Error(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`)
     }
 
     // success
-    return svg;
+    return svg
 }
 
 function parseHTML(str) {
-    let tmp = document.implementation.createHTMLDocument('');
-    tmp.body.innerHTML = str;
-    return tmp.body.children[0];
+    const tmp = document.implementation.createHTMLDocument('')
+    tmp.body.innerHTML = str
+    return tmp.body.children[0]
 }
 
 // image injection for static viewing
 function injectImage(img) {
-    let src = img.getAttribute('src');
-    let request = new XMLHttpRequest();
-    request.open('GET', src, true);
+    const src = img.getAttribute('src')
+    const request = new XMLHttpRequest()
+    request.open('GET', src, true)
     request.onload = function() {
         if (this.status >= 200 && this.status < 400) {
-            let cls = img.classList;
-            let alt = img.getAttribute('alt');
-            let svg = parseHTML(this.response);
-            svg.classList = cls;
-            svg.setAttribute('alt', alt);
-            img.parentNode.replaceChild(svg, img);
+            const cls = img.classList
+            const alt = img.getAttribute('alt')
+            const svg = parseHTML(this.response)
+            svg.classList = cls
+            svg.setAttribute('alt', alt)
+            img.parentNode.replaceChild(svg, img)
         }
     }
-    request.send();
+    request.send()
 }
 
 function injectScript(scr) {
-    let src = scr.innerText;
-    let width = scr.getAttribute('width');
-    let size = string_to_int(scr.getAttribute('size'));
-    let svg = renderGum(src, {size: size});
-    let elem = parseHTML(svg);
+    const src = scr.innerText
+    const width = scr.getAttribute('width')
+    const size = string_to_int(scr.getAttribute('size'))
+    const svg = renderGum(src, { size: size })
+    const elem = parseHTML(svg)
     if (width != null) {
-        elem.style.width = width;
-        elem.style.display = 'block';
-        elem.style.margin = 'auto';
+        elem.style.width = width
+        elem.style.display = 'block'
+        elem.style.margin = 'auto'
     }
-    scr.replaceWith(elem);
+    scr.replaceWith(elem)
 }
 
 function injectScripts(elem) {
-    elem = elem ?? document;
+    elem = elem ?? document
     elem.querySelectorAll('script').forEach(scr => {
         if (scr.getAttribute('type') == 'text/gum') {
-            injectScript(scr);
+            injectScript(scr)
         }
     })
 }
 
 function injectImages(elem) {
-    elem = elem ?? document;
+    elem = elem ?? document
     elem.querySelectorAll('img').forEach(img => {
         if (img.classList.contains('gum')) {
-            injectImage(img);
+            injectImage(img)
         }
-    });
+    })
 }
 
 //
@@ -2980,4 +2980,4 @@ function injectImages(elem) {
 
 export {
     Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
-};
+}
