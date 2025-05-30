@@ -1,6 +1,6 @@
 // jsx interface
 
-import { KEYS, VALS } from './gum.js'
+import { KEYS, VALS, is_function, is_object, Svg } from './gum.js'
 
 // recursively flatten all children, including nested arrays
 function flattenChildren(items) {
@@ -34,19 +34,41 @@ function parseTree(tree) {
 }
 
 function parseJSX(code) {
+    // wrap code in a function if it's not an element
+    const wrappedCode = /^\s*</.test(code) ? code : `function run() { ${code} }`
+
     // plugin based approach
     const react_jsx = ['transform-react-jsx', { pragma: 'h' }]
-    const { code: transformed } = babel.transform(code, { plugins: [ react_jsx ] })
+    const { code: transformed } = babel.transform(wrappedCode, { plugins: [ react_jsx ] })
 
     // run that baby
     const runnable = `return ${transformed}`
     const executor = new Function('h', ...KEYS, runnable)
-    return executor(h, ...VALS)
+    const result = executor(h, ...VALS)
+
+    // if its a function then run it
+    return is_function(result) ? result() : result
 }
 
 function evaluateJSX(code) {
+    // parse to property tree
     const tree = parseJSX(code)
-    return parseTree(tree)
+
+    // check if its actually a tree
+    if (!is_object(tree)) {
+        return `Return value:\n\n${tree}`
+    }
+
+    // parse to gum element
+    const element = parseTree(tree)
+
+    // wrap it in Svg if not already
+    if (!(element instanceof Svg)) {
+        return new Svg({ children: [ element ] })
+    }
+
+    // return the element
+    return element
 }
 
 //

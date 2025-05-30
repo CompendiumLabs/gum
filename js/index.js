@@ -1,5 +1,5 @@
 import { GumEditor, enableResize } from './editor.js'
-import { range, zip, split } from './gum.js'
+import { range, zip, split, is_string } from './gum.js'
 import { evaluateJSX } from './eval.js'
 
 /*
@@ -266,8 +266,11 @@ enableResize(left, right, mid);
 
 // temp eval
 function execute(code) {
+    // get element (or string)
     const elem = evaluateJSX(code)
-    return elem.svg()
+
+    // render if its a gum element
+    return is_string(elem) ? elem : elem.svg()
 }
 
 // make the actual editor
