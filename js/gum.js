@@ -489,9 +489,14 @@ function rect_center(rect) {
 }
 
 function rect_radius(rect) {
-    const [ x, y ] = rect_center(rect)
     const [ w, h ] = rect_size(rect)
-    return [ x, y, w / 2, h / 2 ]
+    return [ w / 2, h / 2 ]
+}
+
+function rect_radial(rect) {
+    const [ x, y ] = rect_center(rect)
+    const [ rx, ry ] = rect_radius(rect)
+    return [ x, y, rx, ry ]
 }
 
 function rect_aspect(rect) {
@@ -499,7 +504,7 @@ function rect_aspect(rect) {
     return w / h
 }
 
-function radius_rect(p, r) {
+function radial_rect(p, r) {
     const [ x, y ] = p
     const [ rx, ry ] = is_scalar(r) ? [ r, r ] : r
     return [ x - rx, y - ry, x + rx, y + ry ]
@@ -723,17 +728,18 @@ class Context {
     }
 
     // NOTE: this is the main mapping function! be very careful when changing it!
-    map({ rect, aspect = null, expand = false, coord = coord_base } = {}) {
+    map({ rect, aspect = null, expand = false, align = 'center', coord = coord_base } = {}) {
         // use parent coord as default rect
         rect ??= this.coord
 
         // get true pixel rect
-        const prect = this.mapRect(rect)
-        let [ cx, cy, rw, rh ] = rect_radius(prect)
-        const [ aw, ah ] = [ abs(rw), abs(rh) ]
+        const prect0 = this.mapRect(rect)
+        const [ cx0, cy0, rw0, rh0 ] = rect_radial(prect0)
 
         // shrink/expand if aspect mismatch
+        let [ cx, cy, rw, rh ] = [ cx0, cy0, rw0, rh0 ]
         if (aspect != null) {
+            const [ aw, ah ] = [ abs(rw), abs(rh) ]
             if (!expand == aw > aspect * ah) {
                 rw = aspect * rh
             } else if (!expand == aw < aspect * ah) {
@@ -741,11 +747,16 @@ class Context {
             }
         }
 
-        // get embedded pixel rect
-        const prect1 = radius_rect([ cx, cy ], [ rw, rh ])
+        // align rect (left, right, center, <float>)
+        if (align != 'center') {
+            const frac = align_frac(align)
+            cx += (2 * frac - 1) * (rw - rw0)
+            cy += (2 * frac - 1) * (rh - rh0)
+        }
 
         // return new context
-        return new Context({ prect: prect1, coord, prec: this.prec, debug: this.debug })
+        const prect = radial_rect([ cx, cy ], [ rw, rh ])
+        return new Context({ prect, coord, prec: this.prec, debug: this.debug })
     }
 }
 
@@ -1108,7 +1119,7 @@ class Place extends Group {
     constructor({ children: children0, pos = [0.5, 0.5], rad = 0.5, ...attr } = {}) {
         const child = check_singleton(children0)
         rad = ensure_vector(rad, 2)
-        child.spec.rect = radius_rect(pos, rad)
+        child.spec.rect = radial_rect(pos, rad)
         child.spec.expand = true
         console.log(child.spec.rect)
         super({ children: child, clip: false, ...attr })
@@ -1183,7 +1194,7 @@ class Points extends Group {
         // construct children (pos or [pos, rad])
         const children = points.map(pr => {
             const [ p, r ] = is_scalar(pr[0]) ? [pr, rad] : pr
-            return shape({ rect: radius_rect(p, r), ...point_attr })
+            return shape({ rect: radial_rect(p, r), ...point_attr })
         })
 
         // pass to Group
@@ -1207,9 +1218,9 @@ class Absolute extends Element {
 
         // get relative size from absolute size
         const pcent = rect_center(prect)
-        const pradi = rect_radius(prect)
+        const pradi = rect_radial(prect)
         const psize = ensure_vector(this.size, 2)
-        const rect = radius_rect(pcent, div(psize, pradi))
+        const rect = radial_rect(pcent, div(psize, pradi))
 
         // render child element
         const ctx1 = ctx.map({ rect, aspect })
@@ -1292,7 +1303,7 @@ class Rect extends Element {
         const attr = super.props(ctx)
 
         // get true pixel rect
-        const rect = radius_rect(this.pos, this.rad)
+        const rect = radial_rect(this.pos, this.rad)
         const prect = ctx.mapRect(rect)
         let [ x, y, w, h ] = rect_box(prect)
 
@@ -1908,7 +1919,7 @@ class TitleFrame extends Frame {
 
         // make title box
         const base = title_offset * title_size
-        const title_rect = radius_rect([ 0.5, base ], [ 0.0, title_size ])
+        const title_rect = radial_rect([ 0.5, base ], [ 0.0, title_size ])
         const title_box = new TextFrame({ children: title, rect: title_rect, expand: true, ...title_attr })
 
         // make outer frame
@@ -2050,7 +2061,7 @@ class SymPoints extends Group {
         // make points
         const points = zip(tvals, xvals, yvals)
         const children = enumerate(points).map(([i, [t, x, y]]) =>
-            shape({ rect: radius_rect([x, y], fsize(x, y, t, i)) })
+            shape({ rect: radial_rect([x, y], fsize(x, y, t, i)) })
         )
 
         // pass  to element
@@ -2351,7 +2362,7 @@ class Node extends Place {
         if (is_scalar(size) && frame.aspect != null) {
             size = aspect_invariant(size, frame.aspect);
         }
-        const rect = radius_rect(pos, size);
+        const rect = radial_rect(pos, size);
 
         // pass to place
         super({ children: frame, rect });
@@ -2506,7 +2517,7 @@ class Labels extends Group {
             const talign = invert_align(align)
             children = children.map(c => {
                 const { tick } = c.attr
-                return new Anchor({ children: c, aspect: 1, side: talign, align: talign, tick: tick })
+                return new Anchor({ children: c, aspect: 1, side: talign, tick: tick })
             })
         }
 
@@ -2865,7 +2876,7 @@ class Image extends Element {
     props(ctx) {
         const attr = super.props(ctx)
         const prect = ctx.mapRect()
-        const [ x, y, w, h ] = rect_radius(prect)
+        const [ x, y, w, h ] = rect_radial(prect)
         return { x, y, width: w, height: h, ...attr }
     }
 }
@@ -2875,7 +2886,7 @@ class Image extends Element {
 //
 
 let Gum = [
-    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Group, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radial_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ]
 
 // main parser entry
@@ -2990,5 +3001,5 @@ function injectImages(elem) {
 //
 
 export {
-    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radius_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
+    Gum, Context, Element, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radial_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_element
 }
