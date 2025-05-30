@@ -517,6 +517,8 @@ function box_rect(box) {
 }
 
 function merge_rects(...rects) {
+    if (rects.length == 0) return null
+    if (rects.length == 1) return rects[0]
     const [ xa, ya, xb, yb ] = zip(...rects)
     const [ xs, ys ] = [ [ ...xa, ...xb ], [ ...ya, ...yb ] ]
     return [ min(...xs), min(...ys), max(...xs), max(...ys) ]
@@ -2594,13 +2596,13 @@ class Axis extends Group {
 
 class HAxis extends Axis {
     constructor(attr) {
-        super({ direc: 'h', ...attr });
+        super({ direc: 'h', ...attr })
     }
 }
 
 class VAxis extends Axis {
     constructor(attr) {
-        super({ direc: 'v', ...attr });
+        super({ direc: 'v', ...attr })
     }
 }
 
@@ -2631,19 +2633,19 @@ class Title extends Frame {
 
 class Mesh extends Scale {
     constructor({ direc, locs, lim = lim_base, opacity = 0.2, ...attr } = {}) {
-        super({ direc, locs, lim, opacity, ...attr });
+        super({ direc, locs, lim, opacity, ...attr })
     }
 }
 
 class HMesh extends Mesh {
     constructor(attr) {
-        super({ direc: 'h', ...attr });
+        super({ direc: 'h', ...attr })
     }
 }
 
 class VMesh extends Mesh {
     constructor(attr) {
-        super({ direc: 'v', ...attr });
+        super({ direc: 'v', ...attr })
     }
 }
 
@@ -2692,37 +2694,39 @@ class Note extends Place {
 }
 
 function expand_limits(lim, fact) {
-    const [lo, hi] = lim;
-    const ex = fact*(hi-lo);
-    return [lo-ex, hi+ex];
+    const [ lo, hi ] = lim
+    const ex = fact * (hi - lo)
+    return [ lo - ex, hi + ex ]
 }
 
 // find minimal containing limits
 function outer_limits(children, padding=0) {
-    const [xpad, ypad] = ensure_vector(padding, 2);
-    let [xmin, ymin, xmax, ymax] = merge_rects(
-        ...children.map(c => c.bounds).filter(z => z != null)
-    );
-    [xmin, xmax] = expand_limits([xmin, xmax], xpad);
-    [ymin, ymax] = expand_limits([ymin, ymax], ypad);
-    return [xmin, ymin, xmax, ymax];
+    if (children.length == 0) return null
+    const [ xpad, ypad ] = ensure_vector(padding, 2)
+    const rects = children.map(c => c.bounds).filter(z => z != null)
+    if (rects.length == 0) return null
+    let [ xmin, ymin, xmax, ymax ] = merge_rects(...rects);
+    [ xmin, xmax ] = expand_limits([ xmin, xmax ], xpad)
+    [ ymin, ymax ] = expand_limits([ ymin, ymax ], ypad)
+    return [ xmin, ymin, xmax, ymax ]
 }
 
 class Graph extends Group {
     constructor({ children, coord, aspect, padding = 0, flex = false, flip = true, ...attr } = {}) {
-        children = ensure_array(children);
+        children = ensure_array(children)
 
         // determine coordinate limits and aspect
-        let [xmin, ymin, xmax, ymax] = coord ?? outer_limits(children, padding);
-        if (flip) [ymin, ymax] = [ymax, ymin];
-        coord = [xmin, ymax, xmax, ymin];
-        if (!flex && aspect == null) aspect = rect_aspect(coord);
+        const coord0 = outer_limits(children, padding) ?? coord_base
+        let [ xmin, ymin, xmax, ymax ] = coord ?? coord0
+        if (flip) [ ymin, ymax ] = [ ymax, ymin ]
+        coord = [ xmin, ymax, xmax, ymin ]
+        if (!flex && aspect == null) aspect = rect_aspect(coord)
 
         // though the coords are inverted, we dont want the children to be flipped visually
-        children.forEach(e => e.spec.coord = coord);
+        children.forEach(e => e.spec.coord = coord)
 
         // pass to Group
-        super({ children, aspect, ...attr });
+        super({ children, aspect, ...attr })
     }
 }
 
@@ -2744,85 +2748,85 @@ class Plot extends Group {
         [xgrid_attr, ygrid_attr] = [{...grid_attr, ...xgrid_attr}, {...grid_attr, ...ygrid_attr}];
         [xlabel_attr, ylabel_attr] = [{...label_attr, ...xlabel_attr}, {...label_attr, ...ylabel_attr}];
 
-
         // determine coordinate limits
-        const bounds = outer_limits(elems, padding);
-        let [xmin, ymin, xmax, ymax] = bounds;
-        xlim = xlim ?? [xmin, xmax]; [xmin, xmax] = xlim;
-        ylim = ylim ?? [ymin, ymax]; [ymin, ymax] = ylim;
-        const coord = [xmin, ymax, xmax, ymin];
+        const bounds = outer_limits(elems, padding) ?? coord_base
+        let [ xmin, ymin, xmax, ymax ] = bounds
+        xlim = xlim ?? [ xmin, xmax ];
+        ylim = ylim ?? [ ymin, ymax ];
+        [ [ xmin, xmax ], [ ymin, ymax ] ] = [ xlim, ylim ]
+        const coord = [ xmin, ymax, xmax, ymin ]
 
         // ensure consistent apparent tick size
-        const [xrange, yrange] = [xmax - xmin, ymax - ymin];
-        aspect = (aspect == 'auto') ? abs(xrange/yrange) : aspect;
-        let [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
-        [xtick_size, ytick_size] = [yrange * xtick_size, xrange * ytick_size];
+        const [ xrange, yrange ] = [ xmax - xmin, ymax - ymin ]
+        aspect = (aspect == 'auto') ? abs(xrange/yrange) : aspect
+        let [ xtick_size, ytick_size ] = aspect_invariant(tick_size, aspect);
+        [ xtick_size, ytick_size ] = [ yrange * xtick_size, xrange * ytick_size ]
 
         // default xaxis generation
         if (xaxis === true) {
-            xaxis = new HAxis({ ticks: xticks, coord, pos: ymin, lim: xlim, tick_size: xtick_size, ...xaxis_attr });
+            xaxis = new HAxis({ ticks: xticks, coord, pos: ymin, lim: xlim, tick_size: xtick_size, ...xaxis_attr })
         } else if (xaxis === false) {
-            xaxis = null;
+            xaxis = null
         }
 
         // default yaxis generation
         if (yaxis === true) {
-            yaxis = new VAxis({ ticks: yticks, coord, pos: xmin, lim: ylim, tick_size: ytick_size, ...yaxis_attr });
+            yaxis = new VAxis({ ticks: yticks, coord, pos: xmin, lim: ylim, tick_size: ytick_size, ...yaxis_attr })
         } else if (yaxis === false) {
-            yaxis = null;
+            yaxis = null
         }
 
         // fill background
         if (fill != null) {
-            fill = new Rect({ fill });
+            fill = new Rect({ fill })
         }
 
         // automatic grid path
         if (grid === true || xgrid === true) {
-            const xgridvals = (xaxis != null) ? xaxis.ticks.map(([x, t]) => x) : null;
-            xgrid = new HMesh({ locs: xgridvals, lim: ylim, ...xgrid_attr });
+            const xgridvals = (xaxis != null) ? xaxis.ticks.map(([ x, t ]) => x) : null
+            xgrid = new HMesh({ locs: xgridvals, lim: ylim, ...xgrid_attr })
         } else {
-            xgrid = null;
+            xgrid = null
         }
         if (grid === true || ygrid === true) {
-            const ygridvals = (yaxis != null) ? yaxis.ticks.map(([y, t]) => y) : null;
-            ygrid = new VMesh({ locs: ygridvals, lim: xlim, ...ygrid_attr });
+            const ygridvals = (yaxis != null) ? yaxis.ticks.map(([ y, t ]) => y) : null
+            ygrid = new VMesh({ locs: ygridvals, lim: xlim, ...ygrid_attr })
         } else {
-            ygrid = null;
+            ygrid = null
         }
 
         // create graph from core elements
-        const elems1 = [fill, xgrid, ygrid, ...elems, xaxis, yaxis].filter(z => z != null);
-        const graph = new Graph({ children: elems1, coord, aspect, flex });
+        const elems1 = [ fill, xgrid, ygrid, ...elems, xaxis, yaxis ].filter(z => z != null)
+        const graph = new Graph({ children: elems1, coord, aspect, flex })
 
         // create base layout
-        const children = [graph];
+        const children = [ graph ]
 
         // sort out label size and offset
         if (xlabel != null || ylabel != null) {
-            label_size = label_size ?? label_size_base;
-            const [xlabelsize, ylabelsize] = aspect_invariant(label_size, aspect);
-            xlabel_size = xlabel_size ?? xlabelsize;
-            ylabel_size = ylabel_size ?? ylabelsize;
+            label_size = label_size ?? label_size_base
+            const [ xlabelsize, ylabelsize ] = aspect_invariant(label_size, aspect)
+            xlabel_size = xlabel_size ?? xlabelsize
+            ylabel_size = ylabel_size ?? ylabelsize
 
-            label_offset = label_offset ?? label_offset_base;
-            const [xlabeloffset, ylabeloffset] = aspect_invariant(label_offset, aspect);
-            xlabel_offset = xlabel_offset ?? xlabeloffset;
-            ylabel_offset = ylabel_offset ?? ylabeloffset;
+            label_offset = label_offset ?? label_offset_base
+            const [ xlabeloffset, ylabeloffset ] = aspect_invariant(label_offset, aspect)
+            xlabel_offset = xlabel_offset ?? xlabeloffset
+            ylabel_offset = ylabel_offset ?? ylabeloffset
 
-            label_align = label_align ?? 'center';
-            xlabel_align = xlabel_align ?? label_align;
-            ylabel_align = ylabel_align ?? label_align;
+            label_align = label_align ?? 'center'
+            xlabel_align = xlabel_align ?? label_align
+            ylabel_align = ylabel_align ?? label_align
         }
 
         // optional axis labels
         if (xlabel != null) {
-            xlabel = new XLabel({ children: xlabel, size: xlabel_size, offset: xlabel_offset, align: xlabel_align, ...xlabel_attr });
-            children.push(xlabel);
+            xlabel = new XLabel({ children: xlabel, size: xlabel_size, offset: xlabel_offset, align: xlabel_align, ...xlabel_attr })
+            children.push(xlabel)
         }
         if (ylabel != null) {
-            ylabel = new YLabel({ children: ylabel, size: ylabel_size, offset: ylabel_offset, align: ylabel_align, ...ylabel_attr });
-            children.push(ylabel);
+            ylabel = new YLabel({ children: ylabel, size: ylabel_size, offset: ylabel_offset, align: ylabel_align, ...ylabel_attr })
+            children.push(ylabel)
         }
 
         // optional plot title
