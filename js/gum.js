@@ -809,13 +809,10 @@ class Element {
     }
 }
 
-// detect realized aspect of children
-function detect_aspect(children, coord) {
+function children_bounds(children) {
     const ctx = new Context()
     const rects = children.map(c => ctx.map(c.spec).prect)
-    const outer = rects.length > 0 ? merge_rects(...rects) : null
-    const aspect = outer != null ? rect_aspect(outer) : null
-    return aspect
+    return rects.length > 0 ? merge_rects(...rects) : null
 }
 
 class Group extends Element {
@@ -823,11 +820,13 @@ class Group extends Element {
         children = ensure_array(children)
 
         // extract specs from children
-        if (clip && aspect == null) aspect = detect_aspect(children, coord)
+        const bounds = children_bounds(children)
+        if (clip && aspect == null && bounds != null) aspect = rect_aspect(bounds)
 
         // pass to Element
         super({ tag, unary: false, coord, aspect, ...attr })
         this.children = children
+        this.bounds = bounds
     }
 
     inner(ctx) {
