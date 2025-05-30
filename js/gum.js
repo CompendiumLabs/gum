@@ -1408,6 +1408,10 @@ class Pointstring extends Element {
     constructor({ tag, points, ...attr } = {}) {
         super({ tag, unary: true, ...attr })
         this.points = points
+
+        // compute bounding box
+        const [ xvals, yvals ] = zip(...this.points)
+        this.bounds = [ min(...xvals), min(...yvals), max(...xvals), max(...yvals) ]
     }
 
     props(ctx) {
@@ -2724,9 +2728,9 @@ function outer_limits(children, padding=0) {
     const [ xpad, ypad ] = ensure_vector(padding, 2)
     const rects = children.map(c => c.bounds).filter(z => z != null)
     if (rects.length == 0) return null
-    let [ xmin, ymin, xmax, ymax ] = merge_rects(...rects);
-    [ xmin, xmax ] = expand_limits([ xmin, xmax ], xpad)
-    [ ymin, ymax ] = expand_limits([ ymin, ymax ], ypad)
+    const [ xmin0, ymin0, xmax0, ymax0 ] = merge_rects(...rects)
+    const [ xmin, xmax ] = expand_limits([ xmin0, xmax0 ], xpad)
+    const [ ymin, ymax ] = expand_limits([ ymin0, ymax0 ], ypad)
     return [ xmin, ymin, xmax, ymax ]
 }
 
@@ -2771,11 +2775,13 @@ class Plot extends Group {
         ylabel_attr = { ...label_attr, ...ylabel_attr }
 
         // determine coordinate limits
-        const bounds = outer_limits(elems, padding) ?? coord_base
-        let [ xmin, ymin, xmax, ymax ] = bounds
-        xlim = xlim ?? [ xmin, xmax ];
-        ylim = ylim ?? [ ymin, ymax ];
-        [ [ xmin, xmax ], [ ymin, ymax ] ] = [ xlim, ylim ]
+        const [ xmin0, ymin0, xmax0, ymax0 ] = outer_limits(elems, padding) ?? coord_base
+        xlim = xlim ?? [ xmin0, xmax0 ]
+        ylim = ylim ?? [ ymin0, ymax0 ]
+
+        // determine coordinate system
+        const [ xmin, xmax ] = xlim
+        const [ ymin, ymax ] = ylim
         const coord = [ xmin, ymax, xmax, ymin ]
 
         // ensure consistent apparent tick size
