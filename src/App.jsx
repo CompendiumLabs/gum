@@ -1,9 +1,10 @@
 // GUM.JSX
 
 import { useRef, useState, useEffect } from 'react'
-import { evaluateGum } from './Eval'
+import { evaluateGumSafe } from './Eval'
 import { CodeEditor } from './Editor'
 import { ErrorCatcher } from './Error'
+import { useElementSize } from './utils'
 
 import './App.css'
 import './fonts.css'
@@ -13,7 +14,7 @@ import './fonts.css'
 //
 
 const DEFAULT_CODE = `
-<Frame margin={0.3}>
+<Frame padding={0.3} border={1} margin={0.05}>
   <Plot grid ylim={[-1.5, 1.5]} xlabel="Phase (radians)" title="Hello World!">
     <SymFill fy1={sin} fy2={cos} xlim={[0, 2*pi]} fill={blue+"99"} />
   </Plot>
@@ -23,8 +24,8 @@ const DEFAULT_CODE = `
 export default function App() {
   const outerRef = useRef(null)
   const editorRef = useRef(null)
-  const canvasRef = useRef(null)
   const [ key, setKey ] = useState(0)
+  const [ canvasRef, canvasSize ] = useElementSize()
 
   const [ code, setCode ] = useState(DEFAULT_CODE)
   const [ element, setElement ] = useState(null)
@@ -53,16 +54,15 @@ export default function App() {
 
   // eval code for element render
   useEffect(() => {
-    const [ newElement, newError ] = evaluateGum(code)
+    // get adjusted size
+    const [ width, height ] = canvasSize ?? [ 500, 500 ]
+    const size = [ zoom * width / 100, zoom * height / 100 ]
+
+    // send to evaluator
+    const [ newElement, newError ] = evaluateGumSafe(code, size)
     if (newElement) setElement(newElement)
     setError(newError)
-  }, [ code ])
-
-  // set width directly using style
-  const canvasStyle = {
-    width: `${zoom}%`,
-    height: `${zoom}%`,
-  }
+  }, [ code, zoom, canvasSize ])
 
   // render full screen
   return <div ref={outerRef} className="w-screen h-screen p-5 bg-gray-100" onWheel={handleZoom}>
@@ -87,9 +87,7 @@ export default function App() {
       </div>
       <div ref={canvasRef} className="w-full flex-1">
         <div className="w-full h-full flex justify-center items-center border rounded-md border-gray-500 bg-white pointer-events-none select-none">
-          <div style={canvasStyle}>
-            <ErrorCatcher key={key} onError={handleError}>{element}</ErrorCatcher>
-          </div>
+          <ErrorCatcher key={key} onError={handleError}>{element}</ErrorCatcher>
         </div>
       </div>
     </div>

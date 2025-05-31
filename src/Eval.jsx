@@ -63,7 +63,7 @@ function parseJSX(code) {
 // gum evaluator
 //
 
-function evaluateGum(code) {
+function evaluateGum(code, size) {
   // parse to property tree
   const tree = parseJSX(code)
 
@@ -77,20 +77,37 @@ function evaluateGum(code) {
 
   // wrap it in Svg if not already
   if (!(element instanceof Svg)) {
-      element = new Svg({ children: [ element ] })
+    const [ width, height ] = size
+    element = new Svg({ children: [ element ], width, height })
   }
 
   // render to string
   const svg = element.svg()
-  const div = <div dangerouslySetInnerHTML={{ __html: svg }} />
-  console.log(div)
 
   // return the element
-  return [ div, null ]
+  return svg
+}
+
+function evaluateGumSafe(code, size) {
+  size ??= [ 500, 500 ]
+
+  // give it a shot
+  let svg, error = null
+  try {
+    svg = evaluateGum(code, size)
+  } catch (e) {
+    error = e.message
+  }
+
+  // wrap the svg in a div
+  const div = <div className="flex w-full h-full justify-center items-center" dangerouslySetInnerHTML={{ __html: svg }} />
+
+  // return results
+  return [ div, error ]
 }
 
 //
 // export
 //
 
-export { evaluateGum }
+export { evaluateGum, evaluateGumSafe }
