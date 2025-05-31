@@ -2895,125 +2895,15 @@ class Image extends Element {
 // scripting
 //
 
-let VALS = [
-    Context, Element, Group, Group, Svg, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radial_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, aspect_invariant, random, uniform, normal, cumsum, none, blue, red, green, Filter, Effect, DropShadow, Image
+const VALS = [
+    Context, Element, Group, Svg, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, Filter, Effect, DropShadow, Image, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, rounder, random, uniform, normal, cumsum, pi, phi, r2d, d2r, none, blue, red, green
 ]
-
-// main parser entry
 const KEYS = VALS.map(g => g.name)
-function parseGum(src, extra) {
-    extra = extra ?? []
-    const keys = extra.map(g => g.name)
-    const gums = [ ...KEYS, ...keys ]
-    const mako = [ ...VALS, ...extra ]
-    const expr = new Function(gums, src)
-    return expr(...mako)
-}
-
-function renderElem(elem, args) {
-    if (is_element(elem)) {
-        elem = (elem instanceof Svg) ? elem : new Svg({ children: [ elem ], ...args })
-        return elem.svg()
-    } else {
-        return String(elem)
-    }
-}
-
-function renderGum(src, args) {
-    const elem = parseGum(src)
-    return renderElem(elem, args)
-}
-
-function renderGumSafe(src, args) {
-    // parse gum into element
-    let elem
-    try {
-        elem = parseGum(src)
-    } catch (err) {
-        throw new Error(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`)
-    }
-
-    // check for null
-    if (elem == null) {
-        throw new Error('no data. does your code return an element?')
-    }
-
-    // render element to svg
-    let svg
-    try {
-        svg = renderElem(elem, args)
-    } catch (err) {
-        throw new Error(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`)
-    }
-
-    // success
-    return svg
-}
-
-//
-// image injection
-//
-
-function parseHTML(str) {
-    const tmp = document.implementation.createHTMLDocument('')
-    tmp.body.innerHTML = str
-    return tmp.body.children[0]
-}
-
-// image injection for static viewing
-function injectImage(img) {
-    const src = img.getAttribute('src')
-    const request = new XMLHttpRequest()
-    request.open('GET', src, true)
-    request.onload = function() {
-        if (this.status >= 200 && this.status < 400) {
-            const cls = img.classList
-            const alt = img.getAttribute('alt')
-            const svg = parseHTML(this.response)
-            svg.classList = cls
-            svg.setAttribute('alt', alt)
-            img.parentNode.replaceChild(svg, img)
-        }
-    }
-    request.send()
-}
-
-function injectScript(scr) {
-    const src = scr.innerText
-    const width = scr.getAttribute('width')
-    const size = string_to_int(scr.getAttribute('size'))
-    const svg = renderGum(src, { size: size })
-    const elem = parseHTML(svg)
-    if (width != null) {
-        elem.style.width = width
-        elem.style.display = 'block'
-        elem.style.margin = 'auto'
-    }
-    scr.replaceWith(elem)
-}
-
-function injectScripts(elem) {
-    elem = elem ?? document
-    elem.querySelectorAll('script').forEach(scr => {
-        if (scr.getAttribute('type') == 'text/gum') {
-            injectScript(scr)
-        }
-    })
-}
-
-function injectImages(elem) {
-    elem = elem ?? document
-    elem.querySelectorAll('img').forEach(img => {
-        if (img.classList.contains('gum')) {
-            injectImage(img)
-        }
-    })
-}
 
 //
 // exports
 //
 
 export {
-    KEYS, VALS, Context, Element, Group, Svg, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, gzip, zip, reshape, split, concat, pos_rect, pad_rect, radial_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_object, is_function, is_element
+    KEYS, VALS, Context, Element, Group, Svg, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, Filter, Effect, DropShadow, Image, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, rounder, random, uniform, normal, cumsum, pi, phi, r2d, d2r, none, blue, red, green, is_string, is_array, is_object, is_function, is_element
 }
