@@ -90,7 +90,7 @@ function evaluateGum(code, size) {
   // wrap it in Svg if not already
   if (!(element instanceof Svg)) {
     const [ width, height ] = size
-    element = new Svg({ children: [ element ], width, height })
+    element = new Svg({ children: [ element ], width, height, size })
   }
 
   // render to string
