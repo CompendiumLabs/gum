@@ -32,10 +32,10 @@ const num_ticks_base = 5
 const tick_size_base = 0.02
 const tick_label_size_base = 2.5
 const tick_label_offset_base = 2.0
-const label_size_base = 0.5
+const label_size_base = 0.07
 const label_offset_base = 0.15
-const title_size_base = 0.1
-const title_offset_base = 0.1
+const title_size_base = 0.14
+const title_offset_base = 0.08
 
 // default styling
 const svg_attr_base = {
@@ -142,7 +142,7 @@ function any(arr) {
 
 // vector ops
 
-function broadcast2d(x, y) {
+function broadcast_tuple(x, y) {
     const xa = is_array(x)
     const ya = is_array(y)
     if (xa == ya) return [ x, y ]
@@ -152,8 +152,8 @@ function broadcast2d(x, y) {
 }
 
 function broadcastFunc(f) {
-    return (x, y) => {
-        [ x, y]  = broadcast2d(x, y)
+    return (x0, y0) => {
+        const [ x, y] = broadcast_tuple(x0, y0)
         if (is_scalar(x) && is_scalar(y)) return f(x, y)
         else return zip(x, y).map(([ a, b ]) => f(a, b))
     }
@@ -197,9 +197,9 @@ function normalize(vals, degree) {
 // array generators
 //
 
-function range(i0, i1, step) {
-    step = step ?? 1;
-    [ i0, i1 ] = (i1 == null) ? [ 0, i0 ] : [ i0, i1 ]
+function range(ia, ib, step) {
+    step = step ?? 1
+    const [ i0, i1 ] = (ib == null) ? [ 0, ia ] : [ ia, ib ]
     const n = floor((i1 - i0) / step)
     return [...Array(n).keys()].map(i => i0 + step * i)
 }
@@ -1171,7 +1171,7 @@ class Anchor extends Group {
 }
 
 class Attach extends Group {
-    constructor({ children: children0, offset = 0, size = 1, align, side, ...attr } = {}) {
+    constructor({ children: children0, offset = 0, size = 1, align = 'center', side, ...attr } = {}) {
         const child = check_singleton(children0)
 
         // get extent and map
@@ -1953,7 +1953,7 @@ class TitleFrame extends Frame {
 }
 
 // determines actual values given combinations of limits, values, and functions
-function sympath({fx, fy, xlim, ylim, tlim = lim_base, xvals, yvals, tvals, clip = true, N} = {}) {
+function sympath({ fx, fy, xlim, ylim, tlim = lim_base, xvals, yvals, tvals, clip = true, N } = {}) {
     fx = func_or_scalar(fx)
     fy = func_or_scalar(fy)
 
@@ -1966,7 +1966,7 @@ function sympath({fx, fy, xlim, ylim, tlim = lim_base, xvals, yvals, tvals, clip
     if (Ns.size > 1) {
         throw new Error(`Error: data sizes must be in aggreement but got ${Ns}`)
     } else if (Ns.size == 1) {
-        [ N ] = Ns
+        N = [...Ns][0]
     } else {
         N = N ?? N_base
     }
@@ -2006,12 +2006,12 @@ function sympath({fx, fy, xlim, ylim, tlim = lim_base, xvals, yvals, tvals, clip
 class SymPath extends Polyline {
     constructor({ fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N, ...attr } = {}) {
         // compute path values
-        [ tvals, xvals, yvals ] = sympath({
+        const [ tvals1, xvals1, yvals1 ] = sympath({
             fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N
         })
 
         // get valid point pairs
-        const points = zip(xvals, yvals).filter(
+        const points = zip(xvals1, yvals1).filter(
             ([ x, y ]) => (x != null) && (y != null)
         )
 
@@ -2062,12 +2062,12 @@ class SymPoints extends Group {
         const fsize = is_number(size) ? (() => size) : size
 
         // compute point values
-        [tvals, xvals, yvals] = sympath({
+        const [tvals1, xvals1, yvals1] = sympath({
             fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N
         })
 
         // make points
-        const points = zip(tvals, xvals, yvals)
+        const points = zip(tvals1, xvals1, yvals1)
         const children = enumerate(points).map(([i, [t, x, y]]) =>
             shape({ rect: radial_rect([x, y], fsize(x, y, t, i)) })
         )
@@ -2091,6 +2091,10 @@ function datapoints({ xvals, yvals, xlim, ylim, N } = {}) {
     return zip(xvals, yvals)
 }
 
+function broadcast_arrays(vs, N) {
+    return vs.map(v => (v != null) ? ensure_vector(v, N) : null)
+}
+
 class DataPath extends Polyline {
     constructor({ xvals, yvals, xlim, ylim, ...attr } = {}) {
         const points = datapoints({ xvals, yvals, xlim, ylim })
@@ -2109,13 +2113,13 @@ class DataFill extends Polygon {
     constructor({ xvals1, yvals1, xvals2, yvals2, xlim, ylim, ...attr } = {}) {
         // repeat constants
         const N = max(...[ xvals1, yvals1, xvals2, yvals2 ].map(v => v?.length))
-        [xvals1, yvals1, xvals2, yvals2] = [xvals1, yvals1, xvals2, yvals2].map(
-            v => (v != null) ? ensure_vector(v, N) : null
+        const [ xvals1v, yvals1v, xvals2v, yvals2v ] = broadcast_arrays(
+            [ xvals1, yvals1, xvals2, yvals2 ], N
         )
 
         // make forward-backard shape
-        const points1 = datapoints({ xvals: xvals1, yvals: yvals1, xlim, ylim, N })
-        const points2 = datapoints({ xvals: xvals2, yvals: yvals2, xlim, ylim, N })
+        const points1 = datapoints({ xvals: xvals1v, yvals: yvals1v, xlim, ylim, N })
+        const points2 = datapoints({ xvals: xvals2v, yvals: yvals2v, xlim, ylim, N })
         const points = [ ...points1, ...points2.reverse() ]
 
         // pass to pointstring
@@ -2471,7 +2475,7 @@ class Bars extends Group {
 //
 
 function ensure_tick(tick, prec = 2) {
-    const [ str, pos ] = is_scalar(tick) ? [tick, tick] : tick
+    const [ pos, str ] = is_scalar(tick) ? [tick, tick] : tick
     return new Text({ children: rounder(str, prec), tick: pos })
 }
 
@@ -2633,28 +2637,12 @@ class VAxis extends Axis {
     }
 }
 
-class XLabel extends Attach {
-    constructor({ children: children0, offset = label_offset_base, size = label_size_base, side = 'bottom', ...attr } = {}) {
-        const text = check_singleton(children0);
-        const label = is_element(text) ? text : new Text({ children: text, ...attr });
-        super({ children: label, offset, size, side, ...attr });
-    }
-}
-
-class YLabel extends Attach {
-    constructor({ children: children0, offset = label_offset_base, size = label_size_base, side = 'left', ...attr } = {}) {
-        const text = check_singleton(children0);
-        const label = is_element(text) ? text : new Text({ children: text, ...attr });
-        const rotate = new Place({ children: label, rotate: -90, invar: false });
-        super({ children: rotate, offset, size, side, ...attr });
-    }
-}
-
-class Title extends Frame {
-    constructor({ children: children0, ...attr } = {}) {
-        const text = check_singleton(children0);
-        const label = is_element(text) ? text : new Text({ children: text, ...attr });
-        super({ children: label, ...attr });
+class BoxLabel extends Attach {
+    constructor({ children: children0, ...attr0 } = {}) {
+        const text = check_singleton(children0)
+        const [text_attr, attr] = prefix_split(['text'], attr0)
+        const label = is_element(text) ? text : new Text({ children: text, ...text_attr })
+        super({ children: label, ...attr })
     }
 }
 
@@ -2678,45 +2666,46 @@ class VMesh extends Mesh {
 
 function make_legendbadge(c, attr) {
     if (is_string(c)) {
-        attr = {stroke: c, ...attr};
+        attr = {stroke: c, ...attr}
     } else if (is_object(c)) {
-        attr = {...c, ...attr};
+        attr = {...c, ...attr}
     } else {
-        throw new Error(`Unrecognized legend badge specification: ${c}`);
+        throw new Error(`Unrecognized legend badge specification: ${c}`)
     }
-    return new HLine({ pos: 0.5, aspect: 1, ...attr });
+    return new HLine({ aspect: 1, ...attr })
 }
 
 function make_legendlabel(s) {
-    return new Text({children: s});
+    return new Text({ children: s })
 }
 
 class Legend extends Place {
     constructor({ lines, badgewidth = 0.1, vspacing = 0.1, hspacing = 0.025, rect, pos, rad, ...attr0 } = {}) {
-        const [badge_attr, attr] = prefix_split(['badge'], attr0);
+        const [badge_attr, attr] = prefix_split(['badge'], attr0)
 
         // construct legend badges and labels
-        const [badges, labels] = zip(...lines);
-        badges = badges.map(b => is_element(b) ? b : make_legendbadge(b, badge_attr));
-        labels = labels.map(t => is_element(t) ? t : make_legendlabel(t));
+        const [badges, labels] = zip(...lines)
+        badges = badges.map(b => is_element(b) ? b : make_legendbadge(b, badge_attr))
+        labels = labels.map(t => is_element(t) ? t : make_legendlabel(t))
 
         // construct legend grid
-        const bs = new VStack({ children: badges, spacing: vspacing });
-        const ls = new VStack({ children: labels, expand: false, align: 'left', spacing: vspacing });
-        const vs = new HStack({ children: [bs, ls], spacing: hspacing });
-        const fr = new Frame({ children: vs, ...attr });
+        const bs = new VStack({ children: badges, spacing: vspacing })
+        const ls = new VStack({ children: labels, expand: false, align: 'left', spacing: vspacing })
+        const vs = new HStack({ children: [bs, ls], spacing: hspacing })
+        const fr = new Frame({ children: vs, ...attr })
 
         // pass to Place
-        super({ children: fr, rect, pos, rad });
+        super({ children: fr, rect, pos, rad })
     }
 }
 
 class Note extends Place {
     constructor({ children: children0, latex = false, ...attr0 } = {}) {
-        const [text_attr, attr] = prefix_split(['text'], attr0);
-        const Maker = latex ? Latex : Text;
-        const label = new Maker({ children: text, ...text_attr });
-        super({ children: label, ...attr });
+        const text = check_singleton(children0)
+        const [text_attr, attr] = prefix_split(['text'], attr0)
+        const Maker = latex ? Latex : Text
+        const label = new Maker({ children: text, ...text_attr })
+        super({ children: label, ...attr })
     }
 }
 
@@ -2762,7 +2751,7 @@ class Plot extends Group {
         children: children0, xlim, ylim, xaxis = true, yaxis = true, xticks = num_ticks_base, yticks = num_ticks_base, grid, xgrid, ygrid, xlabel, ylabel, title, tick_size = tick_size_base, label_size, label_offset, label_align, title_size = title_size_base, title_offset = title_offset_base, xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, xlabel_align, ylabel_align, padding, prec, aspect, flex = false, fill, ...attr0
     } = {}) {
         const elems = ensure_array(children0)
-        aspect = flex ? null : (aspect ?? 'auto');
+        aspect = flex ? null : (aspect ?? 'auto')
 
         // some advanced piping
         let [
@@ -2770,7 +2759,7 @@ class Plot extends Group {
             ylabel_attr, label_attr, title_attr, attr
         ] = prefix_split([
             'xaxis', 'yaxis', 'axis', 'xgrid', 'ygrid', 'grid', 'xlabel', 'ylabel', 'label', 'title'
-        ], attr0);
+        ], attr0)
         xaxis_attr = { ...axis_attr, ...xaxis_attr }
         yaxis_attr = { ...axis_attr, ...yaxis_attr }
         xgrid_attr = { ...grid_attr, ...xgrid_attr }
@@ -2791,8 +2780,8 @@ class Plot extends Group {
         // ensure consistent apparent tick size
         const [ xrange, yrange ] = [ xmax - xmin, ymax - ymin ]
         aspect = (aspect == 'auto') ? abs(xrange/yrange) : aspect
-        let [ xtick_size, ytick_size ] = aspect_invariant(tick_size, aspect);
-        [ xtick_size, ytick_size ] = [ yrange * xtick_size, xrange * ytick_size ]
+        const [ xtick_size0, ytick_size0 ] = aspect_invariant(tick_size, aspect)
+        const [ xtick_size, ytick_size ] = [ yrange * xtick_size0, xrange * ytick_size0 ]
 
         // default xaxis generation
         if (xaxis === true) {
@@ -2815,13 +2804,13 @@ class Plot extends Group {
 
         // automatic grid path
         if (grid === true || xgrid === true) {
-            const locs = (xaxis != null) ? xaxis.locs : null
+            const locs = is_array(xgrid) ? xgrid : (xaxis != null) ? xaxis.locs : null
             xgrid = new HMesh({ locs, lim: ylim, coord, ...xgrid_attr })
         } else {
             xgrid = null
         }
         if (grid === true || ygrid === true) {
-            const locs = (yaxis != null) ? yaxis.locs : null
+            const locs = is_array(ygrid) ? ygrid : (yaxis != null) ? yaxis.locs : null
             ygrid = new VMesh({ locs, lim: xlim, coord, ...ygrid_attr })
         } else {
             ygrid = null
@@ -2853,18 +2842,18 @@ class Plot extends Group {
 
         // optional axis labels
         if (xlabel != null) {
-            xlabel = new XLabel({ children: xlabel, size: xlabel_size, offset: xlabel_offset, align: xlabel_align, ...xlabel_attr })
+            xlabel = new BoxLabel({ children: xlabel, side: 'bottom', size: xlabel_size, offset: xlabel_offset, align: xlabel_align, ...xlabel_attr })
             children.push(xlabel)
         }
         if (ylabel != null) {
-            ylabel = new YLabel({ children: ylabel, size: ylabel_size, offset: ylabel_offset, align: ylabel_align, ...ylabel_attr })
+            ylabel = new BoxLabel({ children: ylabel, side: 'left', size: ylabel_size, offset: ylabel_offset, align: ylabel_align, ...ylabel_attr })
             children.push(ylabel)
         }
 
         // optional plot title
         if (title != null) {
-            title = new Title({ children: title, ...title_attr });
-            children.push([title, [0, -title_offset-title_size, 1, -title_offset]]);
+            title = new BoxLabel({ children: title, side: 'top', size: title_size, offset: title_offset, ...title_attr })
+            children.push(title)
         }
 
         // pass to Group
@@ -2896,7 +2885,7 @@ class Image extends Element {
 //
 
 const VALS = [
-    Context, Element, Group, Svg, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, Filter, Effect, DropShadow, Image, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, rounder, random, uniform, normal, cumsum, pi, phi, r2d, d2r, none, blue, red, green
+    Context, Element, Group, Svg, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, BoxLabel, Mesh, Graph, Plot, Legend, Note, Filter, Effect, DropShadow, Image, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, rounder, random, uniform, normal, cumsum, pi, phi, r2d, d2r, none, blue, red, green
 ]
 const KEYS = VALS.map(g => g.name)
 
@@ -2905,5 +2894,5 @@ const KEYS = VALS.map(g => g.name)
 //
 
 export {
-    KEYS, VALS, Context, Element, Group, Svg, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, Legend, Note, Filter, Effect, DropShadow, Image, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, rounder, random, uniform, normal, cumsum, pi, phi, r2d, d2r, none, blue, red, green, is_string, is_array, is_object, is_function, is_element
+    KEYS, VALS, Context, Element, Group, Svg, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Flip, VFlip, HFlip, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, VMultiBar, HMultiBar, Bars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, BoxLabel, Mesh, Graph, Plot, Legend, Note, Filter, Effect, DropShadow, Image, range, linspace, enumerate, repeat, meshgrid, lingrid, hexToRgba, palette, gzip, zip, reshape, split, concat, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, clamp, mask, rescale, sigmoid, logit, smoothstep, rounder, random, uniform, normal, cumsum, pi, phi, r2d, d2r, none, blue, red, green, is_string, is_array, is_object, is_function, is_element
 }
