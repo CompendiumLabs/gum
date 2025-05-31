@@ -14,11 +14,11 @@ import './fonts.css'
 //
 
 const DEFAULT_CODE = `
-<Frame padding={0.3} border={1} margin={0.05}>
-  <Plot grid ylim={[-1.5, 1.5]} xlabel="Phase (radians)" title="Hello World!">
-    <SymFill fy1={sin} fy2={cos} xlim={[0, 2*pi]} fill={blue+"99"} />
+<TitleFrame title="Flux Capacitance" margin={0.25} border-fill="#f0f0f0">
+  <Plot grid ylim={[-1.5, 1.5]} xlabel="Phase (radians)">
+    <SymFill fy1={sin} fy2={cos} xlim={[0, 2*pi]} fill={blue} fill-opacity={0.5} />
   </Plot>
-</Frame>
+</TitleFrame>
 `.trim() + '\n'
 
 export default function App() {
