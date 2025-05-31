@@ -1,0 +1,48 @@
+/* text */
+
+.smallcaps {
+    font-variant-caps: all-small-caps;
+}
+
+/* editor */
+
+.ͼ1.cm-focused {
+    outline: none;
+}
+
+.cm-theme-light {
+    width: 100%;
+}
+
+.cm-editor .cm-content {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+}
+
+.ͼ2 .cm-gutters {
+    background-color: rgb(249 250 251);
+}
+
+.ͼ2 .cm-activeLine {
+    background-color: rgba(0 0 0 / 0.04);
+}
+
+.cm-gutter {
+    min-width: 1.4rem;
+}
+
+.rounded-md .cm-editor,
+.rounded-md .cm-scroller,
+.rounded-md .cm-light-theme {
+    border-radius: 0.375rem;
+}
+
+/* hide scrollbar */
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+* {
+    scrollbar-width: none;
+}
