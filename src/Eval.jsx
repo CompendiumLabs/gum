@@ -8,14 +8,26 @@ import { KEYS, VALS, is_function, is_object, Svg } from '../lib/gum.js'
 //
 
 function parseTree(tree) {
+  // handle special cases
   if (tree == null) return null
   if (typeof tree !== 'object') return tree
   let { tag: Tag, props, children } = tree
+
+  // convert kebab case to lower-kebab case
+  props = (props != null) ? Object.fromEntries(
+    Object.entries(props).map(
+      ([ k, v ]) => [ k.replace(/-/g, '_'), v ]
+    )
+  ) : {}
+
+  // parse children
   if (Array.isArray(children)) {
       children = children.map(parseTree)
   } else if (children != null) {
       children = [ parseTree(children) ]
   }
+
+  // return the element
   return new Tag({ children, ...props })
 }
 
@@ -96,7 +108,8 @@ function evaluateGumSafe(code, size) {
   try {
     svg = evaluateGum(code, size)
   } catch (e) {
-    error = e.message
+    const trace = e.stack.split('\n').slice(1).join('\n')
+    error = `${e.message}\n\n${trace}`
   }
 
   // wrap the svg in a div
