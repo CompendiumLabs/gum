@@ -14,7 +14,7 @@ import './fonts.css'
 //
 
 const DEFAULT_CODE = `
-<TitleFrame title="Flux Capacitance" margin={0.25} border-fill="#f0f0f0">
+<TitleFrame title="Flux Capacitance" margin={0.25} fill="#f0f0f0">
   <Plot grid ylim={[-1.5, 1.5]} xlabel="Phase (radians)" ylabel="Interference">
     <SymFill fy1={sin} fy2={cos} xlim={[0, 2*pi]} fill={blue} fill-opacity={0.5} />
   </Plot>
