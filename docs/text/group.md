@@ -1,6 +1,6 @@
 # Container
 
-<span class="inherit">[Element](#Element)</span>
+[Element](/docs/element)
 
 This is the `Element` class by which components are grouped together. It accepts a list of `Element`s and their positions and attempts to place them accordingly, taking `Context` information an input and passing re-scoped `Context` information to sub-`Element`s.
 

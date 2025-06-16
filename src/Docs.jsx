@@ -2,7 +2,7 @@
 
 import { useNavigate, useParams } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
-import { marked } from 'marked'
+import ReactMarkdown from 'react-markdown'
 
 import { ErrorCatcher } from './Error'
 import { CodeEditor } from './Editor'
@@ -13,7 +13,7 @@ import { Text, HStack, Svg } from '../lib/gum.js'
 
 import './Docs.css'
 
-import meta from '../docs/meta.json?2'
+import meta from '../docs/meta.json?3'
 
 function Panel({ children, className }) {
   return <div className={`border rounded-md border-gray-500 bg-white ${className}`}>
@@ -46,17 +46,27 @@ function GumLogo() {
   </div>
 }
 
+function splitCode(code) {
+  if (code.startsWith('//')) {
+    code = code.split('\n').slice(1).join('\n')
+  }
+  return code.trim() + '\n'
+}
+
 // build document cache
 function usePage(meta, page) {
   const [ text, setText ] = useState('')
   const [ code, setCode ] = useState('')
   useEffect(() => {
     async function fetchDocs() {
+      // fetch documentation text
       const res_text = await fetch(`../docs/text/${page}.md?raw`)
-      const res_code = await fetch(`../docs/code/${page}.jsx?raw`)
       const val_text = await res_text.text()
-      const val_code = await res_code.text()
       setText(val_text)
+
+      // fetch code example
+      const res_code = await fetch(`../docs/code/${page}.jsx?raw`)
+      const val_code = await res_code.text()
       setCode(val_code)
     }
     fetchDocs()
@@ -89,8 +99,9 @@ export default function Docs() {
 
   // eval code for element render
   useEffect(() => {
+    const code1 = splitCode(code)
     const size = canvasSize ?? [ 500, 500 ]
-    const [ newElement, newError ] = evaluateGumSafe(code, size)
+    const [ newElement, newError ] = evaluateGumSafe(code1, size)
     if (newElement) setElement(newElement)
     setError(newError)
   }, [ code, canvasSize ])
@@ -100,11 +111,16 @@ export default function Docs() {
     navigate(`/docs/${name.toLowerCase()}`)
   }
 
-  // render markdown
-  const html = useMemo(() => {
-    if (!text) return null
-    return marked.parse(text)
-  }, [ text ])
+  function handleMarkdownLink({ href, children }) {
+    return <a className="cursor-pointer" onClick={e => {
+      e.preventDefault()
+      if (href.startsWith('/docs/')) {
+        navigate(href)
+      } else {
+        window.open(href, '_blank')
+      }
+    }}>{children}</a>
+  }
 
   return <div className="w-screen h-screen p-5 bg-gray-100">
     <div className="w-full h-full flex flex-row gap-5">
@@ -123,7 +139,7 @@ export default function Docs() {
           </ClickList>
         </div>
         <div className="h-full flex-1 p-5 overflow-y-auto prose max-w-none text-md">
-          <div dangerouslySetInnerHTML={{ __html: html }} />
+          <ReactMarkdown components={{ a: handleMarkdownLink }}>{text}</ReactMarkdown>
         </div>
       </Panel>
       <div className="h-full flex flex-col gap-5 w-[45%]">
