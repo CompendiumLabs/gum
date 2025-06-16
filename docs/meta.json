@@ -1,6 +1,6 @@
 {
     "main": [
-        ["gum", "gum.js"]
+        "GUM.JSX"
     ],
     "core": [
         "Element",

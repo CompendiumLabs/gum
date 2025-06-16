@@ -1,7 +1,7 @@
 // code evaluation
 
 import * as Babel from '@babel/standalone'
-import { KEYS, VALS, is_function, is_object, Svg } from '../lib/gum.js'
+import { KEYS, VALS, is_function, is_object, Rect, Svg } from '../lib/gum.js'
 
 //
 // tree parser
@@ -75,7 +75,7 @@ function parseJSX(code) {
 // gum evaluator
 //
 
-function evaluateGum(code, size) {
+function evaluateGum(code, size, { stroke = 'none', stroke_width = 1, fill = 'white' }) {
   // parse to property tree
   const tree = parseJSX(code)
 
@@ -90,7 +90,8 @@ function evaluateGum(code, size) {
   // wrap it in Svg if not already
   if (!(element instanceof Svg)) {
     const [ width, height ] = size
-    element = new Svg({ children: [ element ], width, height, size })
+    const frame = new Rect({ fill, stroke, stroke_width })
+    element = new Svg({ children: [ frame, element ], width, height, size })
   }
 
   // render to string
@@ -100,13 +101,13 @@ function evaluateGum(code, size) {
   return svg
 }
 
-function evaluateGumSafe(code, size) {
+function evaluateGumSafe(code, size, { stroke = 'none', stroke_width = 1, fill = 'white' } = {}) {
   size ??= [ 500, 500 ]
 
   // give it a shot
   let svg, error = null
   try {
-    svg = evaluateGum(code, size)
+    svg = evaluateGum(code, size, { stroke, stroke_width, fill })
   } catch (e) {
     const trace = e.stack.split('\n').slice(1).join('\n')
     error = `${e.message}\n\n${trace}`

@@ -14,11 +14,14 @@ import './fonts.css'
 //
 
 const DEFAULT_CODE = `
-<TitleFrame title="Flux Capacitance" margin={0.25} fill="#f0f0f0">
-  <Plot grid ylim={[-1.5, 1.5]} xlabel="Phase (radians)" ylabel="Interference">
-    <SymFill fy1={sin} fy2={cos} xlim={[0, 2*pi]} fill={blue} fill-opacity={0.5} />
+const xlim = [0, 2*pi]
+return <Frame fill margin={0.2}>
+  <Plot grid ylim={[-1.5, 1.5]} xlabel="Phase (radians)" ylabel="Interference" title="Flux Capacitance">
+    <SymFill fy1={sin} fy2={cos} xlim={xlim} fill={blue} opacity={0.5} />
+    <SymPath fy={sin} xlim={xlim} />
+    <SymPath fy={cos} xlim={xlim} />
   </Plot>
-</TitleFrame>
+</Frame>
 `.trim() + '\n'
 
 export default function App() {
