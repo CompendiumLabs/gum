@@ -1,5 +1,6 @@
 // docs
 
+import { useNavigate, useParams } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { marked } from 'marked'
 
@@ -46,36 +47,34 @@ function GumLogo() {
 }
 
 // build document cache
-function useDocCache(meta) {
-  const [ cache, setCache ] = useState({})
+function usePage(meta, page) {
+  const [ text, setText ] = useState('')
+  const [ code, setCode ] = useState('')
   useEffect(() => {
     async function fetchDocs() {
-      const docs = {}
-      const keys = Object.values(meta).flat()
-        .map(item => item.toLowerCase())
-      for (const key of keys) {
-        const res_text = await fetch(`../docs/text/${key}.md?raw`)
-        const res_code = await fetch(`../docs/code/${key}.jsx?raw`)
-        const text = await res_text.text()
-        const code = await res_code.text()
-        docs[`${key}.md`] = text
-        docs[`${key}.jsx`] = code
-      }
-      setCache(docs)
+      const res_text = await fetch(`../docs/text/${page}.md?raw`)
+      const res_code = await fetch(`../docs/code/${page}.jsx?raw`)
+      const val_text = await res_text.text()
+      const val_code = await res_code.text()
+      setText(val_text)
+      setCode(val_code)
     }
     fetchDocs()
-  }, [meta])
-  return cache
+  }, [meta, page])
+  return { text, code, setCode }
 }
 
-export default function Docs({}) {
+export default function Docs() {
+  // page loading and navigation
+  const { page = 'gum' } = useParams()
+  const navigate = useNavigate()
+  const { text, code, setCode } = usePage(meta, page)
+
+  // code editor setup
   const [ key, setKey ] = useState(0)
   const [ element, setElement ] = useState(null)
   const [ error, setError ] = useState(null)
-  const [ doc, setDoc ] = useState(null)
-  const [ code, setCode ] = useState('')
   const [ canvasRef, canvasSize ] = useElementSize()
-  const docCache = useDocCache(meta)
 
   // handle code updates
   function handleCode(c) {
@@ -98,23 +97,21 @@ export default function Docs({}) {
 
   // handle sidebar clicks
   function handleClick(name) {
-    const key = name.toLowerCase()
-    setDoc(docCache[`${key}.md`])
-    setCode(docCache[`${key}.jsx`])
+    navigate(`/docs/${name.toLowerCase()}`)
   }
 
   // render markdown
-  const docHtml = useMemo(() => {
-    if (!doc) return null
-    return marked.parse(doc)
-  }, [ doc ])
+  const html = useMemo(() => {
+    if (!text) return null
+    return marked.parse(text)
+  }, [ text ])
 
   return <div className="w-screen h-screen p-5 bg-gray-100">
     <div className="w-full h-full flex flex-row gap-5">
-      <Panel className="h-full w-[53%] flex flex-row">
+      <Panel className="h-full w-[55%] flex flex-row">
         <div className="h-full w-[150px] flex flex-col border-r rounded-l border-gray-500 bg-slate-200 overflow-y-auto pt-2">
           <ClickList>
-            <div className="cursor-pointer select-none border rounded px-2 m-3 hover:bg-slate-300" onClick={() => handleClick('gum')}>
+            <div className="cursor-pointer select-none border rounded px-2 m-3 hover:bg-slate-300 hover:border-blue-500" onClick={() => handleClick('')}>
               <GumLogo />
             </div>
             {Object.entries(meta).map(([ key, value ]) => <>
@@ -126,10 +123,10 @@ export default function Docs({}) {
           </ClickList>
         </div>
         <div className="h-full flex-1 p-5 overflow-y-auto prose max-w-none text-md">
-          <div dangerouslySetInnerHTML={{ __html: docHtml }} />
+          <div dangerouslySetInnerHTML={{ __html: html }} />
         </div>
       </Panel>
-      <div className="h-full flex flex-col gap-5 w-[47%]">
+      <div className="h-full flex flex-col gap-5 w-[45%]">
         <Panel className="w-full flex-1 flex">
           <CodeEditor className="h-full" code={code} setCode={handleCode} />
         </Panel>
