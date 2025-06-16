@@ -13,7 +13,7 @@ import { Text, HStack, Svg } from '../lib/gum.js'
 
 import './Docs.css'
 
-import meta from '../docs/meta.json?3'
+import meta from '../docs/meta.json?5'
 
 function Panel({ children, className }) {
   return <div className={`border rounded-md border-gray-500 bg-white ${className}`}>

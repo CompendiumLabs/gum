@@ -1,5 +1,4 @@
 // draw a grid of square boxes filled in light gray. each box contains an arrow that is pointing in a particular direction. that direction rotates clockwise as we move through the grid.
-
 const head = new Arrow(90, {
     pos: [0.5, 0],
     head: 0.3,

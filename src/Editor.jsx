@@ -1,17 +1,18 @@
 // codemirror
 
-import CodeMirror from '@uiw/react-codemirror'
+import CodeMirror, { EditorView } from '@uiw/react-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
 
-const extensions = [ javascript({ jsx: true }) ]
+const extensions = [ javascript({ jsx: true }), EditorView.lineWrapping ]
 
 const basicSetup = {
-  lineNumbers: false,
+  lineNumbers: true,
   foldGutter: false,
   indentOnInput: false,
   highlightActiveLine: true,
   highlightActiveLineGutter: false,
   autocompletion: false,
+  lineWrapping: true,
 }
 
 function CodeEditor({ editorRef, className, code, setCode }) {

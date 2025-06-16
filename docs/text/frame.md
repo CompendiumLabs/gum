@@ -8,10 +8,7 @@ There are multiple ways to specify padding and margins. If given as a scalar, it
 
 The `adjust` flag controls whether padding/margins are adjusted for the aspect ratio. If `true`, horizontal and vertical components are scaled so that their ratio is equal to the `child` element's aspect ratio. This yields padding/margins of constant apparent size regardless of aspect ratio. If `false`, the inputs are used as-is.
 
-Positional arguments:
-- `child` — the element to be encapsulated
-
-Keyword arguments:
+Parameters:
 - `padding` = `0` / `0.1` — the padding to be added (inside border)
 - `margin` = `0` / `0.1` — the margin to be added (outside border)
 - `border` = `0` / `1` — the border width to use

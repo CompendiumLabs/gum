@@ -8,12 +8,10 @@
         "Frame",
         "Stack",
         "Grid",
-        "Place",
         "Points"
     ],
     "simple": [
         "Rect",
-        "Circle",
         "Ellipse",
         "Triangle",
         "Line",
