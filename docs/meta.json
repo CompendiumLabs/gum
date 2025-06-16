@@ -1,7 +1,4 @@
 {
-    "main": [
-        "GUM.JSX"
-    ],
     "core": [
         "Element",
         "Container",

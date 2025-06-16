@@ -8,7 +8,11 @@ import { CodeEditor } from './Editor'
 import { useElementSize } from './utils'
 import { evaluateGumSafe } from './Eval'
 
-import meta from '../docs/meta.json'
+import { Text, HStack, Svg } from '../lib/gum.js'
+
+import './Docs.css'
+
+import meta from '../docs/meta.json?2'
 
 function Panel({ children, className }) {
   return <div className={`border rounded-md border-gray-500 bg-white ${className}`}>
@@ -16,15 +20,28 @@ function Panel({ children, className }) {
   </div>
 }
 
-function ClickList({ children, onClick }) {
+function ClickList({ children }) {
   return <div className="w-full h-full flex flex-col gap-1">
     {children}
   </div>
 }
 
-function ClickItem({ name, onClick }) {
-  return <div className="cursor-pointer select-none hover:bg-slate-300 border-l-5 border-transparent hover:border-l-5 hover:border-blue-500 p-2" onClick={onClick}>
-    {name}
+function ClickItem({ children, onClick }) {
+  return <div className={`cursor-pointer select-none hover:bg-slate-300 border-l-5 border-transparent hover:border-l-5 hover:border-blue-500 p-2`} onClick={onClick}>
+    {children}
+  </div>
+}
+
+function makeGumLogo() {
+  const runes = [...'GUM'].map(r => new Text({ children: r }))
+  const text = new HStack({ children: runes, spacing: 0.4 })
+  const svg = new Svg({ children: text, size: 200, aspect: 2.8 })
+  return svg.svg()
+}
+
+function GumLogo() {
+  return <div className="w-full h-full flex justify-center items-center">
+    <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: makeGumLogo() }} />
   </div>
 }
 
@@ -37,8 +54,8 @@ function useDocCache(meta) {
       const keys = Object.values(meta).flat()
         .map(item => item.toLowerCase())
       for (const key of keys) {
-        const res_text = await fetch(`/docs/text/${key}.md?raw`)
-        const res_code = await fetch(`/docs/code/${key}.jsx?raw`)
+        const res_text = await fetch(`../docs/text/${key}.md?raw`)
+        const res_code = await fetch(`../docs/code/${key}.jsx?raw`)
         const text = await res_text.text()
         const code = await res_code.text()
         docs[`${key}.md`] = text
@@ -97,15 +114,18 @@ export default function Docs({}) {
       <Panel className="h-full w-[53%] flex flex-row">
         <div className="h-full w-[150px] flex flex-col border-r rounded-l border-gray-500 bg-slate-200 overflow-y-auto pt-2">
           <ClickList>
+            <div className="cursor-pointer select-none border rounded px-2 m-3 hover:bg-slate-300" onClick={() => handleClick('gum')}>
+              <GumLogo />
+            </div>
             {Object.entries(meta).map(([ key, value ]) => <>
               <div key={key} className="pl-2 font-mono smallcaps text-sm text-slate-600 select-none">{key}</div>
               {value.map((item, index) =>
-                <ClickItem key={index} name={item} onClick={() => handleClick(item)} />
+                <ClickItem key={index} onClick={() => handleClick(item)}>{item}</ClickItem>
               )}
             </>)}
           </ClickList>
         </div>
-        <div className="h-full flex-1 p-5 overflow-y-auto prose max-w-none">
+        <div className="h-full flex-1 p-5 overflow-y-auto prose max-w-none text-md">
           <div dangerouslySetInnerHTML={{ __html: docHtml }} />
         </div>
       </Panel>

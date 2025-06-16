@@ -2,7 +2,7 @@
 
 <span class="inherit">[Container](#Container) > [Element](#Element)</span>
 
-This is a simple container class allowing you to add padding, margins, and a border to a single `Element`. It's pretty versatile and is often used to set up the outmost positioning of a figure. Mirroring the standard CSS definitions, padding is space inside the border and margin is space outside the border.
+This is a simple container class allowing you to add padding, margins, and a border to a single `Element`. It's pretty versatile and is often used to set up the outermost positioning of a figure. Mirroring the standard CSS definitions, padding is space inside the border and margin is space outside the border.
 
 There are multiple ways to specify padding and margins. If given as a scalar, it is constant across all sides. If two values are given, they correspond to the horizontal and vertical sides. If four values are given, they correspond to `[left, top, right, bottom]`.
 
@@ -12,10 +12,10 @@ Positional arguments:
 - `child` — the element to be encapsulated
 
 Keyword arguments:
-- `padding` = `0` — the padding to be added (inside border)
-- `margin` = `0` — the margin to be added (outside border)
-- `border` = `0` — the border width to use
-- `rounded` = `0` — the border rounding to use
+- `padding` = `0` / `0.1` — the padding to be added (inside border)
+- `margin` = `0` / `0.1` — the margin to be added (outside border)
+- `border` = `0` / `1` — the border width to use
+- `rounded` = `0` / `0.1` — the border rounding to use
 - `adjust` = `true` — whether to adjust values for aspect ratio
 - `flex` = `false` — if `true`, do *not* inherit `child` aspect ratio
 - `shape` = `Rect` — the shape class to use for the border
