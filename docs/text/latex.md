@@ -1,14 +1,9 @@
 # Math
 
-<span class="inherit">[Element](#Element)</span>
+[Text](/docs/text) > [Element](/docs/element)
 
-Creates a new `Math` math element from LaTeX source. Uses `MathJax` when available to render in SVG and calculate aspect ratio. This is also implicitly accessible through `TextFrame` and `Note` elements when passing `latex: true`.
+Creates a new `Math` math element from LaTeX source. Uses `MathJax` when available to render in SVG and calculate aspect ratio. This is also implicitly accessible through [TextFrame](/docs/textframe) when passing the `latex` flag. As seen in the example, you will probably need to wrap the LaTeX in `{"..."}` to prevent syntax errors.
 
-Positional arguments:
-
-- `tex`: a string to be used as the content
-
-Keyword arguments:
-
-- `offset` = `[0, 0]`: the position of the center of the element
-- `scale` = `1`: the proportional size of the element
+Parameters:
+- `offset` — the position of the center of the element
+- `scale` — the proportional size of the element

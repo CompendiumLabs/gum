@@ -1,19 +1,15 @@
 # Node
 
-<span class="inherit">[Place](#Place) > [Container](#Container) > [Element](#Element)</span>
+[Frame](/docs/frame) > [Element](/docs/element)
 
-This is a container class that encloses text in a `Frame` at a particular position. Passing a string or list of strings to `text` will automatically create a `MultiText` node. One can also simply pass a generic `Element`. The primary usage of this is in the creation of networks in conjunction with `Edge` objects. Additional keyword arguments are passed to the `Frame` constructor.
+This is a container class that encloses text in a `Frame` at a particular position. Passing a string or list of strings to `text` will automatically create a `MultiText` node. One can also simply pass a generic `Element`. The primary usage of this is in the creation of networks using the [Network](/docs/network) container. You must provide a `label` argument to reference this in an [Edge](/docs/edge) element.
 
-Positional arguments:
-- `text` — a string, a list of strings, or an `Element` to be used as the content
-- `pos` — the position to place the node
+Parameters:
+- `label` — a string or `Element` to be used as the label
+- `rad` = `0.1` — the radius of the node box (will adjust to aspect)
+- `padding` = `0.1` — the padding of the node box
+- `border` = `1` — the border width of the node box
+- `rounded` = `0.05` — the radius of the corners of the node box
 
-Keyword arguments:
-- `size` = `0.1` — the size of the node box
-
-Subunit names:
-- `text` — keywords to pass to an auto-generated `Text` object or objects
-
-Functions:
-- `get_center` — returns the center of the node
+Methods:
 - `get_anchor(direc)` — returns the anchor point of the node in the specified direction (`n`, `s`, `e`, `w`)

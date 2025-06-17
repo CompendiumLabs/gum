@@ -33,13 +33,12 @@
     "networks": [
         "Node",
         "Edge",
-        "Networks"
+        "Network"
     ],
     "display": [
         "Text",
         "Emoji",
         "Latex",
-        "Note",
         "TextFrame",
         "TitleFrame"
     ],
