@@ -9,8 +9,8 @@ Parameters:
 - `xanchor`/`yanchor` — the value at which to place the respective axis. Note that the `xanchor` is a y-value and vice versa. Defaults to `xmin`/`ymin`
 - `xticks`/`yticks` = `5` — either an integer for evenly spaced ticks, a list of tick locations, or list of tick `[location, label]` pairs (see [Axis](/docs/axis) for more details)
 - `xgrid`/`ygrid` = `false` — whether to show a grid in the background. If `true`, the grid lines match the specified ticks. Alternatively, you can pass a list of positions to override this
-- `xlabel`/`ylabel` — a string or `Element` to use as the respective label
-- `title` — a string or `Element` to use as the title
+- `xlabel`/`ylabel` — a string or **Element** to use as the respective label
+- `title` — a string or **Element** to use as the title
 
 Subunits:
 - `xaxis`/`yaxis`/`axis` — the axes, including lines, ticks, and tick labels

@@ -6,9 +6,9 @@ A special type of [Frame](/docs/frame) that places a title element in a box cent
 
 Parameters:
 - `title` — the text or element to use as the title
-- `title_size` — `0.075`: the size of the title element
-- `adjust` — `true`: whether to adjust the padding and margin to account for the title element
-- `border` — `1`: the outer frame border width to use
+- `title_size` = `0.075` — the size of the title element
+- `adjust` = `true` — whether to adjust the padding and margin to account for the title element
+- `border` = `1` — the outer frame border width to use
 
 Subunits:
 - `title` — the title element

@@ -1,8 +1,8 @@
 # Context
 
-This is the class the handles the flow of information down the `Element` chain as rendering happens. Essentially, it contains information about the absolute location (in pixels) of the current `Element` and provides methods for mapping from coordinate positions within that `Element` (such as `[0.3, 0.6]`) to pixel positions (such as `[100, 250]`).
+This is the class the handles the flow of information down the [Element](/docs/element) chain as rendering happens. Essentially, it contains information about the absolute location (in pixels) of the current Element and provides methods for mapping from coordinate positions within that Element (such as `[0.3, 0.6]`) to pixel positions (such as `[100, 250]`).
 
-The most commonly used would be `mapPoint` for positions, `mapRect` for areas, and `mapSize` for sizes. These are used as the core logic in most custom `Element` classes. See [Element](/docs/element) for more information on their proper usage in that setting.
+The most commonly used would be `mapPoint` for positions, `mapRect` for areas, and `mapSize` for sizes. These are used as the core logic in most custom Element classes. See [Element](/docs/element) for more information on their proper usage in that setting.
 
 The `map` function is used generate a subcontext for child elements. The input `rect` specifies where to place the child in the coordinate system of the parent, while the `coord` argument specifies a new coordinate system for the child to use. The canonical usage of the `coord` argument is in [Graph](/docs/graph), where we want to place the graph in a particular spot but specify child positions in an arbitrary coordinate system.
 

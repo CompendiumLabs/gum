@@ -2,7 +2,7 @@
 
 [Group](/docs/group) > [Element](/docs/element)
 
-This is a simple container class allowing you to add padding, margins, and a border to a single `Element`. It's pretty versatile and is often used to set up the outermost positioning of a figure. Mirroring the standard CSS definitions, padding is space inside the border and margin is space outside the border.
+This is a simple container class allowing you to add padding, margins, and a border to a single **Element**. It's pretty versatile and is often used to set up the outermost positioning of a figure. Mirroring the standard CSS definitions, padding is space inside the border and margin is space outside the border.
 
 There are multiple ways to specify padding and margins. If given as a scalar, it is constant across all sides. If two values are given, they correspond to the horizontal and vertical sides. If four values are given, they correspond to `[left, top, right, bottom]`.
 
@@ -18,4 +18,4 @@ Parameters:
 - `shape` = `Rect` — the shape class to use for the border
 
 Subunit names:
-- `border` — keywords to pass to border, such as `stroke` or `stroke_dasharray`
+- `border` — keywords to pass to border, such as `stroke` or `stroke-dasharray`

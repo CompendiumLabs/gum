@@ -11,8 +11,8 @@ There are a number of related elements that can handle different types of text:
 - [Latex](/docs/latex) is specialized for the display of LaTeX expressions
 
 Parameters:
-- `font_family` — `'IBMPlexSans'`: the font family (for display and size calculations)
-- `font_weight` — `100`: the font weight (for display and size calculations)
-- `font_size` — `null`: only set this to hard-code a specific font size
-- `color` — `black` = sets the text color using both stroke and fill (this is the usual way)
-- `offset` — `[0.0, -0.13]`: offset of the text relative to its bounding box
+- `font_family` = `'IBMPlexSans'` — the font family (for display and size calculations)
+- `font_weight` = `100` — the font weight (for display and size calculations)
+- `font_size` = `null` — only set this to hard-code a specific font size
+- `color` = `black` — sets the text color using both stroke and fill (this is the usual way)
+- `offset` = `[0.0, -0.13]` — offset of the text relative to its bounding box

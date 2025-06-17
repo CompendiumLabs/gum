@@ -2,7 +2,7 @@
 
 [Group](/docs/group) > [Element](/docs/element)
 
-This creates a cubic spline path from one point to another with optional arrowheads at either or both ends. It is named `Edge` because of its usage in network diagrams with [Network](/docs/network). The emanation directions are automatically inferred from the relative point positions but can be overriden as well.
+This creates a cubic spline path from one point to another with optional arrowheads at either or both ends. It is named **Edge** because of its usage in network diagrams with [Network](/docs/network). The emanation directions are automatically inferred from the relative point positions but can be overriden as well.
 
 Parameters:
 - `node1`/`node2` — the beginning and ending [Node](/docs/node) for the path and where the optional arrowheads are placed, or a `[node, direc]` pair where `direc` specifies the emanation direction

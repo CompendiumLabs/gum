@@ -1,6 +1,6 @@
 # Element
 
-The base class for all `gum.js` objects. You will usually not be working with this object directly unless you are implementing your own custom elements. An `Element` has a few methods that can be overriden, each of which takes a [Context](/docs/context) object as an argument. The vast majority of implementations will override only `props` and `inner` (for non-unary elements).
+The base class for all `gum.js` objects. You will usually not be working with this object directly unless you are implementing your own custom elements. An **Element** has a few methods that can be overriden, each of which takes a [Context](/docs/context) object as an argument. The vast majority of implementations will override only `props` and `inner` (for non-unary elements).
 
 Parameters:
 - `children` = `[]` — a list of child elements

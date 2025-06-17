@@ -10,4 +10,4 @@ Keyword arguments:
 - `shape` = `Dot()` — the default shape to use for children
 - `stroke` = `black` — the color of the stroke
 - `fill` = `black` — the color of the fill
-- `stroke_width` = `1` — the width of the stroke
+- `stroke-width` = `1` — the width of the stroke

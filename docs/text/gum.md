@@ -4,7 +4,7 @@ Welcome to the gum.js docs! Click on an item in the list on the left to get more
 
 Each entry has a description of the operation and arguments of the item and an associated example code snippet. You can edit the code snippet, but note that these will get clobbered if you navigate to another entry! Go to the [main editor](/) for non-ephemeral work.
 
-The syntax is an XML component style one familiar to React developers. The output is pure SVG. You can nest objects in interesting ways and specify their parameters.
+The syntax is an XML component style one familiar to React developers. The output is pure SVG. You can nest objects in interesting ways and specify their parameters. Positions and sizes are specified proportionally (i.e. between `0` and `1`), but some quantities like `border` or `stroke-width` are specified in absolute units.
 
 ## Common Patterns
 

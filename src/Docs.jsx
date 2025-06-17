@@ -47,16 +47,20 @@ function GumLogo() {
 }
 
 function splitCode(code) {
+  let desc = ''
   if (code.startsWith('//')) {
-    code = code.split('\n').slice(1).join('\n')
+    const lines = code.split('\n')
+    desc = lines[0].slice(2).trim()
+    code = lines.slice(1).join('\n')
   }
-  return code.trim() + '\n'
+  return { code: code.trim() + '\n', desc: desc.trim() }
 }
 
 // build document cache
 function usePage(meta, page) {
   const [ text, setText ] = useState('')
   const [ code, setCode ] = useState('')
+  const [ desc, setDesc ] = useState('')
   useEffect(() => {
     async function fetchDocs() {
       // fetch documentation text
@@ -65,20 +69,22 @@ function usePage(meta, page) {
       setText(val_text)
 
       // fetch code example
-      const res_code = await fetch(`../docs/code/${page}.jsx?raw`)
-      const val_code = await res_code.text()
+      const res_java = await fetch(`../docs/code/${page}.jsx?raw`)
+      const val_java = await res_java.text()
+      const { code: val_code, desc: val_desc } = splitCode(val_java)
       setCode(val_code)
+      setDesc(val_desc)
     }
     fetchDocs()
   }, [meta, page])
-  return { text, code, setCode }
+  return { text, code, desc, setCode }
 }
 
 export default function Docs() {
   // page loading and navigation
   const { page = 'gum' } = useParams()
   const navigate = useNavigate()
-  const { text, code, setCode } = usePage(meta, page)
+  const { text, code, desc, setCode } = usePage(meta, page)
 
   // code editor setup
   const [ key, setKey ] = useState(0)
@@ -99,9 +105,8 @@ export default function Docs() {
 
   // eval code for element render
   useEffect(() => {
-    const code1 = splitCode(code)
     const size = canvasSize ?? [ 500, 500 ]
-    const [ newElement, newError ] = evaluateGumSafe(code1, size)
+    const [ newElement, newError ] = evaluateGumSafe(code, size)
     if (newElement) setElement(newElement)
     setError(newError)
   }, [ code, canvasSize ])
@@ -143,7 +148,8 @@ export default function Docs() {
         </div>
       </Panel>
       <div className="h-full flex flex-col gap-5 w-[45%]">
-        <Panel className="w-full flex-1 flex">
+        <Panel className="w-full flex-1 flex flex-col">
+          <div className="text-sm text-gray-500 p-2 border-b rounded-t border-gray-400 bg-slate-100">{desc}</div>
           <CodeEditor className="h-full" code={code} setCode={handleCode} />
         </Panel>
         <Panel ref={canvasRef} className="w-full h-[50%]">
