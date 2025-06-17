@@ -27,8 +27,8 @@ function ClickList({ children }) {
   </div>
 }
 
-function ClickItem({ children, onClick }) {
-  return <div className={`cursor-pointer select-none hover:bg-slate-300 border-l-5 border-transparent hover:border-l-5 hover:border-blue-500 p-2`} onClick={onClick}>
+function ClickItem({ children, onClick, active }) {
+  return <div className={`cursor-pointer select-none hover:bg-slate-300 border-x-5 border-transparent hover:border-l-blue-500 p-2 ${active ? 'bg-slate-300 border-l-slate-500' : ''}`} onClick={onClick}>
     {children}
   </div>
 }
@@ -133,7 +133,7 @@ export default function Docs() {
             {Object.entries(meta).map(([ key, value ]) => <>
               <div key={key} className="pl-2 font-mono smallcaps text-sm text-slate-600 select-none">{key}</div>
               {value.map((item, index) =>
-                <ClickItem key={index} onClick={() => handleClick(item)}>{item}</ClickItem>
+                <ClickItem key={index} onClick={() => handleClick(item)} active={page === item.toLowerCase()}>{item}</ClickItem>
               )}
             </>)}
           </ClickList>
