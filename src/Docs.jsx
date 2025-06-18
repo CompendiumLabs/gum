@@ -35,7 +35,7 @@ function ClickItem({ children, onClick, active }) {
 
 function makeGumLogo() {
   const runes = [...'GUM'].map(r => new Text({ children: r }))
-  const text = new HStack({ children: runes, spacing: 0.4 })
+  const text = new HStack({ children: runes, spacing: 0.2 })
   const svg = new Svg({ children: text, size: 200, aspect: 2.8 })
   return svg.svg()
 }
@@ -161,3 +161,5 @@ export default function Docs() {
     </div>
   </div>
 }
+
+export { GumLogo }

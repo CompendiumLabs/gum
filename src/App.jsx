@@ -5,6 +5,7 @@ import { evaluateGumSafe } from './Eval'
 import { CodeEditor } from './Editor'
 import { ErrorCatcher } from './Error'
 import { useElementSize } from './utils'
+import { GumLogo } from './Docs'
 
 import './App.css'
 import './fonts.css'
@@ -75,11 +76,11 @@ export default function App() {
         </div>
         <div className="w-[45%] h-full flex">
           <div className="w-full h-full flex flex-col">
-            <div className="w-full flex flex-row cursor-default select-none">
+            <div className="w-full flex flex-row gap-2 cursor-default select-none">
               <div className="flex-1 p-2 border border-b-0 border-gray-500 rounded-t-md font-mono smallcaps bg-white">
                 Status — { error ? <span className="text-red-500">Error</span> : <span className="text-green-700">Success</span> }
               </div>
-              <div className="w-[100px] p-2 font-mono text-center text-gray-700">GUM.JSX</div>
+              <div className="my-1 mr-2 p-1 px-3 font-mono text-gray-700 border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('/docs', '_blank') }>?</div>
             </div>
             <div className="w-full flex-1 p-2 border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
               {error && <div className="whitespace-pre-wrap font-mono text-sm">{error}</div>}
