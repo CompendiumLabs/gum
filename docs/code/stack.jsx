@@ -3,9 +3,6 @@ const donut = <TextFrame aspect={1}>🍩</TextFrame>
 return <Frame margin>
   <VStack>
     {donut}
-    <HStack>
-      {donut}
-      {donut}
-    </HStack>
+    <HStack>{donut}{donut}</HStack>
   </VStack>
 </Frame>
