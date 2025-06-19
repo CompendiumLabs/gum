@@ -105,7 +105,8 @@ export default function Docs() {
 
   // eval code for element render
   useEffect(() => {
-    const size = canvasSize ?? [ 500, 500 ]
+    const [ width, height ] = canvasSize ?? [ 500, 500 ]
+    const size = [ 0.9 * width, 0.9 * height ]
     const [ newElement, newError ] = evaluateGumSafe(code, size)
     if (newElement) setElement(newElement)
     setError(newError)
@@ -152,8 +153,8 @@ export default function Docs() {
           <div className="text-sm text-gray-500 p-2 border-b rounded-t border-gray-400 bg-slate-100">{desc}</div>
           <CodeEditor className="h-full" code={code} setCode={handleCode} />
         </Panel>
-        <Panel ref={canvasRef} className="w-full h-[50%]">
-          <div className="w-full h-full flex justify-center items-center pointer-events-none select-none rounded-md">
+        <Panel className="w-full h-[50%]">
+          <div ref={canvasRef} className="w-full h-full flex justify-center items-center pointer-events-none select-none rounded-md">
             <ErrorCatcher key={key} onError={handleError}>{element}</ErrorCatcher>
           </div>
         </Panel>
