@@ -10,7 +10,7 @@
         "Grid",
         "Points"
     ],
-    "simple": [
+    "shapes": [
         "Rect",
         "Ellipse",
         "Triangle",
@@ -35,7 +35,7 @@
         "Edge",
         "Network"
     ],
-    "display": [
+    "text": [
         "Text",
         "Emoji",
         "Latex",
