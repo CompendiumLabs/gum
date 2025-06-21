@@ -5,7 +5,6 @@ import { evaluateGumSafe } from './Eval'
 import { CodeEditor } from './Editor'
 import { ErrorCatcher } from './Error'
 import { useElementSize } from './utils'
-import { GumLogo } from './Docs'
 
 import './App.css'
 import './fonts.css'
