@@ -8,7 +8,7 @@ import { ErrorCatcher } from './Error'
 import { CodeEditor } from './Editor'
 import { useElementSize } from './utils'
 import { evaluateGumSafe } from './Eval'
-import { useDocCache } from './query'
+import { useDocCache } from './utils'
 
 import { Text, HStack, Svg } from '../lib/gum.js'
 

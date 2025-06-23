@@ -1,109 +1,72 @@
 // generation
 
-import { useMemo, useState, useEffect } from 'react'
+import { reply } from 'oneping'
+
+import { makePrompt, extractCode } from './prompt'
 
 //
-// prompt
+// llm provider
 //
 
-import meta from '../docs/meta.json?json'
-import prompt from '../gen/prompt.md?raw'
-import docs from '../gen/docs.md?raw'
-import diff from '../gen/diff_block.md?raw'
-import launch from '../gen/launch.md?raw'
+// ONEPING SETUP
+// python -m oneping router --allow-origins="['https://beta.compendiumlabs.ai', 'https://compendiumlabs.ai']"
+const ONEPING_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://beta.compendiumlabs.ai'
+const ONEPING_MODEL = 'google/gemini-2.0-flash-exp'
 
-// replace links with bold and push headings
-function prepareText(text) {
-  text = text.replace(/\[(.*?)\]\((.*?)\)/g, '**$1**')
-  text = text.replace(/^# (.*?)$/gm, '## $1')
-  return text.trim()
-}
-
-// if there's a comment on line one, that's the query
-function prepareCode(text) {
-  const [ first, ...rest ] = text.split('\n')
-  const query = first.replace(/^\/\/(.*?)$/, '$1').trim()
-  const code = `\`\`\`jsx\n${rest.join('\n').trim()}\n\`\`\``
-  return `**Example**\n\nQUERY: ${query}\n\nRESPONSE:\n\n${code}`
-}
-
-function getFileTag(path) {
-  const file_name = path.split('/').pop()
-  const file_tag = file_name.split('.').shift()
-  return file_tag
-}
-
-function useDocCache() {
-  const [ cache, setCache ] = useState(null)
-
-  useEffect(() => {
-    const loadDocs = async () => {
-      // enumerate files
-      const textModules = import.meta.glob('../docs/text/*.md', {
-        query: '?raw',
-        import: 'default',
-      })
-      const codeModules = import.meta.glob('../docs/code/*.jsx', {
-        query: '?raw',
-        import: 'default',
-      })
-
-      // fetch files
-      const textEntries = await Promise.all(Object.entries(textModules).map(
-        async ([path, importFn]) => [ getFileTag(path), await importFn() ]
-      ))
-      const codeEntries = await Promise.all(Object.entries(codeModules).map(
-        async ([path, importFn]) => [ getFileTag(path), await importFn() ]
-      ))
-
-      // set maps
-      setCache({
-        text: new Map(textEntries),
-        code: new Map(codeEntries),
-      })
+function getProvider(settings) {
+  let { provider, base_url, model } = settings
+  provider = provider ?? 'oneping'
+  if (provider == 'oneping') {
+    model = model ?? ONEPING_MODEL
+    base_url = base_url ?? ONEPING_URL
+    return { provider, model, base_url }
+  } else {
+    const api_key = settings[provider]
+    if (api_key == null) {
+      throw new Error(`Must specify API key for ${provider}`)
     }
-    loadDocs()
-  }, [])
-
-  return cache
-}
-
-// generate docs for all pages
-function useSystem() {
-  const cache = useDocCache()
-
-  // load docs async
-  return useMemo(() => {
-    // wait until cache is loaded
-    if (!cache) return null
-
-    // construct system promot
-    const pageList = Object.values(meta).flat()
-    const pages = pageList.map(page => {
-      const tag = page.toLowerCase()
-      const text_raw = cache.text.get(tag)
-      const code_raw = cache.code.get(tag)
-      const text = prepareText(text_raw)
-      const code = prepareCode(code_raw)
-      return `${text}\n\n${code}`
-    })
-
-    // make system prompt
-    return `${prompt.trim()}\n\n${docs.trim()}\n\n${pages.join('\n\n')}\n\n${diff.trim()}\n\n${launch.trim()}`
-  }, [ cache ])
+    return model ? { provider, model, api_key } : { provider, api_key }
+  }
 }
 
 //
 // generation
 //
 
-async function generate(query, system) {
-  console.log(system)
-  await new Promise(resolve => setTimeout(resolve, 1000))
+async function generate(query, { settings, system, setCode }) {
+  try {
+    // make query params
+    const provider = getProvider(settings)
+    const prompt = makePrompt(query)
+
+    // log prompt
+    console.log('PROMPT:')
+    console.log(prompt)
+
+    // execute request
+    const text = await reply(prompt, { ...provider, system })
+
+    // log text
+    console.log('TEXT:')
+    console.log(text)
+
+    // extract code from response
+    const { lang, code } = extractCode(text)
+
+    // log code
+    console.log(`CODE (${lang}):`)
+    console.log(code)
+
+    // update state / history
+    setCode(code)
+  } catch (error) {
+    console.error('Error generating code:', error)
+    console.log(error.message)
+  }
 }
 
 //
 // export
 //
 
-export { generate, useDocCache, useSystem }
+export { generate }

@@ -1,11 +1,13 @@
 // GUM.JSX
 
-import { useRef, useState, useEffect, useMemo } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { useElementSize, initFromStorage, usePeriodicLocalStorage } from './utils'
 import { evaluateGumSafe } from './Eval'
-import { CodeEditor } from './Editor'
+import { useSystem } from './prompt'
+import { generate } from './query'
 import { ErrorCatcher } from './Error'
-import { useElementSize } from './utils'
-import { generate, useSystem } from './query'
+import { CodeEditor } from './Editor'
+import { Settings } from './Settings'
 
 import './App.css'
 import './fonts.css'
@@ -18,8 +20,8 @@ function TabBar({ children, selected, setSelected }) {
   return <div className="w-fit flex flex-row">
     {children.map(child => {
       const tab = child.props ? child.props.tab : child.toLowerCase()
-      const bgClass = selected == tab ? 'bg-gray-100' : 'bg-white'
-      return <div key={tab} className={`flex items-center px-4 border border-r-0 border-b-0 border-gray-500 first:rounded-tl-md last:rounded-tr-md last:border-r font-mono smallcaps cursor-pointer ${bgClass}`} onClick={() => setSelected(tab)}>
+      const className = selected == tab ? 'bg-white' : 'bg-gray-100'
+      return <div key={tab} className={`flex items-center px-4 border border-r-0 border-b-0 border-gray-500 first:rounded-tl-md last:rounded-tr-md last:border-r font-mono smallcaps cursor-pointer ${className}`} onClick={() => setSelected(tab)}>
         {child}
       </div>
     })}
@@ -69,6 +71,10 @@ const DEFAULT_CODE = `
 </Frame>
 `.trim() + '\n'
 
+const DEFAULT_SETTINGS = {
+  diff_type: 'none',
+}
+
 export default function App() {
   // ui refs
   const outerRef = useRef(null)
@@ -87,6 +93,12 @@ export default function App() {
 
   // generation state
   const system = useSystem()
+
+  // settings state
+  const [settings, setSettings] = useState(() =>
+    initFromStorage('gum-settings', DEFAULT_SETTINGS)
+  )
+  const saveSettings = usePeriodicLocalStorage('gum-settings', settings)
 
   // handle scroll zoom
   function handleZoom(event) {
@@ -122,7 +134,7 @@ export default function App() {
 
   // handle query submit
   async function handleQuery(query) {
-    const result = await generate(query, system)
+    const result = await generate(query, { settings, system, setCode })
     if (result != null) handleCode(result)
   }
 
@@ -139,13 +151,15 @@ export default function App() {
               <TabBar selected={tab} setSelected={setTab}>
                 {"Query"}
                 <span tab="status" className={error ? "text-red-500" : "text-green-700"}>Status</span>
+                {"Settings"}
               </TabBar>
               <div className="flex-1" />
               <div className="my-1 mr-1 p-1 px-3 font-mono border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('/docs', '_blank') }>?</div>
             </div>
-            <div className="w-full flex-1 border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
+            <div className="w-full flex-1 flex flex-col items-center border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
               {tab == "query" && <QueryBox onSubmit={handleQuery} />}
-              {tab == "status" && <div className="whitespace-pre-wrap font-mono text-sm p-4">{error ?? "All good!"}</div>}
+              {tab == "status" && <div className="w-full h-full whitespace-pre-wrap font-mono text-sm p-4">{error ?? "All good!"}</div>}
+              {tab == "settings" && <Settings settings={settings} setSettings={setSettings} />}
             </div>
           </div>
         </div>
