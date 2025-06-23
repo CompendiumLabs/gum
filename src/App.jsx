@@ -1,13 +1,59 @@
 // GUM.JSX
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useMemo } from 'react'
 import { evaluateGumSafe } from './Eval'
 import { CodeEditor } from './Editor'
 import { ErrorCatcher } from './Error'
 import { useElementSize } from './utils'
+import { generate, useSystem } from './query'
 
 import './App.css'
 import './fonts.css'
+
+//
+// widgets
+//
+
+function TabBar({ children, selected, setSelected }) {
+  return <div className="w-fit flex flex-row">
+    {children.map(child => {
+      const tab = child.props ? child.props.tab : child.toLowerCase()
+      const bgClass = selected == tab ? 'bg-gray-100' : 'bg-white'
+      return <div key={tab} className={`flex items-center px-4 border border-r-0 border-b-0 border-gray-500 first:rounded-tl-md last:rounded-tr-md last:border-r font-mono smallcaps cursor-pointer ${bgClass}`} onClick={() => setSelected(tab)}>
+        {child}
+      </div>
+    })}
+  </div>
+}
+
+function QueryBox({ onSubmit }) {
+  const [ query, setQuery ] = useState('')
+  const [ active, setActive ] = useState(true)
+
+  // handle key down
+  async function handleKeyDown(event) {
+    if (event.key == 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      if (onSubmit) {
+        setActive(false)
+        await onSubmit(query)
+        setActive(true)
+      }
+      setQuery('')
+    }
+  }
+
+  // handle change
+  function handleChange(event) {
+    setQuery(event.target.value)
+  }
+
+  // render
+  const activeClass = active ? '' : 'bg-gray-100'
+  return <div className="w-full h-full flex flex-col">
+    <textarea className={`w-full h-full outline-none font-mono text-sm p-4 ${activeClass}`} placeholder="Enter your query here..." value={query} onChange={handleChange} onKeyDown={handleKeyDown} />
+  </div>
+}
 
 //
 // app
@@ -24,15 +70,23 @@ const DEFAULT_CODE = `
 `.trim() + '\n'
 
 export default function App() {
+  // ui refs
   const outerRef = useRef(null)
   const editorRef = useRef(null)
-  const [ key, setKey ] = useState(0)
   const [ canvasRef, canvasSize ] = useElementSize()
 
+  // ui state
+  const [ tab, setTab ] = useState('query')
+  const [ zoom, setZoom ] = useState(60)
+
+  // code state
+  const [ key, setKey ] = useState(0)
   const [ code, setCode ] = useState(DEFAULT_CODE)
   const [ element, setElement ] = useState(null)
   const [ error, setError ] = useState(null)
-  const [ zoom, setZoom ] = useState(60)
+
+  // generation state
+  const system = useSystem()
 
   // handle scroll zoom
   function handleZoom(event) {
@@ -66,6 +120,12 @@ export default function App() {
     setError(newError)
   }, [ code, zoom, canvasSize ])
 
+  // handle query submit
+  async function handleQuery(query) {
+    const result = await generate(query, system)
+    if (result != null) handleCode(result)
+  }
+
   // render full screen
   return <div ref={outerRef} className="w-screen h-screen p-5 bg-gray-100" onWheel={handleZoom}>
     <div className="w-full h-full flex flex-col gap-5">
@@ -76,13 +136,16 @@ export default function App() {
         <div className="w-[45%] h-full flex">
           <div className="w-full h-full flex flex-col">
             <div className="w-full flex flex-row gap-2 cursor-default select-none">
-              <div className="flex-1 p-2 border border-b-0 border-gray-500 rounded-t-md font-mono smallcaps bg-white">
-                Status — { error ? <span className="text-red-500">Error</span> : <span className="text-green-700">Success</span> }
-              </div>
-              <div className="my-1 mr-2 p-1 px-3 font-mono text-gray-700 border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('/docs', '_blank') }>?</div>
+              <TabBar selected={tab} setSelected={setTab}>
+                {"Query"}
+                <span tab="status" className={error ? "text-red-500" : "text-green-700"}>Status</span>
+              </TabBar>
+              <div className="flex-1" />
+              <div className="my-1 mr-1 p-1 px-3 font-mono border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('/docs', '_blank') }>?</div>
             </div>
-            <div className="w-full flex-1 p-2 border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
-              {error && <div className="whitespace-pre-wrap font-mono text-sm">{error}</div>}
+            <div className="w-full flex-1 border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
+              {tab == "query" && <QueryBox onSubmit={handleQuery} />}
+              {tab == "status" && <div className="whitespace-pre-wrap font-mono text-sm p-4">{error ?? "All good!"}</div>}
             </div>
           </div>
         </div>

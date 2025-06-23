@@ -1,6 +1,6 @@
 # Line
 
-[Element](/docs/element)
+*Inherits*: [Element](/docs/element)
 
 The `Line` element is a basic geometric element that draws a line between two points.
 

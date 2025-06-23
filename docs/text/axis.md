@@ -1,6 +1,6 @@
 # Axis
 
-[Group](/docs/group) > [Element](/docs/element)
+*Inherits*: [Group](/docs/group) > [Element](/docs/element)
 
 A single vertical or horizontal axis for plotting. This includes the central line, the perpendicual ticks, and their associated tick labels. Note that the proper bounds encompass only the central line and ticks, while the tick labels may fall well outside of them. Use **HAxis** and **VAxis** for specific directions.
 

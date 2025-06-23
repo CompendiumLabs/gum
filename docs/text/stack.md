@@ -1,6 +1,6 @@
 # Stack
 
-[Group](/docs/group) > [Element](/docs/element)
+*Inherits*: [Group](/docs/group) > [Element](/docs/element)
 
 Stack one or more **Element** either vertically or horizontally. There are specialized components **VStack** and **HStack** that don't take the `direc` argument. Expects a `size` parameter for each child.
 

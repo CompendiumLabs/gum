@@ -1,6 +1,6 @@
 # Node
 
-[Frame](/docs/frame) > [Element](/docs/element)
+*Inherits*: [Frame](/docs/frame) > [Element](/docs/element)
 
 This is a container class that encloses text in a **Frame** at a particular position. Passing a string or list of strings to `text` will automatically create a **MultiText** node. One can also simply pass a generic **Element**. The primary usage of this is in the creation of networks using the [Network](/docs/network) container. You must provide a `label` argument to reference this in an [Edge](/docs/edge) element.
 

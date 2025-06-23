@@ -8,6 +8,7 @@ import { ErrorCatcher } from './Error'
 import { CodeEditor } from './Editor'
 import { useElementSize } from './utils'
 import { evaluateGumSafe } from './Eval'
+import { useDocCache } from './query'
 
 import { Text, HStack, Svg } from '../lib/gum.js'
 
@@ -56,41 +57,33 @@ function splitCode(code) {
   return { code: code.trim() + '\n', desc: desc.trim() }
 }
 
-// build document cache
-function usePage(meta, page) {
-  const [ text, setText ] = useState('')
-  const [ code, setCode ] = useState('')
-  const [ desc, setDesc ] = useState('')
-  useEffect(() => {
-    async function fetchDocs() {
-      // fetch documentation text
-      const res_text = await fetch(`../docs/text/${page}.md?raw`)
-      const val_text = await res_text.text()
-      setText(val_text)
-
-      // fetch code example
-      const res_java = await fetch(`../docs/code/${page}.jsx?raw`)
-      const val_java = await res_java.text()
-      const { code: val_code, desc: val_desc } = splitCode(val_java)
-      setCode(val_code)
-      setDesc(val_desc)
-    }
-    fetchDocs()
-  }, [meta, page])
-  return { text, code, desc, setCode }
-}
-
 export default function Docs() {
   // page loading and navigation
   const { page = 'gum' } = useParams()
   const navigate = useNavigate()
-  const { text, code, desc, setCode } = usePage(meta, page)
+
+  // docs data
+  const [ text, setText ] = useState('')
+  const [ code, setCode ] = useState('')
+  const [ desc, setDesc ] = useState('')
+  const cache = useDocCache()
 
   // code editor setup
   const [ key, setKey ] = useState(0)
   const [ element, setElement ] = useState(null)
   const [ error, setError ] = useState(null)
   const [ canvasRef, canvasSize ] = useElementSize()
+
+  // get page data from doc cache
+  useEffect(() => {
+    if (!cache) return
+    const val_text = cache.text.get(page)
+    const code_raw = cache.code.get(page)
+    const { code: val_code, desc: val_desc } = splitCode(code_raw)
+    setText(val_text)
+    setCode(val_code)
+    setDesc(val_desc)
+  }, [ cache, page ])
 
   // handle code updates
   function handleCode(c) {
@@ -131,7 +124,7 @@ export default function Docs() {
   return <div className="w-screen h-screen p-5 bg-gray-100">
     <div className="w-full h-full flex flex-row gap-5">
       <Panel className="h-full w-[55%] flex flex-row">
-        <div className="h-full w-[150px] flex flex-col border-r rounded-l border-gray-500 bg-slate-200 overflow-y-auto pt-2">
+        <div className="h-full w-[150px] flex flex-col border-r rounded-l-md border-gray-500 bg-slate-200 overflow-y-auto pt-2">
           <ClickList>
             <div className="cursor-pointer select-none border rounded px-2 m-3 hover:bg-slate-300 hover:border-blue-500" onClick={() => handleClick('')}>
               <GumLogo />
@@ -150,7 +143,7 @@ export default function Docs() {
       </Panel>
       <div className="h-full flex flex-col gap-5 w-[45%]">
         <Panel className="w-full flex-1 flex flex-col">
-          <div className="text-sm text-gray-500 p-2 border-b rounded-t border-gray-400 bg-slate-100">{desc}</div>
+          <div className="text-sm text-gray-500 p-2 border-b rounded-t-md border-gray-400 bg-slate-100">{desc}</div>
           <CodeEditor className="h-full" code={code} setCode={handleCode} />
         </Panel>
         <Panel className="w-full h-[50%]">

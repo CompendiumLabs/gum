@@ -1,6 +1,6 @@
 # Text
 
-[Element](/docs/element)
+*Inherits*: [Element](/docs/element)
 
 Displays text. Uses built-in browser facilities when available to calculate font size and aspect ratio. Note that you will typically not set the font size of the text here, as this will fill the entire space with the provided text.
 

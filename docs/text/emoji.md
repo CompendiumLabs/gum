@@ -1,6 +1,6 @@
 # Emoji
 
-[Text](/docs/text) > [Element](/docs/element)
+*Inherits*: [Text](/docs/text) > [Element](/docs/element)
 
 Creates a new `Emoji` element from a Github emoji name (like "smile" = "🙂"). This is a specialized version of [Text](/docs/text) that accepts the name of the emoji as a regular ASCII string. Note that you do not need to include the ":" characters around the name.
 

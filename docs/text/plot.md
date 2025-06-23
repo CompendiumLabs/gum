@@ -1,6 +1,6 @@
 # Plot
 
-[Group](/docs/group) > [Element](/docs/element)
+*Inherits*: [Group](/docs/group) > [Element](/docs/element)
 
 This will graph one or more elements over the desired limits and frame them with axes. If not specified by `xlim` and `ylim`, the limits of the plot will be computed from the bounding box of the constituent elements. By default, the `aspect` will be the ratio of the range of the `xlim` and `ylim`.
 

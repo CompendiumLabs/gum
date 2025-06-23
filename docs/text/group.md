@@ -1,6 +1,6 @@
 # Group
 
-[Element](/docs/element)
+*Inherits*: [Element](/docs/element)
 
 This is the **Element** class by which components are grouped together. It accepts a list of Elements and attempts to place them according to their declared properties. There are a few child properties that a group container will look for:
 

@@ -51,8 +51,6 @@ Notes: The user didn't specify the aspect ratio, so we use `2` as a default. The
 
 # Interface Definitions
 
-This is a description of the types, functions, and constructors used in the `gum.js` library using TypeScript style annotations. Any arguments passed in `args` objects are optional unless specified otherwise.
-
 Below are the type aliases used throughout the library:
 ```typescript
 type point = number[2]
@@ -106,11 +104,11 @@ function enumerate(x: any[]): any[]
 function repeat(x: any, n: number): any[]
 function meshgrid(x: number[], y: number[]): number[][]
 function lingrid(xlim: range, ylim: range, N: number): number[][]
-function interpolate_hex(c1: string, c2: string, alpha: number): string
+function palette(c1: string, c2: string, clim: range): number => string
 ```
 
-Next are the constructors used to create the various types of `Element` objects that can be used in the library. For convenience, one does not have to use the `new` keyword, you can simply call them as functions, but they are functions that return the specified object of the same name. The two most important types of elements are `Element`, which represents a single element and `Group`, which represents a container that can hold multiple elements. All other elements are derived from one or both of these:
-```typescript
+Next are the various `Element`-derived components that can be used in the library. Everything is either a singular `Element` or a `Group` which is a container that can hold multiple elements. Here are the specifications for the most commonly used components:
+```jsx
 <Element tag={string} unary={boolean} aspect={number?} pos={point?} rad={size?} rect={rect?} coord={rect?} aspect={number = null} expand={boolean = false} align={align = 'center'} rotate={number = 0} invar={boolean = false}>
 <Group tag={string = 'g'}>
 <Frame padding={frame = 0} margin={frame = 0} border={number = 0} rounded={size = 0} adjust={boolean = false} flex={boolean = false} shape={Element = Rect}>
@@ -141,7 +139,7 @@ Next are the constructors used to create the various types of `Element` objects 
 <Network xlim={range?} ylim={range?} coord={rect?}>
 ```
 
-You will typically use one of the higher level constructors to create the elements you need, but you can also create your own custom elements by using the `Element` or `Container`constructor. Note that for ease of use, `Group` is an alias for `Container`. Additionally, elements with a direction notion such as `Stack` and `Axis` have specialized versions denoted by the prefixes `V` and `H`, for example `VStack` and `HStack` and `VAxis` and `HAxis`.
+Elements with a direction notion such as `Stack` and `Axis` have specialized versions denoted by the prefixes `V` and `H`, for example `VStack` and `HStack` and `VAxis` and `HAxis`. In very rare cases, you may want to subclass one of these components to add additional functionality.
 
 Some of the most commonly used mathematical constants are pre-defined in the global scope:
 ```javascript
