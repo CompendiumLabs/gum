@@ -6,7 +6,16 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   base: mode == 'development' ? '' : '/gum/',
+  esbuild: {
+    keepNames: true,
+  },
   build: {
     outDir: 'dist',
+    rollupOptions: {
+      external: ['@babel/standalone', 'mathjax'],
+      output: {
+        globals: { '@babel/standalone': 'Babel', 'mathjax': 'MathJax' },
+      },
+    },
   },
 }))

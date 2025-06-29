@@ -1,6 +1,5 @@
 // code evaluation
 
-import * as Babel from '@babel/standalone'
 import { KEYS, VALS, is_function, is_object, Svg } from '../lib/gum.js'
 
 //
@@ -50,7 +49,6 @@ function flattenChildren(items) {
 }
 
 function h(tag, props, ...children) {
-  console.log(tag, props, children)
   const flattened = children.length > 0 ? flattenChildren(children) : null
   return { tag, props, children: flattened }
 }
