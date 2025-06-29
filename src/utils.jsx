@@ -84,9 +84,9 @@ function initFromStorage(key, value, loader) {
   return loader ? loader(data) : data
 }
 
-function useLocalStorage(key, defaultState = null) {
+function useLocalStorage(key, defaultState = null, loader = null) {
   // load from localStorage
-  const [state, setState] = useState(() => initFromStorage(key, defaultState))
+  const [state, setState] = useState(() => initFromStorage(key, defaultState, loader))
 
   // on state change, save to localStorage
   useEffect(() => {

@@ -157,7 +157,7 @@ export default function App() {
                 {"Settings"}
               </TabBar>
               <div className="flex-1" />
-              <div className="my-1 mr-1 p-1 px-3 font-mono border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('/docs', '_blank') }>?</div>
+              <div className="my-1 mr-1 p-1 px-3 font-mono border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('docs', '_blank') }>?</div>
             </div>
             <div className="w-full flex-1 flex flex-col items-center border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
               {tab == "query" && <QueryBox ref={queryRef} onSubmit={handleQuery} />}

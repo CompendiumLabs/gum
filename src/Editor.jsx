@@ -12,7 +12,6 @@ const basicSetup = {
   highlightActiveLine: true,
   highlightActiveLineGutter: false,
   autocompletion: false,
-  lineWrapping: true,
 }
 
 function CodeEditor({ editorRef, className, code, setCode }) {

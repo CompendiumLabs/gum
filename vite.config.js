@@ -5,11 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
-  base: mode == 'development' ? '' : '/gum.js/',
+  base: mode == 'development' ? '' : '/gum/',
   build: {
     outDir: 'dist',
-  },
-  esbuild: {
-    minifyIdentifiers: false,
   },
 }))
