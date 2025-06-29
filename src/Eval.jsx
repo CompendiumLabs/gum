@@ -75,7 +75,7 @@ function parseJSX(code) {
 // gum evaluator
 //
 
-function evaluateGum(code, size, { stroke = 'none', stroke_width = 1, fill = 'white' }) {
+function evaluateGum(code, size) {
   // parse to property tree
   const tree = parseJSX(code)
 
@@ -90,8 +90,7 @@ function evaluateGum(code, size, { stroke = 'none', stroke_width = 1, fill = 'wh
   // wrap it in Svg if not already
   if (!(element instanceof Svg)) {
     const [ width, height ] = size
-    const frame = new Rect({ fill, stroke, stroke_width })
-    element = new Svg({ children: [ frame, element ], width, height, size })
+    element = new Svg({ children: element, width, height, size })
   }
 
   // render to string

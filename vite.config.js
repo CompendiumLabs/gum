@@ -3,10 +3,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
-  base: './',
+  base: mode == 'development' ? '' : '/gum.js/',
   build: {
-    outDir: 'docs',
+    outDir: 'dist',
   },
-})
+  esbuild: {
+    minifyIdentifiers: false,
+  },
+}))

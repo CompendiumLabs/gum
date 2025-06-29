@@ -78,43 +78,32 @@ function useDocCache() {
 // local storage
 //
 
-function usePeriodicLocalStorage(key, state, storer = null, intervalMs = 5000) {
-  // use a ref to track the latest state without causing effect reruns
-  const stateRef = useRef(state);
-
-  // update ref whenever state changes
-  useEffect(() => {
-      stateRef.current = state;
-  }, [state]);
-
-  // save to localStorage
-  function saveToStorage() {
-      try {
-          const data = storer ? storer(stateRef.current) : stateRef.current
-          window.localStorage.setItem(key, JSON.stringify(data));
-      } catch (error) {
-          console.error('Failed to save state to localStorage:', error);
-      }
-  }
-
-  // save to localStorage on interval
-  useEffect(() => {
-      const intervalId = setInterval(saveToStorage, intervalMs);
-      return () => clearInterval(intervalId);
-  }, [key, intervalMs]);
-
-  // return state saver
-  return saveToStorage
-}
-
 function initFromStorage(key, value, loader) {
   const json = localStorage.getItem(key)
   const data = json ? JSON.parse(json) : value
   return loader ? loader(data) : data
 }
 
+function useLocalStorage(key, defaultState = null) {
+  // load from localStorage
+  const [state, setState] = useState(() => initFromStorage(key, defaultState))
+
+  // on state change, save to localStorage
+  useEffect(() => {
+    try {
+      const data = JSON.stringify(state)
+      window.localStorage.setItem(key, data)
+    } catch (error) {
+      console.error('Failed to save state to localStorage:', error)
+    }
+  }, [state, key])
+
+  // return state saver
+  return [ state, setState ]
+}
+
 //
 // export
 //
 
-export { useElementSize, useDocCache, usePeriodicLocalStorage, initFromStorage }
+export { useElementSize, useDocCache, useLocalStorage, initFromStorage }

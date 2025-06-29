@@ -5,12 +5,15 @@ import './index.css'
 import App from './App'
 import Docs from './Docs'
 
+import 'mathjax/es5/tex-svg.js'
+
 createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
+  <BrowserRouter basename={import.meta.env.BASE_URL}>
     <Routes>
-      <Route path="/" element={<App />} />
+      <Route index element={<App />} />
       <Route path="/docs" element={<Docs />} />
       <Route path="/docs/:page" element={<Docs />} />
+      <Route path="*" element={<div>404</div>} />
     </Routes>
   </BrowserRouter>
 )

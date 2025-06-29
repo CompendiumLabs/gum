@@ -2,6 +2,7 @@
 
 import { reply } from 'oneping'
 
+import { applyDiff } from './patch'
 import { makePrompt, extractCode } from './prompt'
 
 //
@@ -33,7 +34,7 @@ function getProvider(settings) {
 // generation
 //
 
-async function generate(query, { settings, system, setCode }) {
+async function generate(query, { settings, system, code, setCode }) {
   try {
     // make query params
     const provider = getProvider(settings)
@@ -51,14 +52,22 @@ async function generate(query, { settings, system, setCode }) {
     console.log(text)
 
     // extract code from response
-    const { lang, code } = extractCode(text)
+    const { diff_type } = settings
+    const { lang, code: diff } = extractCode(text)
+
+    // log diff
+    console.log(`DIFF (${lang}):`)
+    console.log(diff)
+
+    // apply diff if needed
+    const code1 = (lang == 'diff') ? applyDiff(diff, code, { diff_type }) : diff
 
     // log code
-    console.log(`CODE (${lang}):`)
-    console.log(code)
+    console.log(`CODE:`)
+    console.log(code1)
 
     // update state / history
-    setCode(code)
+    setCode(code1)
   } catch (error) {
     console.error('Error generating code:', error)
     console.log(error.message)
