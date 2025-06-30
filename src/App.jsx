@@ -115,7 +115,7 @@ export default function App() {
   // render full screen
   return <div ref={outerRef} className="w-screen h-screen p-5 bg-gray-100">
     <div className="w-full h-full flex flex-col gap-5">
-      <div className="w-full h-[30%] flex flex-row gap-5">
+      <div className="w-full h-[35%] flex flex-row gap-5">
         <div className="w-[55%] h-full flex border rounded-md border-gray-500">
           <CodeEditor editorRef={editorRef} className="h-full" code={code} setCode={handleCode} />
         </div>

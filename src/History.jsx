@@ -19,8 +19,10 @@ function CodePreview({ code }) {
   }, [ code, canvasSize ])
 
   return <div ref={canvasRef} className="relative w-full h-full">
-    { preview && <div className="w-full h-64">{element}</div> }
-    { !preview && <div className="whitespace-pre-wrap font-mono text-sm">{code}</div> }
+    { preview && <div className="w-full h-64">
+      {error ? <div className="text-red-500 text-sm">{error}</div> : element}
+    </div> }
+    { !preview && <div className="whitespace-pre-wrap font-mono text-xs">{code}</div> }
     <div className="absolute top-2 right-2 border rounded-sm text-xs flex flex-row cursor-pointer">
       <div className={`rounded-l-sm p-1 ${preview ? 'bg-black text-white' : ''}`} onClick={() => setPreview(true)}>Image</div>
       <div className={`rounded-r-sm p-1 ${!preview ? 'bg-black text-white' : ''}`} onClick={() => setPreview(false)}>Code</div>
@@ -29,10 +31,9 @@ function CodePreview({ code }) {
 }
 
 function Message({ role, content }) {
-  const roleCol = role == 'user' ? 'text-blue-500' : 'text-red-500'
-  return <div className="flex flex-col gap-2 text-sm pb-4">
-    <div className={`font-bold ${roleCol}`}>{role}</div>
-    <div className="border rounded-sm border-gray-500 p-2 whitespace-pre-wrap">
+  return <div className="flex flex-col text-sm pb-4">
+    <div className="w-fit border border-b-0 border-gray-400 bg-gray-100 ml-2 px-1 rounded-t smallcaps text-xs">{role}</div>
+    <div className="border rounded-sm border-gray-400 p-2 whitespace-pre-wrap">
       {role == 'assistant' ? <CodePreview code={content} /> : content}
     </div>
   </div>
