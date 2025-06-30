@@ -1,0 +1,1 @@
+const t="// create a square context of radius 50 centered at 100 and map [0.3, 0.5] to pixel coordinates\nconst prect = [ 50, 50, 150, 150 ]\nconst ctx = new Context({ prect })\nconst [fx, fy] = [0.3, 0.5]\nconst [px, py] = ctx.mapPoint([fx, fy])\nreturn `[${fx}, ${fy}] → [${px}, ${py}]`\n";export{t as default};
