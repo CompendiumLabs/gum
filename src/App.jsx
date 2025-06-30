@@ -4,9 +4,10 @@ import { useRef, useState, useEffect } from 'react'
 import { useElementSize, useLocalStorage } from './utils'
 import { evaluateGumSafe } from './Eval'
 import { useSystem } from './prompt'
-import { generate } from './query'
+import { generate, QueryBox } from './Query'
 import { ErrorCatcher } from './Error'
 import { CodeEditor } from './Editor'
+import { History } from './History'
 import { Settings } from './Settings'
 
 import './App.css'
@@ -25,35 +26,6 @@ function TabBar({ children, selected, setSelected }) {
         {child}
       </div>
     })}
-  </div>
-}
-
-function QueryBox({ ref, onSubmit }) {
-  const [ query, setQuery ] = useState('')
-  const [ active, setActive ] = useState(true)
-
-  // handle key down
-  async function handleKeyDown(event) {
-    if (event.key == 'Enter' && !event.shiftKey) {
-      event.preventDefault()
-      if (onSubmit) {
-        setActive(false)
-        await onSubmit(query)
-        setActive(true)
-      }
-      setQuery('')
-    }
-  }
-
-  // handle change
-  function handleChange(event) {
-    setQuery(event.target.value)
-  }
-
-  // render
-  const activeClass = active ? '' : 'bg-gray-100'
-  return <div className="w-full h-full flex flex-col">
-    <textarea ref={ref} className={`w-full h-full outline-none font-mono text-sm p-4 ${activeClass}`} placeholder="Enter your query here..." value={query} onChange={handleChange} onKeyDown={handleKeyDown} />
   </div>
 }
 
@@ -89,21 +61,13 @@ export default function App() {
 
   // generation state
   const system = useSystem()
+  const [ history, setHistory ] = useState([])
 
   // settings state
   const [ settings, setSettings ] = useLocalStorage('gum-settings', DEFAULT_SETTINGS)
   const [ code, setCode ] = useLocalStorage('gum-code', DEFAULT_CODE)
   const [ tab, setTab ] = useLocalStorage('gum-tab', 'query')
   const [ zoom, setZoom ] = useLocalStorage('gum-zoom', 60)
-
-  // handle scroll zoom
-  function handleZoom(event) {
-    const { target, deltaY } = event
-    if (target != canvasRef.current) return
-    const factor = deltaY < 0 ? 1.2 : 1/1.2
-    const newZoom = Math.max(10, Math.min(90, zoom * factor))
-    setZoom(newZoom)
-  }
 
   // handle code updates
   function handleCode(c) {
@@ -113,14 +77,29 @@ export default function App() {
 
   // intercept wildcat errors
   function handleError(error, errorInfo) {
-    setError(error.message + '\n' + errorInfo.componentStack)
+    const { message } = error
+    setError(message)
+  }
+
+  // handle query submit
+  async function handleQuery(query) {
+    const result = await generate(query, { settings, system, code, error, history, setCode, setHistory })
+    if (result != null) handleCode(result)
+  }
+
+  // handle scroll zoom
+  function handleZoom(event) {
+    const { deltaY } = event
+    const factor = deltaY < 0 ? 1.2 : 1 / 1.2
+    const newZoom = Math.max(10, Math.min(90, zoom * factor))
+    setZoom(newZoom)
   }
 
   // eval code for element render
   useEffect(() => {
     // get adjusted size
     const [ width, height ] = canvasSize ?? [ 500, 500 ]
-    const size = [ zoom * width / 100, zoom * height / 100 ]
+    const size = [ (zoom / 100) * width, (zoom / 100) * height ]
 
     // send to evaluator
     const [ newElement, newError ] = evaluateGumSafe(code, size)
@@ -128,21 +107,13 @@ export default function App() {
     setError(newError)
   }, [ code, zoom, canvasSize ])
 
-  // handle query submit
-  async function handleQuery(query) {
-    const result = await generate(query, { settings, system, setCode })
-    if (result != null) handleCode(result)
-  }
-
   // focus query box on startup
   useEffect(() => {
-    if (tab == 'query') {
-      if (queryRef.current) queryRef.current.focus()
-    }
+    if (tab == 'query' && queryRef.current) queryRef.current.focus()
   }, [tab])
 
   // render full screen
-  return <div ref={outerRef} className="w-screen h-screen p-5 bg-gray-100" onWheel={handleZoom}>
+  return <div ref={outerRef} className="w-screen h-screen p-5 bg-gray-100">
     <div className="w-full h-full flex flex-col gap-5">
       <div className="w-full h-[30%] flex flex-row gap-5">
         <div className="w-[55%] h-full flex border rounded-md border-gray-500">
@@ -154,6 +125,7 @@ export default function App() {
               <TabBar selected={tab} setSelected={setTab}>
                 {"Query"}
                 <span tab="status" className={error ? "text-red-500" : "text-green-700"}>Status</span>
+                {"History"}
                 {"Settings"}
               </TabBar>
               <div className="flex-1" />
@@ -161,13 +133,16 @@ export default function App() {
             </div>
             <div className="w-full flex-1 flex flex-col items-center border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
               {tab == "query" && <QueryBox ref={queryRef} onSubmit={handleQuery} />}
-              {tab == "status" && <div className="w-full h-full whitespace-pre-wrap font-mono text-sm p-4">{error ?? "All good!"}</div>}
+              {tab == "status" && <div className="w-full h-full p-4">
+                <div className="pb-4 whitespace-pre-wrap font-mono text-sm">{error ?? "All good!"}</div>
+              </div>}
+              {tab == "history" && <History history={history} />}
               {tab == "settings" && <Settings settings={settings} setSettings={setSettings} />}
             </div>
           </div>
         </div>
       </div>
-      <div ref={canvasRef} className="w-full flex-1">
+      <div ref={canvasRef} className="w-full flex-1" onWheel={handleZoom}>
         <div className="w-full h-full flex justify-center items-center border rounded-md border-gray-500 bg-white pointer-events-none select-none">
           <ErrorCatcher key={key} onError={handleError}>{element}</ErrorCatcher>
         </div>

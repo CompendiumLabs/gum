@@ -22,37 +22,39 @@ const image_start = has_image => has_image ? 'The user has provided the image ab
 
 const image_refine = has_image => has_image ? 'The user has provided the above image which shows the SVG output of the current code. Use this as a reference, and keep in mind that if it is mostly or entirely blank, there may be an issue with the code.\n\n' : ''
 
+const error_refine = error => error ? `The current code is producing the following error message:\n\n${error}\n\nPlease attempt to fix the error while also addressing the query.\n\n` : ''
+
 const prompt_start = (query, has_image) => `Using the guidelines, documentation, and examples provided above, generate JavaScript code for the \`gum.jsx\` library that addresses the following query. ${image_start(has_image)}Please be concise and return only the best implementation possible. Be sure to either return raw code or fence it in \`\`\`javascript\`\`\` tags. Failure is not an option.
 
 QUERY: ${query}`
 
-const prompt_refine = (query, code, has_image) => `The user now wishes to refine the code you've generated. Here is the current state of the code, which may have been manually edited after generation:
+const prompt_refine = (query, code, error, has_image) => `The user now wishes to refine the code you've generated. Here is the current state of the code, which may have been manually edited after generation:
 
 \`\`\`javascript
 ${code}
 \`\`\`
 
-${image_refine(has_image)}Please return modified code to satisfy the following query. Be sure to either return raw code or fence it in \`\`\`javascript\`\`\` tags.
+${error_refine(error)}${image_refine(has_image)}Please return modified code to satisfy the following query. Be sure to either return raw code or fence it in \`\`\`javascript\`\`\` tags.
 
 QUERY: ${query}`
 
-const prompt_refine_diff = (query, code, has_image) => `The user now wishes to refine the code you've generated. Here is the current state of the code, which may have been manually edited after generation:
+const prompt_refine_diff = (query, code, error, has_image) => `The user now wishes to refine the code you've generated. Here is the current state of the code, which may have been manually edited after generation:
 
 \`\`\`javascript
 ${code}
 \`\`\`
 
-${image_refine(has_image)}If the changes to the code are relatively small, please provide a diff in unified format to satisfy the following query (wrap in \`\`\`diff\`\`\` tags). If the changes are more complex, you can simply return the entire new code (wrap in \`\`\`javascript\`\`\` tags).
+${error_refine(error)}${image_refine(has_image)}If the changes to the code are relatively small, please provide a diff in unified format to satisfy the following query (wrap in \`\`\`diff\`\`\` tags). If the changes are more complex, you can simply return the entire new code (wrap in \`\`\`javascript\`\`\` tags).
 
 QUERY: ${query}`
 
-const prompt_refine_block = (query, code, has_image) => `The user now wishes to refine the code you've generated. Here is the current state of the code, which may have been manually edited after generation:
+const prompt_refine_block = (query, code, error, has_image) => `The user now wishes to refine the code you've generated. Here is the current state of the code, which may have been manually edited after generation:
 
 \`\`\`javascript
 ${code}
 \`\`\`
 
-${image_refine(has_image)}If the changes to the code are relatively small, please provide a diff in the form of one or more search and replace blocks like the ones seen in git merge conflicts (wrap in \`\`\`diff\`\`\` tags). If the changes are more complex, you can simply return the entire new code (wrap in \`\`\`javascript\`\`\` tags).
+${error_refine(error)}${image_refine(has_image)}If the changes to the code are relatively small, please provide a diff in the form of one or more search and replace blocks like the ones seen in git merge conflicts (wrap in \`\`\`diff\`\`\` tags). If the changes are more complex, you can simply return the entire new code (wrap in \`\`\`javascript\`\`\` tags).
 
 QUERY: ${query}`
 
@@ -116,8 +118,8 @@ function getRefine(diff_type) {
   }
 }
 
-function makePrompt(query, { code = null, diff_type = 'none', has_image = false } = {}) {
-  return code ? getRefine(diff_type)(query, code, has_image) : prompt_start(query, has_image)
+function makePrompt(query, { code = null, error = null, diff_type = 'none', has_image = false } = {}) {
+  return code ? getRefine(diff_type)(query, code, error, has_image) : prompt_start(query, has_image)
 }
 
 function makeContent(text, imgdata) {

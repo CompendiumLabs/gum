@@ -75,12 +75,20 @@ function parseJSX(code) {
 //
 
 function evaluateGum(code, size) {
+  if (code.trim() == '') {
+    throw new Error(`No code provided`)
+  }
+
   // parse to property tree
   const tree = parseJSX(code)
 
   // check if its actually a tree
   if (!is_object(tree)) {
-      return `Return value:\n\n${tree}`
+    if (tree == null) {
+      throw new Error(`No return value`)
+    } else {
+      throw new Error(`Return value:\n\n${tree}`)
+    }
   }
 
   // parse to gum element
@@ -106,9 +114,9 @@ function evaluateGumSafe(code, size, { stroke = 'none', stroke_width = 1, fill =
   let svg, error = null
   try {
     svg = evaluateGum(code, size, { stroke, stroke_width, fill })
-  } catch (e) {
-    const trace = e.stack.split('\n').slice(1).join('\n')
-    error = `${e.message}\n\n${trace}`
+  } catch (err) {
+    const { message } = err
+    error = message
   }
 
   // wrap the svg in a div

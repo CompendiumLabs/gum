@@ -10,7 +10,7 @@ function maskKey(key) {
   return (key != null) ? '*'.repeat(key.length) : ''
 }
 
-function KeyRow({ name, secret, placeholder, value, setValue }) {
+function TextRow({ name, secret, placeholder, value, setValue }) {
   const [inputValue, setInputValue] = useState('')
 
   const isStored = value != null
@@ -47,7 +47,7 @@ function KeyRow({ name, secret, placeholder, value, setValue }) {
         className="flex-1 p-1 rounded-l-sm font-mono overflow-x-scroll [scrollbar-width:none] outline-none"
         placeholder={placeholder ?? ''}
       />
-      <button onClick={handleStore} className="min-w-[100px] bg-black text-white font-bold p-1">
+      <button onClick={handleStore} className="min-w-[100px] bg-black text-white font-bold p-1 cursor-pointer hover:bg-gray-800">
         {isStored ? 'Unset' : 'Set'}
       </button>
     </div>
@@ -60,9 +60,12 @@ function ToggleRow({ name, options, value, setValue }) {
     <div className="flex flex-row items-center border border-black rounded-sm overflow-x-scroll">
       {options.map((opt, i) => {
         const optLower = opt.toLowerCase()
-        const bgCol = (optLower == value) ? 'bg-black' : 'bg-white'
-        const textCol = (optLower == value) ? 'text-white' : 'text-black'
-        return <button key={opt} onClick={() => setValue(optLower)} className={`min-w-[100px] ${bgCol} ${textCol} font-bold p-1 border-r last:border-r-0 border-black`}>
+        const selected = optLower == value
+        const bgCol = selected ? 'bg-black' : 'bg-white'
+        const textCol = selected ? 'text-white' : 'text-black'
+        const borderCol = selected ? 'border-black' : 'border-gray-600'
+        const hoverCol = selected ? '' : 'hover:bg-gray-200'
+        return <button key={opt} onClick={() => setValue(optLower)} className={`min-w-[100px] ${bgCol} ${textCol} font-bold p-1 border-r last:border-r-0 ${borderCol} ${hoverCol} cursor-pointer`}>
           {opt}
         </button>
       })}
@@ -81,14 +84,14 @@ function Settings({ settings, setSettings }) {
 
   return <div className="w-[80%] flex flex-col gap-4 m-4 text-sm">
     <div className="font-bold text-center">Models</div>
-    <KeyRow name="PROVIDER" key="provider" secret={false} placeholder="anthropic, openai, google" value={settings.provider} setValue={v => handleStore('provider', v)} />
-    <KeyRow name="MODEL" key="model" secret={false} placeholder="claude-3-7-sonnet, gpt-4o, gemini-2.0-flash-exp" value={settings.model} setValue={v => handleStore('model', v)} />
-    <KeyRow name="URL" key="url" secret={false} placeholder="beta.compendiumlabs.ai/chat" value={settings.base_url} setValue={v => handleStore('base_url', v)} />
+    <TextRow name="PROVIDER" key="provider" secret={false} placeholder="anthropic, openai, google" value={settings.provider} setValue={v => handleStore('provider', v)} />
+    <TextRow name="MODEL" key="model" secret={false} placeholder="claude-3-7-sonnet, gpt-4o, gemini-2.0-flash-exp" value={settings.model} setValue={v => handleStore('model', v)} />
+    <TextRow name="URL" key="url" secret={false} placeholder="beta.compendiumlabs.ai/chat" value={settings.base_url} setValue={v => handleStore('base_url', v)} />
     <div></div>
     <div className="font-bold text-center">API Keys</div>
-    <KeyRow name="ANTHROPIC" key="anthropic" placeholder="Anthropic API Key" value={settings.anthropic} setValue={v => handleStore('anthropic', v)} />
-    <KeyRow name="OPENAI" key="openai" placeholder="OpenAI API Key" value={settings.openai} setValue={v => handleStore('openai', v)} />
-    <KeyRow name="GOOGLE" key="google" placeholder="Google API Key" value={settings.google} setValue={v => handleStore('google', v)} />
+    <TextRow name="ANTHROPIC" key="anthropic" placeholder="Anthropic API Key" value={settings.anthropic} setValue={v => handleStore('anthropic', v)} />
+    <TextRow name="OPENAI" key="openai" placeholder="OpenAI API Key" value={settings.openai} setValue={v => handleStore('openai', v)} />
+    <TextRow name="GOOGLE" key="google" placeholder="Google API Key" value={settings.google} setValue={v => handleStore('google', v)} />
     <div></div>
     <div className="font-bold text-center">Generation</div>
     <ToggleRow name="DIFF TYPE" key="diff_type" options={['None', 'Unified', 'Block']} value={settings.diff_type} setValue={v => handleStore('diff_type', v)} />

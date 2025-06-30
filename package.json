@@ -33,8 +33,5 @@
     "react-router-dom": "^7.6.1",
     "tailwindcss": "^4.1.8",
     "vite": "^6.3.5"
-  },
-  "dependencies": {
-    "oneping": "github:CompendiumLabs/oneping.js"
   }
 }

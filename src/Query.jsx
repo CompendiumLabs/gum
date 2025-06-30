@@ -1,5 +1,6 @@
 // generation
 
+import { useState } from 'react'
 import { reply } from 'oneping'
 
 import { applyDiff } from './patch'
@@ -34,25 +35,25 @@ function getProvider(settings) {
 // generation
 //
 
-async function generate(query, { settings, system, code, setCode }) {
+async function generate(query, { settings, system, code, error, history, setCode, setHistory }) {
   try {
     // make query params
+    const { diff_type } = settings
     const provider = getProvider(settings)
-    const prompt = makePrompt(query)
+    const prompt = makePrompt(query, { code, error, diff_type })
 
     // log prompt
     console.log('PROMPT:')
     console.log(prompt)
 
     // execute request
-    const text = await reply(prompt, { ...provider, system })
+    const text = await reply(prompt, { ...provider, system, history })
 
     // log text
     console.log('TEXT:')
     console.log(text)
 
     // extract code from response
-    const { diff_type } = settings
     const { lang, code: diff } = extractCode(text)
 
     // log diff
@@ -66,7 +67,14 @@ async function generate(query, { settings, system, code, setCode }) {
     console.log(`CODE:`)
     console.log(code1)
 
-    // update state / history
+    // update history
+    setHistory([
+      ...history,
+      { role: 'user', content: query },
+      { role: 'assistant', content: code1 },
+    ])
+
+    // set new code
     setCode(code1)
   } catch (error) {
     console.error('Error generating code:', error)
@@ -74,8 +82,39 @@ async function generate(query, { settings, system, code, setCode }) {
   }
 }
 
+// query interface
+
+function QueryBox({ ref, onSubmit }) {
+  const [ query, setQuery ] = useState('')
+  const [ active, setActive ] = useState(true)
+
+  // handle key down
+  async function handleKeyDown(event) {
+    if (event.key == 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      if (onSubmit) {
+        setActive(false)
+        await onSubmit(query)
+        setActive(true)
+      }
+      setQuery('')
+    }
+  }
+
+  // handle change
+  function handleChange(event) {
+    setQuery(event.target.value)
+  }
+
+  // render
+  const activeClass = active ? '' : 'bg-gray-100'
+  return <div className="w-full h-full flex flex-col">
+    <textarea ref={ref} className={`w-full h-full outline-none font-mono text-sm p-4 ${activeClass}`} placeholder="Enter your query here..." value={query} onChange={handleChange} onKeyDown={handleKeyDown} disabled={!active} />
+  </div>
+}
+
 //
 // export
 //
 
-export { generate }
+export { generate, QueryBox }
