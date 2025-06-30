@@ -23,7 +23,7 @@ function CodePreview({ code }) {
       {error ? <div className="text-red-500 text-sm">{error}</div> : element}
     </div> }
     { !preview && <div className="whitespace-pre-wrap font-mono text-xs">{code}</div> }
-    <div className="absolute top-2 right-2 border rounded-sm text-xs flex flex-row cursor-pointer">
+    <div className="absolute top-2 right-2 flex flex-row border rounded-sm text-xs bg-white cursor-pointer">
       <div className={`rounded-l-sm p-1 ${preview ? 'bg-black text-white' : ''}`} onClick={() => setPreview(true)}>Image</div>
       <div className={`rounded-r-sm p-1 ${!preview ? 'bg-black text-white' : ''}`} onClick={() => setPreview(false)}>Code</div>
     </div>

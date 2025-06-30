@@ -109,7 +109,7 @@ function QueryBox({ ref, onSubmit }) {
   // render
   const activeClass = active ? '' : 'bg-gray-100'
   return <div className="w-full h-full flex flex-col">
-    <textarea ref={ref} className={`w-full h-full outline-none font-mono text-sm p-4 ${activeClass}`} placeholder="Enter your query here..." value={query} onChange={handleChange} onKeyDown={handleKeyDown} disabled={!active} />
+    <textarea ref={ref} className={`w-full h-full outline-none resize-none font-mono text-sm p-4 ${activeClass}`} placeholder="Enter your query here..." value={query} onChange={handleChange} onKeyDown={handleKeyDown} disabled={!active} />
   </div>
 }
 

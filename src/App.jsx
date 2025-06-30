@@ -44,7 +44,7 @@ const DEFAULT_CODE = `
 `.trim() + '\n'
 
 const DEFAULT_SETTINGS = {
-  diff_type: 'none',
+  diff_type: 'block',
 }
 
 export default function App() {
