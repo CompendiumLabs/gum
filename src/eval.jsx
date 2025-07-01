@@ -119,11 +119,8 @@ function evaluateGumSafe(code, size, { stroke = 'none', stroke_width = 1, fill =
     error = message
   }
 
-  // wrap the svg in a div
-  const div = <div className="flex w-full h-full justify-center items-center" dangerouslySetInnerHTML={{ __html: svg }} />
-
   // return results
-  return [ div, error ]
+  return [ svg, error ]
 }
 
 //

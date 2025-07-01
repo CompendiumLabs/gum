@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { useElementSize, useLocalStorage } from './utils'
-import { evaluateGumSafe } from './Eval'
+import { evaluateGumSafe } from './eval'
 import { useSystem } from './prompt'
 import { generate, QueryBox } from './Query'
 import { ErrorCatcher } from './Error'
@@ -144,7 +144,9 @@ export default function App() {
       </div>
       <div ref={canvasRef} className="w-full flex-1" onWheel={handleZoom}>
         <div className="w-full h-full flex justify-center items-center border rounded-md border-gray-500 bg-white pointer-events-none select-none">
-          <ErrorCatcher key={key} onError={handleError}>{element}</ErrorCatcher>
+          <ErrorCatcher key={key} onError={handleError}>
+            <div className="flex w-full h-full justify-center items-center" dangerouslySetInnerHTML={{ __html: element }} />
+          </ErrorCatcher>
         </div>
       </div>
     </div>

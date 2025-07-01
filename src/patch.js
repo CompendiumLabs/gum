@@ -1,6 +1,6 @@
 // patch utils
 
-const DEFAULT_DIFF_TYPE = 'unified'
+const DEFAULT_DIFF_TYPE = 'block'
 const DEFAULT_THRESHOLD = 0.2
 
 function parseLine(line) {
@@ -84,7 +84,7 @@ function trimNewlines(lines) {
         start++
     }
 
-    // trim trailing newlines 
+    // trim trailing newlines
     let end = lines.length
     while (end > start && lines[end - 1].trim().length == 0) {
         end--
@@ -94,24 +94,21 @@ function trimNewlines(lines) {
 }
 
 function parseBlockDiff(diff) {
-    const lines = diff.split('\n')
+    // accumulate chunks
     const chunks = []
-
-    // current chunk state
     let current = null
 
     // storing a chunk
     function storeChunk() {
         if (current == null) return
-        if (current.diff == null) current.diff = []
         current.orig = trimNewlines(current.orig)
-        current.diff = trimNewlines(current.diff)
+        current.diff = trimNewlines(current.diff ?? [])
         chunks.push(current)
         current = null
     }
 
     // collect all chunks
-    for (const line of lines) {
+    for (const line of diff.split('\n')) {
         if (line.startsWith('<<<<<<<')) {
             current = { orig: [] }
         } else if (line.startsWith('=======')) {
@@ -132,7 +129,7 @@ function parseBlockDiff(diff) {
     return chunks
 }
 
-function parseDiff(diff, { diff_type = DEFAULT_DIFF_TYPE }) {
+function parseDiff(diff, { diff_type = DEFAULT_DIFF_TYPE } = {}) {
     if (diff_type == 'unified') {
         return parseUnifiedDiff(diff)
     } else if (diff_type == 'block') {
@@ -199,7 +196,7 @@ function histDiff(text1, text2) {
 
 // `chunk` and `lines` are arrays of strings
 // this ignore whitespace when matching
-function matchChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD }) {
+function matchChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD } = {}) {
     const nchunk = chunk.length
     const nlines = lines.length
 
@@ -241,13 +238,13 @@ function matchChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD }) {
     // get matches sorted by total difference (descending)
     const matches = [...deltas]
         .map(([k, v]) => [k - nchunk, v])
-        .sort((a, b) => b[1] - a[1])
+        .sort((a, b) => a[1] - b[1])
 
     // handle multiple matches
     if (matches.length > 1) {
-        console.log('Patch Warning: multiple matches found for chunk: ', chunk)
+        console.log('Patch Warning: multiple matches found for chunk')
     } else if (matches.length == 0) {
-        console.log('Patch Error: no matches found for chunk: ', chunk)
+        console.log('Patch Error: no matches found for chunk')
         return null
     }
 
@@ -255,7 +252,7 @@ function matchChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD }) {
     return matches[0][0]
 }
 
-function applyUnifiedChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD }) {
+function applyUnifiedChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD } = {}) {
     const { orig, diff } = chunk
 
     // find best matching section
@@ -280,8 +277,9 @@ function applyUnifiedChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD }) {
     return lines
 }
 
-function applyBlockChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD }) {
+function applyBlockChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD } = {}) {
     const { orig, diff } = chunk
+    const size = orig.length
 
     // find best matching section
     const pos = matchChunk(orig, lines, { threshold })
@@ -291,11 +289,11 @@ function applyBlockChunk(chunk, lines, { threshold = DEFAULT_THRESHOLD }) {
     return [
         ...lines.slice(0, pos),
         ...diff,
-        ...lines.slice(pos + orig.length)
+        ...lines.slice(pos + size)
     ]
 }
 
-function applyChunk(chunk, lines, { diff_type = DEFAULT_DIFF_TYPE, threshold = DEFAULT_THRESHOLD }) {
+function applyChunk(chunk, lines, { diff_type = DEFAULT_DIFF_TYPE, threshold = DEFAULT_THRESHOLD } = {}) {
     if (diff_type == 'unified') {
         return applyUnifiedChunk(chunk, lines, { threshold })
     } else if (diff_type == 'block') {
@@ -305,7 +303,7 @@ function applyChunk(chunk, lines, { diff_type = DEFAULT_DIFF_TYPE, threshold = D
     }
 }
 
-function applyDiff(diff, text, { threshold = DEFAULT_THRESHOLD, diff_type = DEFAULT_DIFF_TYPE }) {
+function applyDiff(diff, text, { threshold = DEFAULT_THRESHOLD, diff_type = DEFAULT_DIFF_TYPE } = {}) {
     let lines = text.split('\n')
     const chunks = parseDiff(diff, { diff_type })
     for (const chunk of chunks) {

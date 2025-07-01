@@ -18,4 +18,11 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
+  server: {
+    watch: {
+      ignored: [
+        'test/**',
+      ],
+    },
+  },
 }))

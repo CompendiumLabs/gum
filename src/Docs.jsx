@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown'
 import { ErrorCatcher } from './Error'
 import { CodeEditor } from './Editor'
 import { useElementSize } from './utils'
-import { evaluateGumSafe } from './Eval'
+import { evaluateGumSafe } from './eval'
 import { useDocCache } from './utils'
 
 import { Text, HStack, Svg } from '../lib/gum.js'
