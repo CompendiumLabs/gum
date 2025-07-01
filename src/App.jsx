@@ -62,6 +62,8 @@ export default function App() {
   // generation state
   const system = useSystem()
   const [ history, setHistory ] = useState([])
+  const [ generating, setGenerating ] = useState(false)
+  const [ message, setMessage ] = useState(null)
 
   // settings state
   const [ settings, setSettings ] = useLocalStorage('gum-settings', DEFAULT_SETTINGS)
@@ -75,6 +77,11 @@ export default function App() {
     setKey(key + 1)
   }
 
+  // focus query box
+  function focusQuery() {
+    if (tab == 'query' && queryRef.current) queryRef.current.focus()
+  }
+
   // intercept wildcat errors
   function handleError(error, errorInfo) {
     const { message } = error
@@ -83,7 +90,10 @@ export default function App() {
 
   // handle query submit
   async function handleQuery(query) {
-    const result = await generate(query, { settings, system, code, error, history, setCode, setHistory })
+    setGenerating(true)
+    const result = await generate(query, { settings, system, code, error, history, setCode, setHistory, setMessage })
+    setGenerating(false)
+    focusQuery()
     if (result != null) handleCode(result)
   }
 
@@ -109,7 +119,7 @@ export default function App() {
 
   // focus query box on startup
   useEffect(() => {
-    if (tab == 'query' && queryRef.current) queryRef.current.focus()
+    focusQuery()
   }, [tab])
 
   // render full screen
@@ -117,7 +127,7 @@ export default function App() {
     <div className="w-full h-full flex flex-col gap-5">
       <div className="w-full h-[35%] flex flex-row gap-5">
         <div className="w-[55%] h-full flex border rounded-md border-gray-500">
-          <CodeEditor editorRef={editorRef} className="h-full" code={code} setCode={handleCode} />
+          <CodeEditor editorRef={editorRef} className="h-full rounded-md" code={code} setCode={handleCode} disabled={generating} />
         </div>
         <div className="w-[45%] h-full flex">
           <div className="w-full h-full flex flex-col">
@@ -132,7 +142,7 @@ export default function App() {
               <div className="my-1 mr-1 p-1 px-3 font-mono border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('docs', '_blank') }>?</div>
             </div>
             <div className="w-full flex-1 flex flex-col items-center border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
-              {tab == "query" && <QueryBox ref={queryRef} onSubmit={handleQuery} />}
+              {tab == "query" && <QueryBox ref={queryRef} generating={generating} message={message} onSubmit={handleQuery} />}
               {tab == "status" && <div className="w-full h-full p-4">
                 <div className="pb-4 whitespace-pre-wrap font-mono text-sm">{error ?? "All good!"}</div>
               </div>}

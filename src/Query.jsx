@@ -16,18 +16,18 @@ const ONEPING_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://bet
 const ONEPING_MODEL = 'google/gemini-2.0-flash-exp'
 
 function getProvider(settings) {
-  let { provider, base_url, model } = settings
+  let { provider, base_url, chat_model } = settings
   provider = provider ?? 'oneping'
   if (provider == 'oneping') {
-    model = model ?? ONEPING_MODEL
+    chat_model = chat_model ?? ONEPING_MODEL
     base_url = base_url ?? ONEPING_URL
-    return { provider, model, base_url }
+    return { provider, base_url, chat_model }
   } else {
     const api_key = settings[provider]
     if (api_key == null) {
       throw new Error(`Must specify API key for ${provider}`)
     }
-    return model ? { provider, model, api_key } : { provider, api_key }
+    return chat_model ? { provider, api_key, chat_model } : { provider, api_key }
   }
 }
 
@@ -35,7 +35,9 @@ function getProvider(settings) {
 // generation
 //
 
-async function generate(query, { settings, system, code, error, history, setCode, setHistory }) {
+async function generate(query, { settings, system, code, error, history, setCode, setHistory, setMessage }) {
+  setMessage('Generating response...')
+
   try {
     // make query params
     const { diff_type } = settings
@@ -48,6 +50,9 @@ async function generate(query, { settings, system, code, error, history, setCode
 
     // execute request
     const text = await reply(prompt, { ...provider, system, history })
+    if (text == null) {
+      throw new Error('No response from LLM')
+    }
 
     // log text
     console.log('TEXT:')
@@ -80,23 +85,20 @@ async function generate(query, { settings, system, code, error, history, setCode
     console.error('Error generating code:', error)
     console.log(error.message)
   }
+
+  setMessage(null)
 }
 
 // query interface
 
-function QueryBox({ ref, onSubmit }) {
+function QueryBox({ ref, generating, message, onSubmit }) {
   const [ query, setQuery ] = useState('')
-  const [ active, setActive ] = useState(true)
 
   // handle key down
   async function handleKeyDown(event) {
     if (event.key == 'Enter' && !event.shiftKey) {
       event.preventDefault()
-      if (onSubmit) {
-        setActive(false)
-        await onSubmit(query)
-        setActive(true)
-      }
+      await onSubmit(query)
       setQuery('')
     }
   }
@@ -107,9 +109,10 @@ function QueryBox({ ref, onSubmit }) {
   }
 
   // render
-  const activeClass = active ? '' : 'bg-gray-100'
-  return <div className="w-full h-full flex flex-col">
-    <textarea ref={ref} className={`w-full h-full outline-none resize-none font-mono text-sm p-4 ${activeClass}`} placeholder="Enter your query here..." value={query} onChange={handleChange} onKeyDown={handleKeyDown} disabled={!active} />
+  const className = generating ? 'bg-gray-100' : ''
+  return <div className="w-full h-full flex flex-col items-center justify-center">
+    <textarea ref={ref} className={`w-full h-full outline-none resize-none font-mono text-sm p-4 ${className}`} placeholder="Enter your query here..." value={query} onChange={handleChange} onKeyDown={handleKeyDown} disabled={generating} />
+    { message && <div className="absolute border rounded-md p-2 bg-white select-none">{message}</div> }
   </div>
 }
 

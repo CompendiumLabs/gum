@@ -3,18 +3,26 @@
 import CodeMirror, { EditorView } from '@uiw/react-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
 
-const extensions = [ javascript({ jsx: true }), EditorView.lineWrapping ]
+const noSelection = EditorView.theme({
+  '&': { backgroundColor: '#f5f5f5' },
+  '.cm-content': { backgroundColor: '#f5f5f5' },
+  '.cm-editor': { backgroundColor: '#f5f5f5' },
+  '.cm-focused': { backgroundColor: '#f5f5f5' },
+  '.cm-gutter': { backgroundColor: '#f5f5f5' },
+})
 
-const basicSetup = {
-  lineNumbers: true,
-  foldGutter: false,
-  indentOnInput: false,
-  highlightActiveLine: true,
-  highlightActiveLineGutter: false,
-  autocompletion: false,
-}
+const defaultExtensions = [ javascript({ jsx: true }), EditorView.lineWrapping ]
 
-function CodeEditor({ editorRef, className, code, setCode }) {
+function CodeEditor({ editorRef, className, code, setCode, disabled }) {
+  const extensions = disabled ? [ ...defaultExtensions, noSelection ] : defaultExtensions
+  const basicSetup = {
+    lineNumbers: true,
+    foldGutter: false,
+    indentOnInput: false,
+    highlightActiveLine: !disabled,
+    highlightActiveLineGutter: false,
+    autocompletion: false,
+  }
   return <CodeMirror
     ref={editorRef}
     className={className}
@@ -24,6 +32,8 @@ function CodeEditor({ editorRef, className, code, setCode }) {
     extensions={extensions}
     value={code}
     onChange={setCode}
+    editable={!disabled}
+    readOnly={disabled}
   />
 }
 

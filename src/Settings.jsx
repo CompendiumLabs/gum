@@ -85,7 +85,7 @@ function Settings({ settings, setSettings }) {
   return <div className="w-[80%] flex flex-col gap-4 m-4 text-sm">
     <div className="font-bold text-center">Models</div>
     <TextRow name="PROVIDER" key="provider" secret={false} placeholder="anthropic, openai, google" value={settings.provider} setValue={v => handleStore('provider', v)} />
-    <TextRow name="MODEL" key="model" secret={false} placeholder="claude-3-7-sonnet, gpt-4o, gemini-2.0-flash-exp" value={settings.model} setValue={v => handleStore('model', v)} />
+    <TextRow name="MODEL" key="chat_model" secret={false} placeholder="claude-3-7-sonnet, gpt-4o, gemini-2.0-flash-exp" value={settings.chat_model} setValue={v => handleStore('chat_model', v)} />
     <TextRow name="URL" key="url" secret={false} placeholder="beta.compendiumlabs.ai/chat" value={settings.base_url} setValue={v => handleStore('base_url', v)} />
     <div></div>
     <div className="font-bold text-center">API Keys</div>
