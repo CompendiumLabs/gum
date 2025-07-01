@@ -155,7 +155,7 @@ export default function App() {
       <div ref={canvasRef} className="w-full flex-1" onWheel={handleZoom}>
         <div className="w-full h-full flex justify-center items-center border rounded-md border-gray-500 bg-white pointer-events-none select-none">
           <ErrorCatcher key={key} onError={handleError}>
-            <div className="flex w-full h-full justify-center items-center" dangerouslySetInnerHTML={{ __html: element }} />
+            <div dangerouslySetInnerHTML={{ __html: element }} />
           </ErrorCatcher>
         </div>
       </div>

@@ -117,7 +117,7 @@ Next are the various `Element`-derived components that can be used in the librar
 <Points locs={point[]?} size={size = 0.01} shape={Element = Dot}>
 <Rect rounded={size = 0}>
 <Circle>
-<Line p1={point} p2={point}>
+<Line pos1={point} pos2={point}>
 <UnitLine direc={string}>
 <Polyline points={point[]}>
 <SymPath {...path_spec}>

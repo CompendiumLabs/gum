@@ -101,8 +101,7 @@ export default function Docs() {
     const [ width, height ] = canvasSize ?? [ 500, 500 ]
     const size = [ 0.9 * width, 0.9 * height ]
     const [ newElement, newError ] = evaluateGumSafe(code, size)
-    if (newElement) setElement(newElement)
-    setError(newError)
+    setElement(newElement ?? newError)
   }, [ code, canvasSize ])
 
   // handle sidebar clicks
@@ -148,7 +147,9 @@ export default function Docs() {
         </Panel>
         <Panel className="w-full h-[50%]">
           <div ref={canvasRef} className="w-full h-full flex justify-center items-center pointer-events-none select-none rounded-md">
-            <ErrorCatcher key={key} onError={handleError}>{element}</ErrorCatcher>
+            <ErrorCatcher key={key} onError={handleError}>
+              <div dangerouslySetInnerHTML={{ __html: element }} />
+            </ErrorCatcher>
           </div>
         </Panel>
       </div>
