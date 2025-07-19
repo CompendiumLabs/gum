@@ -92,6 +92,7 @@ function Settings({ settings, setSettings }) {
     <TextRow name="ANTHROPIC" key="anthropic" placeholder="Anthropic API Key" value={settings.anthropic} setValue={v => handleStore('anthropic', v)} />
     <TextRow name="OPENAI" key="openai" placeholder="OpenAI API Key" value={settings.openai} setValue={v => handleStore('openai', v)} />
     <TextRow name="GOOGLE" key="google" placeholder="Google API Key" value={settings.google} setValue={v => handleStore('google', v)} />
+    <TextRow name="XAI" key="xai" placeholder="XAI API Key" value={settings.xai} setValue={v => handleStore('xai', v)} />
     <div></div>
     <div className="font-bold text-center">Generation</div>
     <ToggleRow name="DIFF TYPE" key="diff_type" options={['None', 'Unified', 'Block']} value={settings.diff_type} setValue={v => handleStore('diff_type', v)} />
