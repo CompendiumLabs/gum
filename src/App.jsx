@@ -73,6 +73,7 @@ export default function App() {
 
   // handle code updates
   function handleCode(c) {
+    if (generating || c == null) return
     setCode(c)
     setKey(key + 1)
   }

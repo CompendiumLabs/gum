@@ -1,7 +1,7 @@
 // generation
 
 import { useState } from 'react'
-import { reply } from 'oneping'
+import { stream, reply } from 'oneping'
 
 import { applyDiff } from './patch'
 import { makePrompt, extractCode } from './prompt'
@@ -49,7 +49,18 @@ async function generate(query, { settings, system, code, error, history, setCode
     console.log(prompt)
 
     // execute request
-    const text = await reply(prompt, { ...provider, system, history })
+    let text = ''
+    if (code.length == 0) {
+      const tokens = stream(prompt, { ...provider, system, history })
+      for await (const chunk of tokens) {
+        text += chunk
+        setCode(text)
+      }
+    } else {
+      text = await reply(prompt, { ...provider, system, history })
+    }
+
+    // handle empty response
     if (text == null) {
       throw new Error('No response from LLM')
     }
