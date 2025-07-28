@@ -54,6 +54,7 @@ async function generate(query, { settings, system, code, error, history, setCode
       const tokens = stream(prompt, { ...provider, system, history })
       for await (const chunk of tokens) {
         text += chunk
+        console.log(`CHUNK: ${chunk}`)
         setCode(text)
       }
     } else {
@@ -102,14 +103,13 @@ async function generate(query, { settings, system, code, error, history, setCode
 
 // query interface
 
-function QueryBox({ ref, generating, message, onSubmit }) {
-  const [ query, setQuery ] = useState('')
-
+function QueryBox({ ref, query, setQuery, generating, message, onSubmit }) {
   // handle key down
   async function handleKeyDown(event) {
     if (event.key == 'Enter' && !event.shiftKey) {
       event.preventDefault()
-      await onSubmit(query)
+      if (query.length == 0) return
+      await onSubmit()
       setQuery('')
     }
   }
@@ -121,9 +121,12 @@ function QueryBox({ ref, generating, message, onSubmit }) {
 
   // render
   const className = generating ? 'bg-gray-100' : ''
-  return <div className="w-full h-full flex flex-col items-center justify-center">
+  return <div className="relative w-full h-full flex flex-col items-center justify-center">
     <textarea ref={ref} className={`w-full h-full outline-none resize-none font-mono text-sm p-4 ${className}`} placeholder="Enter your query here..." value={query} onChange={handleChange} onKeyDown={handleKeyDown} disabled={generating} />
     { message && <div className="absolute border rounded-md p-2 bg-white select-none">{message}</div> }
+    { query && !generating && <div className="absolute bottom-0 right-0 p-2">
+      <div className="m-2 px-2 py-1 border border-gray-500 rounded cursor-pointer hover:bg-gray-200" onClick={onSubmit}>RUN</div>
+    </div>}
   </div>
 }
 

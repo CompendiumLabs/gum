@@ -44,6 +44,8 @@ const DEFAULT_CODE = `
 `.trim() + '\n'
 
 const DEFAULT_SETTINGS = {
+  provider: 'google',
+  model: 'gemini-2.5-flash-lite',
   diff_type: 'block',
 }
 
@@ -61,6 +63,7 @@ export default function App() {
 
   // generation state
   const system = useSystem()
+  const [ query, setQuery ] = useState('')
   const [ history, setHistory ] = useState([])
   const [ generating, setGenerating ] = useState(false)
   const [ message, setMessage ] = useState(null)
@@ -90,7 +93,7 @@ export default function App() {
   }
 
   // handle query submit
-  async function handleQuery(query) {
+  async function handleQuery() {
     setGenerating(true)
     const result = await generate(query, { settings, system, code, error, history, setCode, setHistory, setMessage })
     setGenerating(false)
@@ -104,6 +107,15 @@ export default function App() {
     const factor = deltaY < 0 ? 1.2 : 1 / 1.2
     const newZoom = Math.max(10, Math.min(90, zoom * factor))
     setZoom(newZoom)
+  }
+
+  // handle fix button
+  async function handleFix() {
+    setQuery('Fix the error in the code.')
+    setTab('query')
+    focusQuery()
+    await handleQuery()
+    setQuery('')
   }
 
   // eval code for element render
@@ -143,9 +155,12 @@ export default function App() {
               <div className="my-1 mr-1 p-1 px-3 font-mono border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('docs', '_blank') }>?</div>
             </div>
             <div className="w-full flex-1 flex flex-col items-center border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
-              {tab == "query" && <QueryBox ref={queryRef} generating={generating} message={message} onSubmit={handleQuery} />}
-              {tab == "status" && <div className="w-full h-full p-4">
+              {tab == "query" && <QueryBox ref={queryRef} query={query} setQuery={setQuery} generating={generating} message={message} onSubmit={handleQuery} />}
+              {tab == "status" && <div className="relative w-full h-full p-4">
                 <div className="pb-4 whitespace-pre-wrap font-mono text-sm">{error ?? "All good!"}</div>
+                {error && <div className="absolute bottom-0 right-0 p-2">
+                  <div className="m-2 px-2 py-1 border border-gray-500 rounded cursor-pointer hover:bg-gray-200" onClick={handleFix}>FIX</div>
+                </div>}
               </div>}
               {tab == "history" && <History history={history} />}
               {tab == "settings" && <Settings settings={settings} setSettings={setSettings} />}
