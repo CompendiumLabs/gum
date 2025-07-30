@@ -22,6 +22,8 @@ function getProvider(settings) {
     chat_model = chat_model ?? ONEPING_MODEL
     base_url = base_url ?? ONEPING_URL
     return { provider, base_url, chat_model }
+  } else if (provider == 'local') {
+    return { provider }
   } else {
     const api_key = settings[provider]
     if (api_key == null) {
