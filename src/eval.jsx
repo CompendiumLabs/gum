@@ -28,9 +28,17 @@ function flattenChildren(items) {
   return result
 }
 
+function convertKebab(props) {
+  return (props != null) ? Object.fromEntries(
+    Object.entries(props).map(
+      ([ k, v ]) => [ k.replace(/-/g, '_'), v ]
+    )
+  ) : {}
+}
+
 function h(tag, props, ...children) {
   const flattened = children.length > 0 ? flattenChildren(children) : null
-  const props1 = { children: flattened, ...props }
+  const props1 = { children: flattened, ...convertKebab(props) }
   return isClass(tag) ? new tag(props1) : tag(props1)
 }
 

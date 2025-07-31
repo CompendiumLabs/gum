@@ -57,7 +57,8 @@ async function generate(query, { settings, system, code, error, history, setCode
       for await (const chunk of tokens) {
         text += chunk
         console.log(`CHUNK: ${chunk}`)
-        setCode(text)
+        const { code: code1 } = extractCode(text)
+        setCode(code1)
       }
     } else {
       text = await reply(prompt, { ...provider, system, history })
