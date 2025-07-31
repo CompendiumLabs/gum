@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     keepNames: true,
   },
   build: {
-    outDir: 'dist',
+    outDir: 'docs',
     rollupOptions: {
       external: ['@babel/standalone', 'mathjax'],
       output: {

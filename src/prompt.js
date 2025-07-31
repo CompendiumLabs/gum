@@ -2,13 +2,13 @@
 
 import { useMemo } from 'react'
 
-import { useDocCache } from './utils'
+import { useManCache } from './utils'
 
 //
 // system prompts
 //
 
-import meta from '../docs/meta.json?json'
+import meta from '../man/meta.json?json'
 import prompt from '../gen/prompt.md?raw'
 import docs from '../gen/docs.md?raw'
 import diff from '../gen/diff_block.md?raw'
@@ -79,7 +79,7 @@ function prepareCode(text) {
 
 // generate docs for all pages
 function useSystem() {
-  const cache = useDocCache()
+  const cache = useManCache()
 
   // load docs async
   return useMemo(() => {

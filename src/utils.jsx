@@ -39,17 +39,17 @@ function getFileTag(path) {
   return file_tag
 }
 
-function useDocCache() {
+function useManCache() {
   const [ cache, setCache ] = useState(null)
 
   useEffect(() => {
-    const loadDocs = async () => {
+    const loadMan = async () => {
       // enumerate files
-      const textModules = import.meta.glob('../docs/text/*.md', {
+      const textModules = import.meta.glob('../man/text/*.md', {
         query: '?raw',
         import: 'default',
       })
-      const codeModules = import.meta.glob('../docs/code/*.jsx', {
+      const codeModules = import.meta.glob('../man/code/*.jsx', {
         query: '?raw',
         import: 'default',
       })
@@ -68,7 +68,7 @@ function useDocCache() {
         code: new Map(codeEntries),
       })
     }
-    loadDocs()
+    loadMan()
   }, [])
 
   return cache
@@ -106,4 +106,4 @@ function useLocalStorage(key, defaultState = null, loader = null) {
 // export
 //
 
-export { useElementSize, useDocCache, useLocalStorage, initFromStorage }
+export { useElementSize, useManCache, useLocalStorage, initFromStorage }

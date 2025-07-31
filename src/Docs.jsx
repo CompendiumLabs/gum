@@ -1,20 +1,20 @@
 // docs
 
 import { useNavigate, useParams } from 'react-router-dom'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 
 import { ErrorCatcher } from './Error'
 import { CodeEditor } from './Editor'
 import { useElementSize } from './utils'
 import { evaluateGumSafe } from './eval'
-import { useDocCache } from './utils'
+import { useManCache } from './utils'
 
 import { Text, HStack, Svg } from '../lib/gum.js'
 
 import './Docs.css'
 
-import meta from '../docs/meta.json?7'
+import meta from '../man/meta.json?7'
 
 function Panel({ children, className }) {
   return <div className={`border rounded-md border-gray-500 bg-white ${className}`}>
@@ -66,7 +66,7 @@ export default function Docs() {
   const [ text, setText ] = useState('')
   const [ code, setCode ] = useState('')
   const [ desc, setDesc ] = useState('')
-  const cache = useDocCache()
+  const cache = useManCache()
 
   // code editor setup
   const [ key, setKey ] = useState(0)

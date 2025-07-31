@@ -1,9 +1,9 @@
-# gum.js
+# gum
 
-Grammar for SVG creation.
+Iterative graphic design with AI. Based on `gum.js`, a grammar for SVG creation.
 
 # Models
 
-Provider: `google`
-Model: `gemini-2.5-flash-lite`
+Provider: `google` <br/>
+Model: `gemini-2.5-flash-lite` <br/>
 Diff Type: `block`
