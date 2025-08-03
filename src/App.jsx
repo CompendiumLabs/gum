@@ -156,10 +156,10 @@ export default function App() {
             </div>
             <div className="w-full flex-1 flex flex-col items-center border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
               {tab == "query" && <QueryBox ref={queryRef} query={query} setQuery={setQuery} generating={generating} message={message} onSubmit={handleQuery} />}
-              {tab == "status" && <div className="relative w-full h-full p-4">
-                <div className="pb-4 whitespace-pre-wrap font-mono text-sm">{error ?? "All good!"}</div>
+              {tab == "status" && <div className="relative w-full h-full">
+                <div className="h-full p-4 whitespace-pre-wrap font-mono text-sm overflow-scroll">{error ?? "All good!"}</div>
                 {error && <div className="absolute bottom-0 right-0 p-2">
-                  <div className="m-2 px-2 py-1 border border-gray-500 rounded cursor-pointer hover:bg-gray-200" onClick={handleFix}>FIX</div>
+                  <div className="m-2 px-2 py-1 border border-gray-500 rounded cursor-pointer bg-white hover:bg-gray-200" onClick={handleFix}>FIX</div>
                 </div>}
               </div>}
               {tab == "history" && <History history={history} />}

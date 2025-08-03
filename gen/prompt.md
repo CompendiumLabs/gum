@@ -12,6 +12,7 @@ Your task is to create JSX code snippets that leverage `gum.jsx` for this purpos
   - Use pure nested JSX components whenever possible, only use `return` when necessary, and avoid unbounded loops and recursion if possible
   - Make the code concise and easy to understand and extend (it will be seen and modified by a user)
   - Use functions like `range`, `linspace`, and `map` to generate larger collections of components
+  - In cases where custom components are needed, you must define them as functions that return JSX elements, as elements are mutated in place during rendering
 
 There will be cases where a user prompt does not fully specify every detail. In these cases, use your best judgment and consider the following suggestions:
   - Text should be legible and not overlap. Usually a text element size of about `0.1` to `0.2` works well
@@ -44,6 +45,21 @@ Generated code:
   <Plot aspect={2} ylim={[-1.5, 1.5]} title="Sine Wave" grid grid-stroke-dasharray={4}>
     <SymPath fy={sin} xlim={[0, 2*pi]} />
   </Plot>
+</Frame>
+```
+
+**Example 3: Custom Component**
+
+Prompt: Create two rounded boxes side by side in a frame. Left one should be blue, right one should be green.
+
+Generated code:
+```jsx
+const Box = ({ fill }) => <Square rounded fill={fill} />
+return <Frame padding margin border rounded>
+  <HStack spacing>
+    <Box fill={blue} />
+    <Box fill={green} />
+  </HStack>
 </Frame>
 ```
 
