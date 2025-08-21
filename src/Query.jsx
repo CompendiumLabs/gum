@@ -1,6 +1,5 @@
 // generation
 
-import { useState } from 'react'
 import { stream, reply } from 'oneping'
 
 import { applyDiff } from './patch'
@@ -10,27 +9,34 @@ import { makePrompt, extractCode } from './prompt'
 // llm provider
 //
 
+const MAX_TOKENS = 8192
+
 // ONEPING SETUP
 // python -m oneping router --allow-origins="['https://beta.compendiumlabs.ai', 'https://compendiumlabs.ai']"
 const ONEPING_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://beta.compendiumlabs.ai'
-const ONEPING_MODEL = 'google/gemini-2.0-flash-exp'
+const ONEPING_MODEL = 'google/gemini-2.5-flash'
 
 function getProvider(settings) {
   let { provider, base_url, chat_model } = settings
   provider = provider ?? 'oneping'
+  let args = { provider }
   if (provider == 'oneping') {
-    chat_model = chat_model ?? ONEPING_MODEL
-    base_url = base_url ?? ONEPING_URL
-    return { provider, base_url, chat_model }
-  } else if (provider == 'local') {
-    return { provider }
-  } else {
+    args.base_url = base_url ?? ONEPING_URL
+    args.chat_model = chat_model ?? ONEPING_MODEL
+  } else if (provider != 'local') {
     const api_key = settings[provider]
     if (api_key == null) {
       throw new Error(`Must specify API key for ${provider}`)
     }
-    return chat_model ? { provider, api_key, chat_model } : { provider, api_key }
+    args.api_key = api_key
+    if (chat_model) {
+      args.chat_model = chat_model
+    }
   }
+  if (provider == 'anthropic') {
+    args.max_tokens = MAX_TOKENS
+  }
+  return args
 }
 
 //
@@ -56,7 +62,7 @@ async function generate(query, { settings, system, code, error, history, setCode
       const tokens = stream(prompt, { ...provider, system, history })
       for await (const chunk of tokens) {
         text += chunk
-        console.log(`CHUNK: ${chunk}`)
+        // console.log(`CHUNK: ${chunk}`)
         const { code: code1 } = extractCode(text)
         setCode(code1)
       }

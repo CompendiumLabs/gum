@@ -24,7 +24,11 @@ const image_refine = has_image => has_image ? 'The user has provided the above i
 
 const error_refine = error => error ? `The current code is producing the following error message:\n\n${error}\n\nPlease attempt to fix the error while also addressing the query.\n\n` : ''
 
-const prompt_start = (query, has_image) => `Using the guidelines, documentation, and examples provided above, generate JavaScript code for the \`gum.jsx\` library that addresses the following query. ${image_start(has_image)}Please be concise and return only the best implementation possible. Failure is not an option.
+const prompt_start = (query, has_image) => `Using the guidelines, documentation, and examples provided above, generate JavaScript code for the \`gum.jsx\` library that addresses the following query. Wrap your proposed code in \`\`\`jsx\`\`\` tags.
+
+Start by writing a description of the code you will generate. In the case that you are generating a complex object, this would include a list of the subcomponents necessary to build it. For instance, to generate a box sitting on a table, you would want a box and a table, and the table would itself be composed of four legs and a surface. Then finally, write the code to generate the entire object. It is important to place the actual code in \`\`\`jsx\`\`\` tags so that it is properly rendered.
+
+${image_start(has_image)}Please be concise and return only the best implementation possible. Failure is not an option.
 
 QUERY: ${query}`
 
@@ -134,19 +138,16 @@ function makeContent(text, imgdata) {
 // extraction tools
 //
 
+// extract code from first code block
 function extractCode(text) {
-  // strip out <thinking>...</thinking>
-  text = text.replace(/<thinking>([\s\S]*?)<\/thinking>/g, '')
-
-  // detect language from first code block
-  const match = text.match(/```(javascript|diff)\n/)
-  const lang = match ? match[1] : 'javascript'
-
-  // strip out all code block markers
-  const code = text.replace(/```.*(\n|$)/g, '')
-
-  // return code information
-  return { lang, code }
+  const match = text.match(/```(jsx|javascript|diff)\n([\s\S]*?)```/)
+  if (match) {
+    const [ _, lang0, code ] = match
+    const lang = (lang0 == 'javascript') ? 'jsx' : lang0
+    return { lang, code: code.trim() }
+  } else {
+    return { lang: 'jsx', code: text.trim() }
+  }
 }
 
 //
