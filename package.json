@@ -16,7 +16,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node lib/server.js"
   },
   "devDependencies": {
     "@babel/standalone": "^7.27.4",
@@ -33,5 +34,8 @@
     "react-router-dom": "^7.6.1",
     "tailwindcss": "^4.1.8",
     "vite": "^6.3.5"
+  },
+  "optionalDependencies": {
+    "express": "^5.1.0"
   }
 }

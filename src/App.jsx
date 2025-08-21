@@ -2,13 +2,14 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { useElementSize, useLocalStorage } from './utils'
-import { evaluateGumSafe } from './eval'
+import { evaluateGum, evaluateGumSafe } from './eval'
 import { useSystem } from './prompt'
 import { generate, QueryBox } from './Query'
 import { ErrorCatcher } from './Error'
 import { CodeEditor } from './Editor'
 import { History } from './History'
 import { Settings } from './Settings'
+import { svgToPng } from './render'
 
 import './App.css'
 import './fonts.css'
@@ -60,6 +61,7 @@ export default function App() {
   const [ key, setKey ] = useState(0)
   const [ element, setElement ] = useState(null)
   const [ error, setError ] = useState(null)
+  const [ image, setImage ] = useState(null)
 
   // generation state
   const system = useSystem()
@@ -95,8 +97,9 @@ export default function App() {
   // handle query submit
   async function handleQuery() {
     setGenerating(true)
-    const result = await generate(query, { settings, system, code, error, history, setCode, setHistory, setMessage })
+    const result = await generate(query, { settings, system, code, image, error, history, setCode, setHistory, setMessage })
     setGenerating(false)
+    setImage(null)
     focusQuery()
     if (result != null) handleCode(result)
   }
@@ -116,6 +119,21 @@ export default function App() {
     focusQuery()
     await handleQuery()
     setQuery('')
+  }
+
+  // handle image
+  async function handleImage(set) {
+    if (error) return
+    if (set) {
+      const size0 = [ 500, 500 ]
+      const elem = evaluateGum(code, size0, false)
+      const { size } = elem
+      const svg = elem.svg()
+      const img = await svgToPng(svg, size, true)
+      setImage(img)
+    } else {
+      setImage(null)
+    }
   }
 
   // eval code for element render
@@ -155,7 +173,7 @@ export default function App() {
               <div className="my-1 mr-1 p-1 px-3 font-mono border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('docs', '_blank') }>?</div>
             </div>
             <div className="w-full flex-1 flex flex-col items-center border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
-              {tab == "query" && <QueryBox ref={queryRef} query={query} setQuery={setQuery} generating={generating} message={message} onSubmit={handleQuery} />}
+              {tab == "query" && <QueryBox ref={queryRef} query={query} setQuery={setQuery} generating={generating} message={message} onSubmit={handleQuery} image={image} setImage={handleImage} />}
               {tab == "status" && <div className="relative w-full h-full">
                 <div className="h-full p-4 whitespace-pre-wrap font-mono text-sm overflow-scroll">{error ?? "All good!"}</div>
                 {error && <div className="absolute bottom-0 right-0 p-2">

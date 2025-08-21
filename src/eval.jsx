@@ -70,7 +70,7 @@ class MessageError extends Error {
   }
 }
 
-function evaluateGum(code, size) {
+function evaluateGum(code, size, render = true) {
   if (code.trim() == '') {
     throw new MessageError(`No code provided`)
   }
@@ -94,19 +94,16 @@ function evaluateGum(code, size) {
   }
 
   // render to string
-  const svg = element.svg()
-
-  // return the element
-  return svg
+  return render ? element.svg() : element
 }
 
-function evaluateGumSafe(code, size, { stroke = 'none', stroke_width = 1, fill = 'white' } = {}) {
+function evaluateGumSafe(code, size) {
   size ??= [ 500, 500 ]
 
   // give it a shot
   let svg, error = null
   try {
-    svg = evaluateGum(code, size, { stroke, stroke_width, fill })
+    svg = evaluateGum(code, size)
   } catch (err) {
     const { message } = err
     if (err instanceof MessageError) {
