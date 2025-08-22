@@ -7,10 +7,10 @@ import ReactMarkdown from 'react-markdown'
 import { ErrorCatcher } from './Error'
 import { CodeEditor } from './Editor'
 import { useElementSize } from './utils'
-import { evaluateGumSafe } from './eval'
 import { useManCache } from './utils'
 
 import { Text, HStack, Svg } from '../lib/gum.js'
+import { evaluateGumSafe } from '../lib/eval.js'
 
 import './Docs.css'
 
@@ -100,7 +100,7 @@ export default function Docs() {
   useEffect(() => {
     const [ width, height ] = canvasSize ?? [ 500, 500 ]
     const size = [ 0.9 * width, 0.9 * height ]
-    const [ newElement, newError ] = evaluateGumSafe(code, size)
+    const [ newElement, newError ] = evaluateGumSafe(code, { size })
     setElement(newElement ?? newError)
   }, [ code, canvasSize ])
 

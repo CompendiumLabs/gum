@@ -2,7 +2,6 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { useElementSize, useLocalStorage } from './utils'
-import { evaluateGum, evaluateGumSafe } from './eval'
 import { useSystem } from './prompt'
 import { generate, QueryBox } from './Query'
 import { ErrorCatcher } from './Error'
@@ -10,6 +9,8 @@ import { CodeEditor } from './Editor'
 import { History } from './History'
 import { Settings } from './Settings'
 import { svgToPng } from './render'
+
+import { evaluateGum, evaluateGumSafe } from '../lib/eval.js'
 
 import './App.css'
 import './fonts.css'
@@ -125,8 +126,7 @@ export default function App() {
   async function handleImage(set) {
     if (error) return
     if (set) {
-      const size0 = [ 500, 500 ]
-      const elem = evaluateGum(code, size0, false)
+      const elem = evaluateGum(code, { size: [250, 250], render: false })
       const { size } = elem
       const svg = elem.svg()
       const img = await svgToPng(svg, size, true)
@@ -143,7 +143,7 @@ export default function App() {
     const size = [ (zoom / 100) * width, (zoom / 100) * height ]
 
     // send to evaluator
-    const [ newElement, newError ] = evaluateGumSafe(code, size)
+    const [ newElement, newError ] = evaluateGumSafe(code, { size })
     if (newElement) setElement(newElement)
     setError(newError)
   }, [ code, zoom, canvasSize ])

@@ -36,6 +36,10 @@
     "vite": "^6.3.5"
   },
   "optionalDependencies": {
-    "express": "^5.1.0"
+    "@resvg/resvg-js": "^2.6.2",
+    "canvas": "^3.2.0",
+    "commander": "^14.0.0",
+    "express": "^5.1.0",
+    "harfbuzzjs": "^0.4.9"
   }
 }

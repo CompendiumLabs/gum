@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useElementSize } from './utils'
-import { evaluateGumSafe } from './eval'
+
+import { evaluateGumSafe } from '../lib/eval.js'
 
 function CodePreview({ code }) {
   const [ preview, setPreview ] = useState(true)
@@ -13,7 +14,7 @@ function CodePreview({ code }) {
   // eval code for element render
   useEffect(() => {
     const size = canvasSize ?? [ 500, 500 ]
-    const [ newElement, newError ] = evaluateGumSafe(code, size)
+    const [ newElement, newError ] = evaluateGumSafe(code, { size })
     if (newElement) setElement(newElement)
     setError(newError)
   }, [ code, canvasSize ])
