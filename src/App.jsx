@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useElementSize, useLocalStorage } from './utils'
 import { useSystem } from './prompt'
 import { generate, QueryBox } from './Query'
-import { ErrorCatcher } from './Error'
+import { Canvas } from './Canvas'
 import { CodeEditor } from './Editor'
 import { History } from './History'
 import { Settings } from './Settings'
@@ -59,8 +59,9 @@ export default function App() {
   const [ canvasRef, canvasSize ] = useElementSize()
 
   // code state
-  const [ key, setKey ] = useState(0)
+  const [ version, setVersion ] = useState(0)
   const [ element, setElement ] = useState(null)
+  const [ size, setSize ] = useState(null)
   const [ error, setError ] = useState(null)
   const [ image, setImage ] = useState(null)
 
@@ -81,18 +82,12 @@ export default function App() {
   function handleCode(c) {
     if (generating || c == null) return
     setCode(c)
-    setKey(key + 1)
+    setVersion(version + 1)
   }
 
   // focus query box
   function focusQuery() {
     if (tab == 'query' && queryRef.current) queryRef.current.focus()
-  }
-
-  // intercept wildcat errors
-  function handleError(error, errorInfo) {
-    const { message } = error
-    setError(message)
   }
 
   // handle query submit
@@ -103,14 +98,6 @@ export default function App() {
     setImage(null)
     focusQuery()
     if (result != null) handleCode(result)
-  }
-
-  // handle scroll zoom
-  function handleZoom(event) {
-    const { deltaY } = event
-    const factor = deltaY < 0 ? 1.2 : 1 / 1.2
-    const newZoom = Math.max(10, Math.min(90, zoom * factor))
-    setZoom(newZoom)
   }
 
   // handle fix button
@@ -126,10 +113,7 @@ export default function App() {
   async function handleImage(set) {
     if (error) return
     if (set) {
-      const elem = evaluateGum(code, { size: [250, 250], render: false })
-      const { size } = elem
-      const svg = elem.svg()
-      const img = await svgToPng(svg, size, true)
+      const img = await svgToPng(element, { size, blob: true })
       setImage(img)
     } else {
       setImage(null)
@@ -140,11 +124,12 @@ export default function App() {
   useEffect(() => {
     // get adjusted size
     const [ width, height ] = canvasSize ?? [ 500, 500 ]
-    const size = [ (zoom / 100) * width, (zoom / 100) * height ]
+    const zsize = [ (zoom / 100) * width, (zoom / 100) * height ]
 
     // send to evaluator
-    const [ newElement, newError ] = evaluateGumSafe(code, { size })
+    const { svg: newElement, error: newError, size: newSize } = evaluateGumSafe(code, { size: zsize })
     if (newElement) setElement(newElement)
+    if (newSize) setSize(newSize)
     setError(newError)
   }, [ code, zoom, canvasSize ])
 
@@ -186,13 +171,7 @@ export default function App() {
           </div>
         </div>
       </div>
-      <div ref={canvasRef} className="w-full flex-1" onWheel={handleZoom}>
-        <div className="w-full h-full flex justify-center items-center border rounded-md border-gray-500 bg-white pointer-events-none select-none">
-          <ErrorCatcher key={key} onError={handleError}>
-            <div dangerouslySetInnerHTML={{ __html: element }} />
-          </ErrorCatcher>
-        </div>
-      </div>
+      <Canvas canvasRef={canvasRef} element={element} size={size} setError={setError} zoom={zoom} setZoom={setZoom} version={version} />
     </div>
   </div>
 }

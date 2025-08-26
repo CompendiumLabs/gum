@@ -2,7 +2,7 @@
 // rendering
 //
 
-async function svgToPng(svgData, size, blob=false) {
+async function svgToPng(svgData, { size = [500, 500], blob = false } = {}) {
     // make svg blob URL
     const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'})
     const svgUrl = URL.createObjectURL(svgBlob)
@@ -24,8 +24,7 @@ async function svgToPng(svgData, size, blob=false) {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
             if (blob) {
                 canvas.toBlob(b => {
-                    const url = URL.createObjectURL(b)
-                    resolve(url)
+                    resolve(b)
                 })
             } else {
                 const pngData = canvas.toDataURL('image/png')
@@ -65,4 +64,26 @@ async function urlToData(url) {
     })
 }
 
-export { svgToPng, urlToData }
+//
+// download
+//
+
+function downloadFile(blob, filename) {
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = filename
+    a.click()
+}
+
+// download svg
+function downloadSvg(svg) {
+    const blob = new Blob([svg], { type: 'image/svg+xml' })
+    downloadFile(blob, 'gum.svg')
+}
+
+// download png
+function downloadPng(png) {
+    downloadFile(png, 'gum.png')
+}
+
+export { svgToPng, urlToData, downloadSvg, downloadPng }

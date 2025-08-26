@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => ({
   esbuild: {
     keepNames: true,
   },
+  optimizeDeps: {
+    exclude: ['@resvg/resvg-js']
+  },
   build: {
     outDir: 'docs',
     rollupOptions: {

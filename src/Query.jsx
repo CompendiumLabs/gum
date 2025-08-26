@@ -143,8 +143,8 @@ function QueryBox({ ref, query, setQuery, generating, message, onSubmit, image, 
     <textarea ref={ref} className={`w-full h-full outline-none resize-none font-mono text-sm p-4 ${className}`} placeholder="Enter your query here..." value={query} onChange={handleChange} onKeyDown={handleKeyDown} disabled={generating} />
     { message && <div className="absolute border rounded-md p-2 bg-white select-none">{message}</div> }
     <div className="absolute bottom-0 right-0 p-3">
-      <div className="px-3 py-2 rounded cursor-pointer hover:bg-gray-200" onClick={() => setImage(image == null)}>
-        { image ? <img src={image} alt="Snapshot" className="max-w-16 max-h-16" /> : <img src={cameraIcon} alt="Take snapshot" className="w-4 h-4" /> }
+      <div className="p-2 rounded cursor-pointer hover:bg-gray-200" onClick={() => setImage(image == null)}>
+        { image ? <img src={image} alt="Snapshot" className="max-w-16 max-h-16 border border-gray-300" /> : <img src={cameraIcon} alt="Take snapshot" className="w-4 h-4" /> }
       </div>
     </div>
   </div>

@@ -100,7 +100,7 @@ export default function Docs() {
   useEffect(() => {
     const [ width, height ] = canvasSize ?? [ 500, 500 ]
     const size = [ 0.9 * width, 0.9 * height ]
-    const [ newElement, newError ] = evaluateGumSafe(code, { size })
+    const { svg: newElement, error: newError } = evaluateGumSafe(code, { size })
     setElement(newElement ?? newError)
   }, [ code, canvasSize ])
 

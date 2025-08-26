@@ -75,6 +75,26 @@ function useManCache() {
 }
 
 //
+// font cache
+//
+
+function useFontData(fontUrl) {
+  const [fontData, setFontData] = useState(null);
+
+  useEffect(() => {
+    const loadFont = async () => {
+      const response = await fetch(fontUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      setFontData(uint8Array);
+    };
+    loadFont();
+  }, []);
+
+  return fontData;
+}
+
+//
 // local storage
 //
 
@@ -106,4 +126,4 @@ function useLocalStorage(key, defaultState = null, loader = null) {
 // export
 //
 
-export { useElementSize, useManCache, useLocalStorage, initFromStorage }
+export { useElementSize, useManCache, useFontData, useLocalStorage, initFromStorage }

@@ -14,7 +14,7 @@ function CodePreview({ code }) {
   // eval code for element render
   useEffect(() => {
     const size = canvasSize ?? [ 500, 500 ]
-    const [ newElement, newError ] = evaluateGumSafe(code, { size })
+    const { svg: newElement, error: newError } = evaluateGumSafe(code, { size })
     if (newElement) setElement(newElement)
     setError(newError)
   }, [ code, canvasSize ])
