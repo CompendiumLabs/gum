@@ -47,7 +47,7 @@ const DEFAULT_CODE = `
 
 const DEFAULT_SETTINGS = {
   provider: 'oneping',
-  model: 'google/gemini-2.5-flash-lite',
+  chat_model: 'google/gemini-2.5-flash-lite',
   diff_type: 'block',
 }
 
