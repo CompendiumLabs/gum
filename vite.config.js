@@ -14,10 +14,11 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: 'docs',
+    target: 'esnext',
     rollupOptions: {
-      external: ['@babel/standalone', 'mathjax'],
+      external: ['mathjax'],
       output: {
-        globals: { '@babel/standalone': 'Babel', 'mathjax': 'MathJax' },
+        globals: { 'mathjax': 'MathJax' },
       },
     },
   },
