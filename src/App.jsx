@@ -46,8 +46,8 @@ const DEFAULT_CODE = `
 `.trim() + '\n'
 
 const DEFAULT_SETTINGS = {
-  provider: 'google',
-  model: 'gemini-2.5-flash-lite',
+  provider: 'oneping',
+  model: 'google/gemini-2.5-flash-lite',
   diff_type: 'block',
 }
 
