@@ -6,12 +6,14 @@ import App from './App'
 import Docs from './Docs'
 
 createRoot(document.getElementById('root')).render(
-  <BrowserRouter basename={import.meta.env.BASE_URL}>
+  <BrowserRouter basename="/gum">
     <Routes>
-      <Route index element={<App />} />
-      <Route path="/docs" element={<Docs />} />
-      <Route path="/docs/:page" element={<Docs />} />
-      <Route path="*" element={<div>404</div>} />
+      <Route path="/">
+        <Route index element={<App />} />
+        <Route path="docs" element={<Docs />} />
+        <Route path="docs/:page" element={<Docs />} />
+        <Route path="*" element={<div>404</div>} />
+      </Route>
     </Routes>
   </BrowserRouter>
 )

@@ -1,6 +1,7 @@
 // GUM.JSX
 
 import { useRef, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useElementSize, useLocalStorage } from './utils'
 import { useSystem } from './prompt'
 import { generate, QueryBox } from './Query'
@@ -10,7 +11,7 @@ import { History } from './History'
 import { Settings } from './Settings'
 import { svgToPng } from './render'
 
-import { evaluateGum, evaluateGumSafe } from '../lib/eval.js'
+import { evaluateGumSafe } from '../lib/eval.js'
 
 import './App.css'
 import './fonts.css'
@@ -52,6 +53,9 @@ const DEFAULT_SETTINGS = {
 }
 
 export default function App() {
+  // app state
+  const navigate = useNavigate();
+
   // ui refs
   const outerRef = useRef(null)
   const editorRef = useRef(null)
@@ -155,7 +159,7 @@ export default function App() {
                 {"Settings"}
               </TabBar>
               <div className="flex-1" />
-              <div className="my-1 mr-1 p-1 px-3 font-mono border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('docs', '_blank') }>?</div>
+              <div className="my-1 mr-1 p-1 px-3 font-mono border rounded border-gray-500 hover:bg-gray-200 cursor-pointer" onClick={() => window.open('/gum/docs', '_blank') }>?</div>
             </div>
             <div className="w-full flex-1 flex flex-col items-center border rounded-tr-md rounded-b-md border-gray-500 overflow-auto bg-white">
               {tab == "query" && <QueryBox ref={queryRef} query={query} setQuery={setQuery} generating={generating} message={message} onSubmit={handleQuery} image={image} setImage={handleImage} />}
