@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "cp docs/index.html docs/404.html",
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "node lib/server.js"
