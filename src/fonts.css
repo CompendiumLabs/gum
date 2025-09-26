@@ -2,54 +2,54 @@
     font-family: 'IBMPlexSans';
     font-style: normal;
     font-weight: 100;
-    src: url('../lib/fonts/IBMPlexSans-Thin.ttf') format('truetype');
+    src: url('./fonts/IBMPlexSans-Thin.ttf') format('truetype');
 }
 
 @font-face {
     font-family: 'IBMPlexSans';
     font-style: normal;
     font-weight: 300;
-    src: url('../lib/fonts/IBMPlexSans-Light.ttf') format('truetype');
+    src: url('./fonts/IBMPlexSans-Light.ttf') format('truetype');
 }
 
 @font-face {
     font-family: 'IBMPlexSans';
     font-style: normal;
     font-weight: 400;
-    src: url('../lib/fonts/IBMPlexSans-Regular.ttf') format('truetype');
+    src: url('./fonts/IBMPlexSans-Regular.ttf') format('truetype');
 }
 
 @font-face {
     font-family: 'IBMPlexSans';
     font-style: normal;
     font-weight: 700;
-    src: url('../lib/fonts/IBMPlexSans-Bold.ttf') format('truetype');
+    src: url('./fonts/IBMPlexSans-Bold.ttf') format('truetype');
 }
 
 @font-face {
     font-family: 'IBMPlexMono';
     font-style: normal;
     font-weight: 100;
-    src: url('../lib/fonts/IBMPlexMono-Thin.ttf') format('truetype');
+    src: url('./fonts/IBMPlexMono-Thin.ttf') format('truetype');
 }
 
 @font-face {
     font-family: 'IBMPlexMono';
     font-style: normal;
     font-weight: 300;
-    src: url('../lib/fonts/IBMPlexMono-Light.ttf') format('truetype');
+    src: url('./fonts/IBMPlexMono-Light.ttf') format('truetype');
 }
 
 @font-face {
     font-family: 'IBMPlexMono';
     font-style: normal;
     font-weight: 400;
-    src: url('../lib/fonts/IBMPlexMono-Regular.ttf') format('truetype');
+    src: url('./fonts/IBMPlexMono-Regular.ttf') format('truetype');
 }
 
 @font-face {
     font-family: 'IBMPlexMono';
     font-style: normal;
     font-weight: 700;
-    src: url('../lib/fonts/IBMPlexMono-Bold.ttf') format('truetype');
+    src: url('./fonts/IBMPlexMono-Bold.ttf') format('truetype');
 }

@@ -5,8 +5,8 @@ import { ExportSvgIcon, ExportPngIcon } from './icons'
 import { downloadSvg, downloadPng, svgToPng } from './render'
 import { useFontData } from './utils'
 
-import ibmPlexSans from '../lib/fonts/IBMPlexSans-Regular.ttf?url'
-import ibmPlexMono from '../lib/fonts/IBMPlexMono-Regular.ttf?url'
+import ibmPlexSans from './fonts/IBMPlexSans-Regular.ttf?url'
+import ibmPlexMono from './fonts/IBMPlexMono-Regular.ttf?url'
 
 function Canvas({ canvasRef, element, size, setError, zoom, setZoom, version }) {
   const sansFont = useFontData(ibmPlexSans)

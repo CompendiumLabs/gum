@@ -11,7 +11,7 @@ import { History } from './History'
 import { Settings } from './Settings'
 import { svgToPng } from './render'
 
-import { evaluateGumSafe } from '../lib/eval.js'
+import { evaluateGumSafe } from 'gum/eval'
 
 import './App.css'
 import './fonts.css'

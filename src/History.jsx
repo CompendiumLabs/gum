@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useElementSize } from './utils'
 
-import { evaluateGumSafe } from '../lib/eval.js'
+import { evaluateGumSafe } from 'gum/eval'
 
 function CodePreview({ code }) {
   const [ preview, setPreview ] = useState(true)

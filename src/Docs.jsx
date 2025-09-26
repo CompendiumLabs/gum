@@ -9,8 +9,8 @@ import { CodeEditor } from './Editor'
 import { useElementSize } from './utils'
 import { useManCache } from './utils'
 
-import { Text, HStack, Svg } from '../lib/gum.js'
-import { evaluateGumSafe } from '../lib/eval.js'
+import { evaluateGumSafe } from 'gum/eval'
+import { Text, HStack, Svg } from 'gum'
 
 import './Docs.css'
 

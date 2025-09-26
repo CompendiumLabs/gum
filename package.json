@@ -36,11 +36,8 @@
     "tailwindcss": "^4.1.8",
     "vite": "^6.3.5"
   },
-  "optionalDependencies": {
-    "@resvg/resvg-js": "^2.6.2",
-    "canvas": "^3.2.0",
-    "commander": "^14.0.0",
-    "express": "^5.1.0",
-    "harfbuzzjs": "^0.4.9"
+  "dependencies": {
+    "gum": "file:../gum.js",
+    "oneping": "file:../oneping.js"
   }
 }
